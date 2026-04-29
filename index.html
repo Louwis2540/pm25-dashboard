@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>รายงานสถานการณ์ PM2.5 เขตสุขภาพที่ 7</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Chart.js zoom plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+  <style>
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║          🔧  CUSTOMIZATION PANEL — แก้ได้ที่นี่             ║
+   ╠══════════════════════════════════════════════════════════════╣
+   ║  ความสูงแต่ละ Zone (รวม = 1123px = A4)                      ║
+   ║  สูตร: --h-a + --h-bc + --h-d + --h-ef + --h-g             ║
+   ║        + --h-footer + (5 × --gap) + (2 × --pad) = 1123px   ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+:root {
+  /* ── Zone heights (ปรับได้ — ผลรวมต้องได้ 1123px) ── */
+  --h-a:       70px;   /* Zone A : Header                  */
+  --h-bc:     290px;   /* Zone BC: แผนที่ + กราฟแนวโน้ม    */
+  --h-d:      165px;   /* Zone D : ตาราง 7 วัน             */
+  --h-ef:     270px;   /* Zone EF: Hotspot + กราฟโรค       */
+  --h-g:      200px;   /* Zone G : คำแนะนำประชาชน          */
+  --h-footer:  38px;   /* Footer                           */
+
+  /* ── Layout ── */
+  --gap:        5px;   /* ช่องว่างระหว่าง Zone              */
+  --pad:       10px;   /* padding รอบ A4                    */
+
+  /* ── สัดส่วน column ── */
+  --col-bc: 36% 64%;   /* B(แผนที่จังหวัด) : C(กราฟแนวโน้ม) */
+  --col-ef: 38% 62%;   /* E(Hotspot map)   : F(กราฟโรค)     */
+
+  /* ── สีระดับ AQI ── */
+  --c-vgood:  #009ede;  /* ดีมาก        0 – 15 µg/m³  */
+  --c-good:   #52b447;  /* ดี          16 – 25 µg/m³  */
+  --c-medium: #f5ce00;  /* ปานกลาง    26 – 37.5 µg/m³ */
+  --c-start:  #f07d00;  /* เริ่มมีผล  37.6 – 75 µg/m³ */
+  --c-bad:    #e8192c;  /* อันตราย       > 75 µg/m³   */
+
+  /* ── สีธีม ── */
+  --c-header:  #1a4f7a;
+  --c-th-bg:   #1a4f7a;
+  --c-footer:  #1a4f7a;
+  --c-export:  #27ae60;
+  --c-border:  #d0d7de;
+  --c-zone-bg: #fafafa;
+
+  /* ── Font size scale ── */
+  --fs-title:   11px;
+  --fs-label:    9.5px;
+  --fs-cell:    10.5px;
+  --fs-small:    8.5px;
+
+  /* ── Misc ── */
+  --font: 'Sarabun', sans-serif;
+  --radius: 5px;
+}
+/* ══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #b0bec5;
+  font-family: var(--font);
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 40px;
+}
+
+/* ── A4 fixed canvas ── */
+#dashboard {
+  width:  794px;
+  height: 1123px;           /* A4 exact */
+  background: #fff;
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  box-shadow: 0 6px 28px rgba(0,0,0,.3);
+  overflow: hidden;         /* ไม่ให้เกิน A4 */
+}
+
+/* ══════════════════════════════════════════════
+   ZONE HELPER — ใช้ร่วมกัน
+══════════════════════════════════════════════ */
+.zone {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-zone-bg);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.zone-title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: #2c3e50;
+  text-align: center;
+  padding: 3px 6px 2px;
+  background: rgba(26,79,122,.06);
+  border-bottom: 1px solid var(--c-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.zone-inner {
+  height: calc(100% - 26px);  /* zone height minus title bar */
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════
+   AQI palette
+══════════════════════════════════════════════ */
+.aqi-vgood  { background:var(--c-vgood);  color:#fff; }
+.aqi-good   { background:var(--c-good);   color:#fff; }
+.aqi-medium { background:var(--c-medium); color:#333; }
+.aqi-start  { background:var(--c-start);  color:#fff; }
+.aqi-bad    { background:var(--c-bad);    color:#fff; }
+
+/* ══════════════════════════════════════════════
+   ZONE A — HEADER
+══════════════════════════════════════════════ */
+#zone-a {
+  height: var(--h-a);
+  background: linear-gradient(135deg, var(--c-header) 0%, #2980b9 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.logo-wrap {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: rgba(255,255,255,.2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8.5px; font-weight: 700; text-align: center; line-height: 1.3;
+}
+.title-wrap { flex: 1; overflow: hidden; }
+.title-wrap h1 { font-size: 13px; font-weight: 700; line-height: 1.35; white-space: nowrap; }
+.title-wrap p  { font-size: 9.5px; opacity: .85; margin-top: 1px; }
+.date-wrap { text-align: right; font-size: 9px; opacity: .9; flex-shrink: 0; line-height: 1.6; }
+.date-wrap .date-big { font-size: 11px; font-weight: 700; }
+
+/* ══════════════════════════════════════════════
+   ZONE BC — Province Map + Trend Line Chart
+══════════════════════════════════════════════ */
+#zone-bc {
+  height: var(--h-bc);
+  display: grid;
+  grid-template-columns: var(--col-bc);
+  gap: var(--gap);
+  flex-shrink: 0;
+}
+#zone-b {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  background: #e8f4f9;
+  display: flex;
+  flex-direction: column;
+}
+#map-province { flex: 1; }
+
+#zone-c {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-zone-bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#zone-c .zone-inner { padding: 4px 6px; }
+#zone-c canvas { width: 100% !important; height: 100% !important; }
+
+/* ══════════════════════════════════════════════
+   ZONE D — Heatmap Table 7 days
+══════════════════════════════════════════════ */
+#zone-d {
+  height: var(--h-d);
+  display: flex;
+  flex-direction: column;
+}
+#zone-d .zone-inner { flex: 1; padding: 4px 8px 6px; overflow: hidden; }
+
+#heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  height: 100%;
+}
+#heatmap-table th {
+  background: var(--c-th-bg);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 4px 2px;
+  text-align: center;
+  border: 1px solid #4a7fa5;
+}
+#heatmap-table th:first-child { width: 80px; text-align: left; padding-left: 6px; }
+#heatmap-table td {
+  font-size: var(--fs-cell);
+  font-weight: 700;
+  text-align: center;
+  padding: 0;
+  border: 1px solid #e0e0e0;
+  vertical-align: middle;
+}
+#heatmap-table td.pname {
+  text-align: left;
+  padding-left: 6px;
+  background: #f0f4f8;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #333;
+}
+/* today column highlight */
+.col-today { border: 2px solid #f07d00 !important; }
+
+/* ══════════════════════════════════════════════
+   ZONE EF — GISTDA Hotspot + Mixed Chart
+══════════════════════════════════════════════ */
+#zone-ef {
+  height: var(--h-ef);
+  display: grid;
+  grid-template-columns: var(--col-ef);
+  gap: var(--gap);
+  flex-shrink: 0;
+}
+#zone-e {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #e8f4f9;
+  display: flex;
+  flex-direction: column;
+}
+#map-hotspot { flex: 1; }
+
+#zone-f {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-zone-bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#zone-f .zone-inner { flex: 1; padding: 4px 6px; overflow: hidden; }
+#zone-f canvas { width: 100% !important; height: 100% !important; }
+
+/* ══════════════════════════════════════════════
+   ZONE G — Public Recommendations
+══════════════════════════════════════════════ */
+#zone-g {
+  height: var(--h-g);
+  display: flex;
+  flex-direction: column;
+}
+#zone-g .zone-inner { flex: 1; padding: 5px 8px 4px; display: flex; flex-direction: column; gap: 4px; }
+
+#rec-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  flex: 1;
+}
+.rec-card {
+  border-radius: 4px;
+  padding: 6px 5px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.rec-icon   { font-size: 18px; line-height: 1; }
+.rec-level  { font-size: 10px; font-weight: 700; line-height: 1.2; }
+.rec-range  { font-size: 8px;  opacity: .85; }
+.rec-body   { font-size: 8.5px; line-height: 1.45; margin-top: 2px; }
+.rec-note   { font-size: var(--fs-small); color: #888; }
+
+/* ══════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════ */
+#zone-footer {
+  height: var(--h-footer);
+  background: var(--c-footer);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-small);
+  flex-shrink: 0;
+}
+#btn-export {
+  background: var(--c-export);
+  color: #fff;
+  border: none;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: background .2s;
+}
+#btn-export:hover { background: #219150; }
+#btn-export:disabled { background: #555; cursor: not-allowed; }
+
+/* ── Leaflet overrides ── */
+.leaflet-control-attribution { font-size: 7px !important; }
+.leaflet-container { background: #dce8f0; }
+.leaflet-control-zoom a {
+  width: 20px !important; height: 20px !important;
+  line-height: 20px !important; font-size: 13px !important;
+}
+.leaflet-control-zoom { margin: 0 4px 4px 0 !important; }
+
+/* ── Province label on map ── */
+.pv-label {
+  text-align: center; line-height: 1.35; pointer-events: none;
+}
+.pv-name {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 10px; font-weight: 700; color: #1a2e3d;
+}
+.pv-val {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 14px; font-weight: 800; color: #1a2e3d;
+}
+
+/* ── Date badge on map ── */
+.map-date-badge {
+  position: absolute; top: 6px; left: 6px; z-index: 500;
+  background: rgba(255,255,255,.88);
+  border: 1px solid #bbb; border-radius: 4px;
+  padding: 2px 7px; font-size: 9px; font-weight: 600;
+  font-family: 'Sarabun', sans-serif; color: #333;
+  pointer-events: none;
+}
+
+/* ── Disease banner ── */
+#disease-banner {
+  background: linear-gradient(135deg, #1a4f7a11, #2980b911);
+  border: 1px solid #1a4f7a33;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 9px;
+  color: #1a4f7a;
+  font-weight: 600;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+/* ── Disease 4 mini charts grid ── */
+#disease-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+}
+.mini-chart-wrap {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 3px 5px 2px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mini-kpi {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-bottom: 1px;
+}
+.mini-icon    { font-size: 9px; }
+.mini-disease { font-size: 8px; font-weight: 600; color: #444; flex: 1; }
+.mini-total   { font-size: 11px; font-weight: 800; color: #1a4f7a; }
+.mini-unit    { font-size: 7.5px; color: #888; }
+.mini-chart-wrap canvas { flex: 1; min-height: 0; }
+
+/* ── Loading spinner ── */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: #999; font-size: 10px; gap: 5px;
+}
+
+/* ── Error badge ── */
+.err-badge {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: #c0392b; font-size: 9.5px;
+  text-align: center; padding: 8px; line-height: 1.5;
+}
+  </style>
+</head>
+<body>
+<div id="dashboard">
+
+  <!-- ════════════════ ZONE A : HEADER ════════════════ -->
+  <div id="zone-a">
+    <div class="logo-wrap">สคร.7<br>ขอนแก่น</div>
+    <div class="title-wrap">
+      <h1>รายงานสถานการณ์ฝุ่นละออง PM<sub>2.5</sub> เขตสุขภาพที่ 7</h1>
+      <p>สำนักงานป้องกันควบคุมโรคที่ 7 จังหวัดขอนแก่น &nbsp;|&nbsp; ขอนแก่น · มหาสารคาม · ร้อยเอ็ด · กาฬสินธุ์</p>
+    </div>
+    <div class="date-wrap">
+      <span class="date-big" id="hdr-date">--/--/----</span><br>
+      <span id="hdr-time">อัปเดต --:-- น.</span>
+    </div>
+  </div>
+
+  <!-- ════════════════ ZONE BC : Map | Trend ════════════════ -->
+  <div id="zone-bc">
+
+    <!-- Zone B : Choropleth Province Map -->
+    <div id="zone-b">
+      <div class="zone-title">ค่า PM<sub>2.5</sub> ล่าสุด รายจังหวัด (µg/m³)</div>
+      <div id="map-province"><div class="loading">⏳ กำลังโหลดแผนที่...</div></div>
+    </div>
+
+    <!-- Zone C : Daily Trend Line Chart -->
+    <div id="zone-c">
+      <div class="zone-title" style="position:relative;">
+        แนวโน้ม PM<sub>2.5</sub> รายวัน ราย 4 จังหวัด (ต.ค. 2568 – ปัจจุบัน)
+        <button id="btn-reset-zoom" onclick="resetChartZoom()"
+          style="display:none;position:absolute;right:4px;top:50%;transform:translateY(-50%);
+                 background:#1a4f7a;color:#fff;border:none;border-radius:3px;
+                 padding:1px 7px;font-size:8.5px;font-family:'Sarabun',sans-serif;cursor:pointer;">
+          🔍 Reset
+        </button>
+      </div>
+      <div class="zone-inner">
+        <canvas id="chart-trend"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════ ZONE D : Heatmap 7 days ════════════════ -->
+  <div id="zone-d" class="zone">
+    <div class="zone-title">ค่าฝุ่น PM<sub>2.5</sub> ย้อนหลัง 7 วันล่าสุด รายจังหวัด (µg/m³)</div>
+    <div class="zone-inner">
+      <table id="heatmap-table">
+        <thead>
+          <tr>
+            <th>จังหวัด</th>
+            <th id="th0">-</th><th id="th1">-</th><th id="th2">-</th>
+            <th id="th3">-</th><th id="th4">-</th><th id="th5">-</th>
+            <th id="th6" class="col-today">วันนี้</th>
+          </tr>
+        </thead>
+        <tbody id="heatmap-body">
+          <tr>
+            <td class="pname">⏳ กำลังโหลด...</td>
+            <td colspan="7"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════ ZONE EF : Hotspot | Disease ════════════════ -->
+  <div id="zone-ef">
+
+    <!-- Zone E : GISTDA Hotspot Map -->
+    <div id="zone-e">
+      <div class="zone-title">🔥 จุด Hotspot ในเขตสุขภาพที่ 7</div>
+      <div id="map-hotspot"><div class="loading">⏳ กำลังโหลด Hotspot...</div></div>
+    </div>
+
+    <!-- Zone F : Disease Summary + Mini Charts -->
+    <div id="zone-f">
+      <div class="zone-title">สถานการณ์โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น PM<sub>2.5</sub></div>
+      <div class="zone-inner" style="padding:4px 6px;display:flex;flex-direction:column;gap:4px;">
+
+        <!-- Update info banner -->
+        <div id="disease-banner">
+          <span id="disease-banner-text">⏳ กำลังโหลด...</span>
+        </div>
+
+        <!-- 4 KPI cards + sparkline -->
+        <div id="disease-grid">
+          <!-- cards สร้างโดย JS จาก DCFG.diseases -->
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════ ZONE G : Recommendations ════════════════ -->
+  <div id="zone-g" class="zone">
+    <div class="zone-title">คำแนะนำประชาชน ตามระดับคุณภาพอากาศ PM<sub>2.5</sub></div>
+    <div class="zone-inner">
+      <div id="rec-grid">
+
+        <div class="rec-card aqi-vgood">
+          <div class="rec-icon">😊</div>
+          <div class="rec-level">ดีมาก</div>
+          <div class="rec-range">0 – 15 µg/m³</div>
+          <div class="rec-body">ทำกิจกรรมกลางแจ้งได้ตามปกติ ไม่มีข้อจำกัด</div>
+        </div>
+
+        <div class="rec-card aqi-good">
+          <div class="rec-icon">🙂</div>
+          <div class="rec-level">ดี</div>
+          <div class="rec-range">16 – 25 µg/m³</div>
+          <div class="rec-body">ทำกิจกรรมได้ตามปกติ ไม่มีผลกระทบต่อประชาชนทั่วไป</div>
+        </div>
+
+        <div class="rec-card aqi-medium">
+          <div class="rec-icon">😐</div>
+          <div class="rec-level">ปานกลาง</div>
+          <div class="rec-range">26 – 37.5 µg/m³</div>
+          <div class="rec-body">กลุ่มเสี่ยง* ควรลดกิจกรรมกลางแจ้งที่ใช้แรงมาก</div>
+        </div>
+
+        <div class="rec-card aqi-start">
+          <div class="rec-icon">😷</div>
+          <div class="rec-level">เริ่มมีผลต่อสุขภาพ</div>
+          <div class="rec-range">37.6 – 75 µg/m³</div>
+          <div class="rec-body">ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95</div>
+        </div>
+
+        <div class="rec-card aqi-bad">
+          <div class="rec-icon">🚨</div>
+          <div class="rec-level">มีผลต่อสุขภาพ</div>
+          <div class="rec-range">&gt; 75 µg/m³</div>
+          <div class="rec-body">หลีกเลี่ยงกิจกรรมกลางแจ้ง อยู่ในอาคาร ปิดประตูหน้าต่าง</div>
+        </div>
+
+      </div>
+      <div class="rec-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
+    </div>
+  </div>
+
+  <!-- ════════════════ FOOTER ════════════════ -->
+  <div id="zone-footer">
+    <div>
+      แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) &nbsp;|&nbsp;
+      GISTDA (จุด Hotspot) &nbsp;|&nbsp;
+      กรมควบคุมโรค / สคร.7 ขอนแก่น
+    </div>
+    <button id="btn-export" onclick="exportPNG()">💾 ดาวน์โหลด PNG</button>
+  </div>
+
+</div><!-- /#dashboard -->
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════ -->
+<script>
+/* ════════════════════════════════════════════════════
+   GLOBAL STATE
+════════════════════════════════════════════════════ */
+let DCFG = {};          // Dashboard config (from server)
+let mapB  = null;       // Leaflet — Zone B
+let mapE  = null;       // Leaflet — Zone E  (Step 4)
+let chartC = null;      // Chart.js — Zone C (Step 3)
+let chartF = null;      // Chart.js — Zone F (Step 5)
+
+/* ════════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════════ */
+async function initDashboard() {
+  try {
+    DCFG = await fetch('/api/config').then(r => r.json());
+    applyTheme();
+    applyRecommendations();
+    updateClock();
+    setInterval(updateClock, 60000);
+
+    // โหลดทุก Zone พร้อมกัน (independent)
+    await Promise.all([
+      initZoneB(),
+      initZoneCD(),  // Zone C + D ใช้ข้อมูล sheet เดียวกัน
+      initZoneE(),   // Step 4
+      initZoneF(),   // Step 5
+    ]);
+  } catch (e) {
+    console.error('Dashboard init error:', e);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   APPLY CONFIG → CSS variables + DOM text
+════════════════════════════════════════════════════ */
+function applyTheme() {
+  const r = document.documentElement;
+  const { theme, layout } = DCFG;
+  if (theme) {
+    r.style.setProperty('--c-header', theme.color_header);
+    r.style.setProperty('--c-footer', theme.color_footer);
+    r.style.setProperty('--c-export', theme.color_export_btn);
+    r.style.setProperty('--c-th-bg',  theme.color_table_header);
+  }
+  if (layout) {
+    r.style.setProperty('--h-a',       layout.h_header + 'px');
+    r.style.setProperty('--h-bc',      layout.h_bc     + 'px');
+    r.style.setProperty('--h-d',       layout.h_d      + 'px');
+    r.style.setProperty('--h-ef',      layout.h_ef     + 'px');
+    r.style.setProperty('--h-g',       layout.h_g      + 'px');
+    r.style.setProperty('--h-footer',  layout.h_footer + 'px');
+    r.style.setProperty('--col-bc',    layout.col_bc);
+    r.style.setProperty('--col-ef',    layout.col_ef);
+  }
+  if (DCFG.site) {
+    document.querySelector('#zone-a .title-wrap h1').innerHTML =
+      DCFG.site.title.replace('PM2.5', 'PM<sub>2.5</sub>');
+    document.querySelector('#zone-a .title-wrap p').textContent = DCFG.site.subtitle;
+    document.querySelector('#zone-a .logo-wrap').innerHTML =
+      DCFG.site.logo_text.replace('\n','<br>');
+    document.querySelector('#zone-footer div').textContent = 'แหล่งข้อมูล: ' + DCFG.site.footer_source;
+  }
+}
+
+function applyRecommendations() {
+  if (!DCFG.recommendations || !DCFG.aqi) return;
+  const grid = document.getElementById('rec-grid');
+  const aqiClasses = ['aqi-vgood','aqi-good','aqi-medium','aqi-start','aqi-bad'];
+  grid.innerHTML = DCFG.recommendations.map((r, i) => `
+    <div class="rec-card ${aqiClasses[i] || ''}">
+      <div class="rec-icon">${r.icon}</div>
+      <div class="rec-level">${r.level}</div>
+      <div class="rec-range">${r.range}</div>
+      <div class="rec-body">${r.body}</div>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════════════════ */
+function getAQI(val) {
+  if (!DCFG.aqi) return { bg: '#ccc', text: '#333', label: '-' };
+  return DCFG.aqi.find(a => val <= a.max) || DCFG.aqi[DCFG.aqi.length - 1];
+}
+
+function thDisplayDate(isoStr) {
+  if (!isoStr) return '-';
+  const [y, m, d] = isoStr.split('-');
+  const thY = parseInt(y) + 543;
+  return `${parseInt(d)}/${parseInt(m)}/${thY}`;
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('hdr-date').textContent =
+    now.toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('hdr-time').textContent =
+    'อัปเดต ' + now.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' }) + ' น.';
+}
+
+/* ════════════════════════════════════════════════════
+   ZONE B — Choropleth Province Map
+════════════════════════════════════════════════════ */
+async function initZoneB() {
+  const el = document.getElementById('map-province');
+  try {
+    const [geojsonRes, pm25Res] = await Promise.all([
+      fetch('/api/provinces-geojson'),
+      fetch('/api/sheet-pm25'),
+    ]);
+    if (!geojsonRes.ok) throw new Error('โหลด GeoJSON ไม่สำเร็จ');
+
+    const geojson = await geojsonRes.json();
+    const pm25    = pm25Res.ok ? await pm25Res.json() : { ok: false, latest: {}, latestDate: {} };
+
+    const rawLatest = pm25.latest || {};
+    const rawDate   = pm25.latestDate || {};
+
+    /* ── สร้าง lookup table pv_idn → {val, aqi, name} ──────────
+       ใช้ pv_idn (ตัวเลข) เป็น key หลีกเลี่ยง encoding issue    */
+    const pvById = {};   // pv_idn → { name, val, aqi }
+    (DCFG.provinces || []).forEach(pv => {
+      // หา key ใน rawLatest ที่ตรงกับชื่อจังหวัด
+      const matchKey = Object.keys(rawLatest).find(k =>
+        k.trim() === pv.name.trim() || k.includes(pv.name) || pv.name.includes(k.trim())
+      );
+      const val = matchKey !== undefined ? rawLatest[matchKey] : null;
+      pvById[pv.pv_idn] = { name: pv.name, val, aqi: val !== null ? getAQI(val) : null };
+    });
+
+    // หาวันล่าสุดจาก latestDate
+    const dates = Object.values(rawDate).filter(Boolean).sort();
+    const shownDate = dates[dates.length - 1] || '';
+
+    // เคลียร์ loading
+    el.innerHTML = '';
+
+    // สร้าง Leaflet map (zoom ได้)
+    mapB = L.map('map-province', {
+      zoomControl:        true,
+      scrollWheelZoom:    true,
+      dragging:           true,
+      doubleClickZoom:    true,
+      touchZoom:          true,
+      attributionControl: false,
+    });
+    mapB.zoomControl.setPosition('bottomright');
+
+    // OSM tile (opacity ต่ำ ให้สี AQI เด่น)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      opacity: 0.35
+    }).addTo(mapB);
+
+    // วาด province polygons — สีตาม AQI
+    const provinceLayer = L.geoJSON(geojson, {
+      style: feature => {
+        const pvid = feature.properties.pv_idn;
+        const info = pvById[pvid];
+        const aqi  = info?.aqi;
+        return {
+          fillColor:   aqi ? aqi.bg : '#cccccc',
+          fillOpacity: 0.80,
+          color:       '#ffffff',
+          weight:      2.5,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const pvid = feature.properties.pv_idn;
+        const info = pvById[pvid] || {};
+        const val  = info.val;
+        const aqi  = info.aqi;
+
+        layer.on('mouseover', function () {
+          this.setStyle({ fillOpacity: 0.95, weight: 3.5 });
+          const tip = val !== null
+            ? `<b>${info.name}</b><br>PM2.5: <b>${val.toFixed(1)}</b> µg/m³<br>${aqi?.label || ''}`
+            : `<b>${info.name || feature.properties.name}</b><br>ไม่มีข้อมูล`;
+          this.bindTooltip(tip, { sticky: true, direction: 'top' }).openTooltip();
+        });
+        layer.on('mouseout', function () {
+          provinceLayer.resetStyle(this);
+          this.closeTooltip();
+        });
+      }
+    }).addTo(mapB);
+
+    mapB.fitBounds(provinceLayer.getBounds(), { padding: [8, 8] });
+
+    // เพิ่ม label ชื่อ + ค่า PM2.5 บนแต่ละจังหวัด
+    geojson.features.forEach(f => {
+      const pvid = f.properties.pv_idn;
+      const info = pvById[pvid] || {};
+      const val  = info.val;
+      const name = info.name || f.properties.name_th || f.properties.name || '';
+      const aqi  = info.aqi;
+
+      let center;
+      try { center = L.geoJSON(f).getBounds().getCenter(); }
+      catch (_) { return; }
+
+      const valStr = val !== null ? val.toFixed(1) : '-';
+
+      L.marker(center, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="pv-label">
+                   <div class="pv-name">${name}</div>
+                   <div class="pv-val">${valStr}</div>
+                 </div>`,
+          iconSize:   [90, 48],
+          iconAnchor: [45, 24],
+        }),
+        interactive: false,
+      }).addTo(mapB);
+    });
+
+    // วันที่ badge
+    if (shownDate) {
+      const badge = document.createElement('div');
+      badge.className = 'map-date-badge';
+      badge.textContent = 'ล่าสุด ณ วันที่ ' + thDisplayDate(shownDate);
+      el.style.position = 'relative';
+      el.appendChild(badge);
+    }
+
+    // Attribution (แค่อันเดียว)
+    L.control.attribution({ prefix: false, position: 'bottomleft' }).addTo(mapB);
+
+  } catch (e) {
+    el.innerHTML = `<div class="err-badge">⚠️ ${e.message}</div>`;
+    console.error('Zone B error:', e);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   ZONE E — GISTDA / NASA FIRMS Hotspot Map
+════════════════════════════════════════════════════ */
+async function initZoneE() {
+  const el = document.getElementById('map-hotspot');
+  try {
+    const [hotspotRes, geojsonRes] = await Promise.all([
+      fetch('/api/hotspot'),
+      fetch('/api/provinces-geojson'),
+    ]);
+
+    const firms   = hotspotRes.ok  ? await hotspotRes.json()  : { ok: false, geojson: { features: [] } };
+    const geojson = geojsonRes.ok  ? await geojsonRes.json()  : { features: [] };
+
+    el.innerHTML = '';
+
+    mapE = L.map('map-hotspot', {
+      zoomControl:        true,
+      scrollWheelZoom:    true,
+      dragging:           true,
+      doubleClickZoom:    true,
+      attributionControl: false,
+      center:             [DCFG.map?.center_lat || 16.2, DCFG.map?.center_lng || 103.5],
+      zoom:               DCFG.map?.zoom || 8,
+    });
+    mapE.zoomControl.setPosition('bottomright');
+    setTimeout(() => mapE.invalidateSize(), 100);
+
+    // Tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      opacity: 0.45
+    }).addTo(mapE);
+
+    // Province boundaries (เบา)
+    L.geoJSON(geojson, {
+      style: {
+        fillColor:   '#fff9e6',
+        fillOpacity: 0.35,
+        color:       '#999',
+        weight:      1.5,
+      }
+    }).addTo(mapE);
+
+    // Hotspot markers
+    const hotspots = firms.geojson?.features || [];
+    hotspots.forEach(f => {
+      const [lng, lat] = f.geometry.coordinates;
+      const { confidence, frp, acq_date, acq_time } = f.properties;
+
+      // สีตาม confidence
+      const dotColor = confidence === 'high'    ? '#e8192c'
+                     : confidence === 'nominal' ? '#f07d00'
+                     :                            '#f5ce00';
+      // ขนาดตาม FRP (Fire Radiative Power)
+      const r = Math.min(5 + frp * 0.4, 14);
+
+      const circle = L.circleMarker([lat, lng], {
+        radius:      r,
+        fillColor:   dotColor,
+        color:       '#fff',
+        weight:      0.8,
+        fillOpacity: 0.88,
+      });
+
+      // Popup — ข้อมูลละเอียดจาก GISTDA
+      const p        = f.properties;
+      const thTime   = p.th_time   ? p.th_time.slice(0,2)+':'+p.th_time.slice(2)+' น.' : '-';
+      const dateStr  = p.acq_date  ? p.acq_date.slice(0,10) : '-';
+      const pvTh     = p.changwat  || p.pv_en  || '';
+      const apEn     = p.ap_en     || '';
+      const tbEn     = p.tb_en     || '';
+      const luName   = p.lu_hp_name|| p.lu_name || '-';
+      const confMap  = { high:'สูง 🔴', nominal:'ปานกลาง 🟠', low:'ต่ำ 🟡' };
+      circle.bindPopup(
+        `<div style="font-family:'Sarabun',sans-serif;font-size:10px;line-height:1.75;">
+          <b>🔥 จุด Hotspot</b><br>
+          <b>จังหวัด:</b> ${pvTh}<br>
+          <b>อำเภอ:</b> ${apEn}<br>
+          <b>ตำบล:</b> ${tbEn}<br>
+          <b>การใช้ที่ดิน:</b> ${luName}<br>
+          <hr style="margin:2px 0;border-color:#eee;">
+          <b>วันที่:</b> ${dateStr}<br>
+          <b>เวลา (ไทย):</b> ${thTime}<br>
+          <b>ความเชื่อมั่น:</b> ${confMap[confidence] || confidence}
+        </div>`,
+        { maxWidth: 160, offset: [0, -r], autoPanPadding: [5, 5] }
+      );
+      circle.addTo(mapE);
+    });
+
+    // Fit map — ใช้ bounds จาก GeoJSON ถ้ามี ไม่งั้นใช้ center จาก config
+    try {
+      const pvLayer = L.geoJSON(geojson);
+      const bounds  = pvLayer.getBounds();
+      if (bounds.isValid()) {
+        mapE.fitBounds(bounds, { padding: [6, 6] });
+      } else {
+        throw new Error('invalid bounds');
+      }
+    } catch (_) {
+      mapE.setView(
+        [DCFG.map?.center_lat || 16.2, DCFG.map?.center_lng || 103.5],
+        DCFG.map?.zoom || 8
+      );
+    }
+
+    // Legend + count badge
+    const legend = L.control({ position: 'topleft' });
+    legend.onAdd = () => {
+      const d = L.DomUtil.create('div');
+      d.style.cssText = 'background:rgba(255,255,255,.88);padding:5px 8px;border-radius:4px;font-family:Sarabun,sans-serif;font-size:8.5px;line-height:1.8;border:1px solid #ccc;';
+      d.innerHTML = `
+        <b>🔥 Hotspot 24 ชม. (${hotspots.length} จุด)</b><br>
+        <span style="color:#e8192c;">●</span> ความเชื่อมั่นสูง<br>
+        <span style="color:#f07d00;">●</span> ปานกลาง<br>
+        <span style="color:#f5ce00;">●</span> ต่ำ<br>
+        <span style="font-size:7.5px;color:#888;">แหล่งข้อมูล: GISTDA VIIRS</span>
+      `;
+      return d;
+    };
+    legend.addTo(mapE);
+
+    // Attribution
+    L.control.attribution({ prefix: 'GISTDA VIIRS', position: 'bottomleft' }).addTo(mapE);
+
+    // อัปเดต Zone title ให้แสดงวันที่
+    if (hotspots.length > 0) {
+      const dates = [...new Set(hotspots.map(f => f.properties.acq_date))].sort().reverse();
+      const titleEl = document.querySelector('#zone-e .zone-title');
+      if (titleEl) titleEl.textContent = '🔥 จุด Hotspot ในเขตสุขภาพที่ 7';
+    }
+
+  } catch (e) {
+    el.innerHTML = `<div class="err-badge">⚠️ ${e.message}</div>`;
+    console.error('Zone E error:', e);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   ZONE F — 4 Mini Charts โรคเฝ้าระวัง
+   แท่ง = 2568 | เส้น = 2569
+════════════════════════════════════════════════════ */
+const miniCharts = [];
+
+async function initZoneF() {
+  try {
+    const res  = await fetch('/api/sheet-disease');
+    if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
+    const data = await res.json();
+
+    const d2025 = data['2025'] || [];
+    const d2026 = data['2026'] || [];
+
+    // อ่านจาก config (แก้ได้ใน Admin Panel → โรคเฝ้าระวัง)
+    const DISEASES = (DCFG.diseases || [
+      { key: 'ทางเดินหายใจ', label: 'ระบบทางเดินหายใจ', icon: '😷', color: '#2980b9' },
+      { key: 'หัวใจ',        label: 'หัวใจ/หลอดเลือด',  icon: '❤️',  color: '#e74c3c' },
+      { key: 'ตาอักเสบ',     label: 'ตาอักเสบ',          icon: '👁️',  color: '#27ae60' },
+      { key: 'ผิวหนัง',      label: 'ผิวหนัง',           icon: '🧴',  color: '#f39c12' },
+    ]);
+
+    const WKS    = Array.from({ length: 53 }, (_, i) => i + 1);
+    const labels = WKS.map(w => String(w));
+
+    function getVal(rows, wk, keyPart) {
+      const row = rows.find(r => r.wk === wk);
+      if (!row) return null;
+      const k = Object.keys(row).find(k => k.includes(keyPart));
+      const v = k ? row[k] : null;
+      return (v !== null && v !== undefined && !isNaN(v) && v > 0) ? v : null;
+    }
+
+    // หา WK สุดท้ายที่มีข้อมูล 2569
+    const lastWK26 = d2026.reduce((max, r) => {
+      const hasData = DISEASES.some(d => getVal(d2026, r.wk, d.key) !== null);
+      return hasData ? Math.max(max, r.wk) : max;
+    }, 0);
+
+    // หาวันที่อัปเดต — ค้นจาก key ที่มีคำว่า "อัพเดท" หรือ "update"
+    let updateDateStr = '';
+    for (const row of d2026) {
+      const dateKey = Object.keys(row).find(k =>
+        k.includes('อัพเดท') || k.includes('อัปเดท') || k.toLowerCase().includes('update')
+      );
+      if (dateKey && row[dateKey] && String(row[dateKey]).includes('/')) {
+        const raw    = String(row[dateKey]).trim();
+        const parts  = raw.split('/');
+        if (parts.length === 3) {
+          const [d, m, y] = parts;
+          const thY = parseInt(y) + 543;
+          updateDateStr = `${parseInt(d)}/${parseInt(m)}/${thY}`;
+        } else {
+          updateDateStr = raw;
+        }
+        break;
+      }
+    }
+
+    // คำนวณยอดสะสม 2569 ถึง WK สุดท้าย
+    const totals26 = DISEASES.map(d =>
+      WKS.filter(w => w <= lastWK26)
+         .reduce((sum, w) => sum + (getVal(d2026, w, d.key) || 0), 0)
+    );
+
+    // Banner
+    const bannerEl = document.getElementById('disease-banner-text');
+    if (bannerEl) {
+      const dateInfo = updateDateStr ? ` (วันที่: ${updateDateStr})` : '';
+      bannerEl.innerHTML =
+        `👥 ยอดผู้ป่วยสะสม ปี 2569 ตั้งแต่สัปดาห์ที่ 1 – ${lastWK26}${dateInfo}<br>` +
+        `📈 ยอดสะสม ณ สัปดาห์ที่ <b>${lastWK26}</b>`;
+    }
+
+    // KPI totals
+    totals26.forEach((total, i) => {
+      const el = document.getElementById(`kt-${i}`);
+      if (el) el.textContent = total.toLocaleString();
+    });
+
+    // สร้าง card HTML จาก DCFG.diseases
+    const grid = document.getElementById('disease-grid');
+    grid.innerHTML = DISEASES.map((d, i) => `
+      <div class="mini-chart-wrap">
+        <div class="mini-kpi">
+          <span class="mini-icon">${d.icon || '●'}</span>
+          <span class="mini-disease">${d.label || d.key}</span>
+          <span class="mini-total" id="kt-${i}">-</span>
+          <span class="mini-unit">ราย</span>
+        </div>
+        <canvas id="cd-${i}"></canvas>
+      </div>`).join('');
+
+    // ทำลาย chart เก่า
+    miniCharts.forEach(c => c.destroy());
+    miniCharts.length = 0;
+
+    DISEASES.forEach((d, i) => {
+      const canvas = document.getElementById(`cd-${i}`);
+      if (!canvas) return;
+
+      const data2025 = WKS.map(w => getVal(d2025, w, d.key));
+      const data2026 = WKS.map(w => getVal(d2026, w, d.key));
+
+      const chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              type:            'bar',
+              label:           '2568',
+              data:            data2025,
+              backgroundColor: d.color + '50',
+              borderColor:     d.color + '99',
+              borderWidth:     0.5,
+              barPercentage:   0.85,
+              categoryPercentage: 1.0,
+            },
+            {
+              type:            'line',
+              label:           '2569',
+              data:            data2026,
+              borderColor:     d.color,
+              backgroundColor: 'transparent',
+              borderWidth:     1.8,
+              pointRadius:     0,
+              pointHoverRadius: 3,
+              tension:         0.3,
+              spanGaps:        false,
+            },
+          ],
+        },
+        options: {
+          responsive:          true,
+          maintainAspectRatio: false,
+          animation:           false,
+          interaction:         { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'top',
+              align:    'end',
+              labels: {
+                font:      { family: "'Sarabun', sans-serif", size: 7.5 },
+                boxWidth:  8,
+                boxHeight: 8,
+                padding:   4,
+              },
+            },
+            tooltip: {
+              titleFont: { family: "'Sarabun', sans-serif", size: 9 },
+              bodyFont:  { family: "'Sarabun', sans-serif", size: 9 },
+              padding:   5,
+              callbacks: {
+                title: items => `WK ${items[0].label}`,
+                label: ctx => {
+                  const v = ctx.parsed.y;
+                  return v !== null ? ` ${ctx.dataset.label}: ${v?.toLocaleString()} ราย` : null;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: {
+                font:          { size: 7, family: "'Sarabun', sans-serif" },
+                maxRotation:   0,
+                autoSkip:      true,
+                maxTicksLimit: 14,
+                callback:      (_, idx) => (idx + 1) % 8 === 1 ? String(idx + 1) : '',
+              },
+              grid: { display: false },
+            },
+            y: {
+              min: 0,
+              ticks: {
+                font:          { size: 7, family: "'Sarabun', sans-serif" },
+                maxTicksLimit: 4,
+                callback:      v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v,
+              },
+              grid: { color: '#f5f5f5' },
+            },
+          },
+        },
+      });
+      miniCharts.push(chart);
+    });
+
+  } catch (e) {
+    document.getElementById('disease-grid').innerHTML =
+      `<div class="err-badge" style="grid-column:span 2;">⚠️ ${e.message}</div>`;
+    console.error('Zone F error:', e);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   ZONE C + D — Line Chart + Heatmap Table
+   ใช้ข้อมูลจาก /api/sheet-pm25 ร่วมกัน
+════════════════════════════════════════════════════ */
+async function initZoneCD() {
+  try {
+    const res  = await fetch('/api/sheet-pm25');
+    const data = res.ok ? await res.json() : { ok: false };
+    if (!data.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ');
+
+    await Promise.all([
+      renderZoneC(data),
+      renderZoneD(data),
+    ]);
+  } catch (e) {
+    console.error('Zone C/D error:', e);
+    document.getElementById('chart-trend').closest('.zone-inner').innerHTML =
+      `<div class="err-badge">⚠️ ${e.message}</div>`;
+  }
+}
+
+/* ─── Zone C : Line Chart แนวโน้ม PM2.5 ───────────── */
+function renderZoneC(data) {
+  const pvs      = DCFG.provinces || [];
+  const allData  = data.allData   || {};
+  const sortedD  = data.sortedDates || Object.keys(allData).sort();
+
+  // จำนวนวันและเส้นเกณฑ์จาก config (แก้ได้ใน Admin Panel)
+  const MAX_DAYS   = DCFG.chart?.days_trend   || 60;
+  const THRESHOLDS = DCFG.chart?.thresholds   || [
+    { value: 37.5, label: 'เกณฑ์พิจารณา', color: '#f07d00' },
+    { value: 75.0, label: 'มาตรฐาน',      color: '#e8192c' },
+  ];
+  const dates    = sortedD.slice(0, MAX_DAYS).reverse(); // เรียงเก่า→ใหม่
+
+  // สร้าง dataset ราย Province
+  const datasets = pvs.map(pv => {
+    const vals = dates.map(d => {
+      const row = allData[d];
+      if (!row) return null;
+      const key = Object.keys(row).find(k =>
+        k.trim() === pv.name.trim() || k.includes(pv.name)
+      );
+      const v = key ? row[key] : null;
+      return (v !== null && v > 0) ? v : null;
+    });
+    return {
+      label:           pv.name,
+      data:            vals,
+      borderColor:     pv.color,
+      backgroundColor: pv.color + '22',
+      borderWidth:     1.5,
+      pointRadius:     0,
+      pointHitRadius:  6,
+      tension:         0.3,
+      spanGaps:        true,
+    };
+  });
+
+  // เส้นเกณฑ์ — อ่านจาก config
+  THRESHOLDS.forEach(t => {
+    datasets.push({
+      label:           t.label + ' ' + t.value,
+      data:            Array(dates.length).fill(t.value),
+      borderColor:     t.color,
+      borderWidth:     1.2,
+      borderDash:      [5, 4],
+      pointRadius:     0,
+      spanGaps:        true,
+      _thresholdLabel: String(t.value),
+      _thresholdColor: t.color,
+    });
+  });
+
+  // แปลงวันที่เป็น Thai short (dd/mm)
+  const labels = dates.map(d => {
+    const [y, m, day] = d.split('-');
+    return `${parseInt(day)}/${parseInt(m)}`;
+  });
+
+  // Plugin วาด label บนเส้นเกณฑ์ (ฝั่งขวา)
+  const thresholdLabelPlugin = {
+    id: 'thresholdLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea: { right }, scales: { y } } = chart;
+      chart.data.datasets.forEach((ds, i) => {
+        if (!ds._thresholdLabel) return;
+        const meta = chart.getDatasetMeta(i);
+        if (meta.hidden) return;
+        const yPx = y.getPixelForValue(parseFloat(ds._thresholdLabel));
+        ctx.save();
+        ctx.font = 'bold 8.5px Sarabun, sans-serif';
+        ctx.fillStyle = ds._thresholdColor;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(ds._thresholdLabel + ' µg/m³', right - 2, yPx - 2);
+        ctx.restore();
+      });
+    }
+  };
+
+  const canvas = document.getElementById('chart-trend');
+  if (chartC) chartC.destroy();
+  chartC = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    plugins: [thresholdLabelPlugin],
+    options: {
+      responsive:          true,
+      maintainAspectRatio: false,
+      animation:           false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            font: { family: "'Sarabun', sans-serif", size: 9 },
+            boxWidth: 10, padding: 6,
+            filter: item => {
+            const thLabels = (DCFG.chart?.thresholds || []).map(t => t.label + ' ' + t.value);
+            return !thLabels.includes(item.text);
+          },
+          },
+        },
+        tooltip: {
+          titleFont: { family: "'Sarabun', sans-serif", size: 10 },
+          bodyFont:  { family: "'Sarabun', sans-serif", size: 10 },
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : '-'} µg/m³`,
+          },
+        },
+        zoom: {
+          pan:  { enabled: true, mode: 'x', threshold: 5 },
+          zoom: {
+            wheel: { enabled: true, speed: 0.08 },
+            pinch: { enabled: true },
+            mode:  'x',
+            onZoomComplete: () => {
+              const btn = document.getElementById('btn-reset-zoom');
+              if (btn) btn.style.display = 'inline-flex';
+            },
+          },
+          limits: { x: { minRange: 7 } },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            font: { size: 7.5, family: "'Sarabun', sans-serif" },
+            maxRotation: 45,
+            autoSkip: true,
+            maxTicksLimit: 15,
+          },
+          grid: { display: false },
+        },
+        y: {
+          min: 0,
+          ticks: {
+            font: { size: 8, family: "'Sarabun', sans-serif" },
+            maxTicksLimit: 6,
+          },
+          grid: { color: '#f0f0f0' },
+          title: {
+            display: true,
+            text: 'µg/m³',
+            font: { size: 8, family: "'Sarabun', sans-serif" },
+            color: '#888',
+          },
+        },
+      },
+    },
+  });
+}
+
+/* ─── Zone D : Heatmap Table 7 วัน ───────────────── */
+function renderZoneD(data) {
+  const pvs   = DCFG.provinces || [];
+  const last7 = data.last7     || [];
+
+  if (!last7.length) {
+    document.getElementById('heatmap-body').innerHTML =
+      '<tr><td class="pname" colspan="8">ไม่มีข้อมูล</td></tr>';
+    return;
+  }
+
+  // อัปเดต header — แสดงวันที่ Thai (dd/mm)
+  last7.forEach((row, i) => {
+    const el = document.getElementById(`th${i}`);
+    if (!el) return;
+    const [y, m, d] = row.date.split('-');
+    const thY = parseInt(y) + 543;
+    el.textContent = `${parseInt(d)}/${parseInt(m)}/${String(thY).slice(2)}`;
+  });
+  // Today header
+  const todayEl = document.getElementById('th6');
+  if (todayEl && last7[6]) {
+    const [y, m, d] = last7[6].date.split('-');
+    todayEl.innerHTML = `${parseInt(d)}/${parseInt(m)}<br><small>วันนี้</small>`;
+    todayEl.style.background = '#f07d00';
+  }
+
+  // สร้างแถว
+  const tbody = document.getElementById('heatmap-body');
+  tbody.innerHTML = pvs.map(pv => {
+    const cells = last7.map((row, i) => {
+      // หา key ตรงกับชื่อจังหวัด
+      const key = Object.keys(row).find(k =>
+        k.trim() === pv.name.trim() || k.includes(pv.name)
+      );
+      const val = key ? row[key] : null;
+      const aqi = (val !== null && val > 0) ? getAQI(val) : null;
+      const bg  = aqi ? aqi.bg  : '#f5f5f5';
+      const fg  = aqi ? aqi.text : '#999';
+      const cls = i === 6 ? ' class="col-today"' : '';
+      const txt = (val !== null && val > 0) ? val.toFixed(1) : '-';
+      return `<td${cls} style="background:${bg};color:${fg};">${txt}</td>`;
+    }).join('');
+    return `<tr><td class="pname">${pv.name}</td>${cells}</tr>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════
+   ZOOM HELPERS
+════════════════════════════════════════════════════ */
+function resetChartZoom() {
+  if (chartC) {
+    chartC.resetZoom();
+    const btn = document.getElementById('btn-reset-zoom');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   PNG EXPORT
+════════════════════════════════════════════════════ */
+function exportPNG() {
+  const btn = document.getElementById('btn-export');
+  btn.textContent = '⏳ กำลังสร้างไฟล์...';
+  btn.disabled = true;
+  html2canvas(document.getElementById('dashboard'), {
+    scale: 2, useCORS: true, allowTaint: true, logging: false
+  }).then(canvas => {
+    const a = document.createElement('a');
+    const d = new Date();
+    a.download = `PM25_ODPC7_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }).finally(() => {
+    btn.textContent = '💾 ดาวน์โหลด PNG';
+    btn.disabled = false;
+  });
+}
+
+/* ── Boot ── */
+document.addEventListener('DOMContentLoaded', initDashboard);
+</script>
+</body>
+</html>

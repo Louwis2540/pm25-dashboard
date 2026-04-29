@@ -1,0 +1,5 @@
+node_modules/
+provinces.geojson
+.env
+*.bat
+pm2.5/

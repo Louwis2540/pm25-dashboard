@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel — PM2.5 Dashboard สคร.7</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --c-primary: #1a4f7a;
+      --c-accent:  #2980b9;
+      --c-success: #27ae60;
+      --c-danger:  #e8192c;
+      --c-warn:    #f07d00;
+      --c-bg:      #f0f4f8;
+      --c-card:    #ffffff;
+      --c-border:  #d0d7de;
+      --radius:    8px;
+      --font:      'Sarabun', sans-serif;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: var(--font); background: var(--c-bg); color: #2c3e50; }
+
+    /* ── Login page ── */
+    #login-page {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+    }
+    .login-card {
+      background: var(--c-card);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,.15);
+      padding: 40px 36px;
+      width: 360px;
+      text-align: center;
+    }
+    .login-card .logo { font-size: 48px; margin-bottom: 8px; }
+    .login-card h1 { font-size: 18px; color: var(--c-primary); margin-bottom: 4px; }
+    .login-card p  { font-size: 12px; color: #888; margin-bottom: 24px; }
+    .login-card input {
+      width: 100%; padding: 10px 14px; margin-bottom: 12px;
+      border: 1px solid var(--c-border); border-radius: 6px;
+      font-family: var(--font); font-size: 14px;
+    }
+    .login-card input:focus { outline: 2px solid var(--c-accent); border-color: transparent; }
+    #login-error { color: var(--c-danger); font-size: 12px; min-height: 18px; margin-bottom: 8px; }
+
+    /* ── Admin layout ── */
+    #admin-page { display: none; min-height: 100vh; }
+
+    .topbar {
+      background: var(--c-primary);
+      color: #fff;
+      padding: 0 24px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .topbar h1 { font-size: 16px; font-weight: 700; }
+    .topbar-right { display: flex; gap: 12px; align-items: center; font-size: 13px; }
+    .topbar a[href] { color: #7ecfff; text-decoration: none; font-size: 12px; }
+    .btn-logout {
+      background: var(--c-danger); color: #fff; border: none;
+      padding: 6px 14px; border-radius: 5px;
+      font-family: var(--font); font-size: 12px; cursor: pointer;
+    }
+
+    .admin-body { display: flex; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px; flex-shrink: 0;
+      background: #fff; border-right: 1px solid var(--c-border);
+      min-height: calc(100vh - 56px);
+      padding: 16px 0;
+      position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+    }
+    .sidebar-group { padding: 4px 0; }
+    .sidebar-group-title {
+      font-size: 9.5px; font-weight: 700; color: #999; letter-spacing: 1px;
+      padding: 8px 20px 4px; text-transform: uppercase;
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 20px; font-size: 13px; cursor: pointer;
+      transition: background .15s; border-radius: 0;
+    }
+    .sidebar-item:hover { background: #f0f4f8; }
+    .sidebar-item.active { background: #e8f0fe; color: var(--c-primary); font-weight: 600; }
+    .sidebar-item .icon { width: 18px; text-align: center; }
+
+    /* ── Main content ── */
+    .main-content { flex: 1; padding: 24px; min-width: 0; }
+
+    /* ── Section panels ── */
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-title {
+      font-size: 20px; font-weight: 700; color: var(--c-primary);
+      margin-bottom: 20px; padding-bottom: 10px;
+      border-bottom: 2px solid var(--c-primary);
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--c-card); border-radius: var(--radius);
+      border: 1px solid var(--c-border);
+      padding: 20px 24px; margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 700; color: #333;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── Form elements ── */
+    .form-row { margin-bottom: 14px; }
+    .form-row label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #555; margin-bottom: 5px;
+    }
+    .form-row input[type=text],
+    .form-row input[type=password],
+    .form-row input[type=number],
+    .form-row input[type=url],
+    .form-row textarea,
+    .form-row select {
+      width: 100%; padding: 9px 12px;
+      border: 1px solid var(--c-border); border-radius: 6px;
+      font-family: var(--font); font-size: 13px; color: #333;
+      transition: border .15s;
+    }
+    .form-row input:focus,
+    .form-row textarea:focus,
+    .form-row select:focus { outline: none; border-color: var(--c-accent); }
+    .form-row textarea { resize: vertical; min-height: 60px; }
+    .form-hint { font-size: 10.5px; color: #888; margin-top: 3px; }
+
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    /* ── Color picker inline ── */
+    .color-row { display: flex; align-items: center; gap: 10px; }
+    .color-row input[type=color] {
+      width: 44px; height: 36px; padding: 2px; border-radius: 6px;
+      border: 1px solid var(--c-border); cursor: pointer; flex-shrink: 0;
+    }
+    .color-row input[type=text] { flex: 1; }
+
+    /* ── AQI editor table ── */
+    .aqi-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .aqi-table th { background: #f0f4f8; padding: 8px 10px; text-align: left; font-size: 11px; color: #555; border-bottom: 2px solid var(--c-border); }
+    .aqi-table td { padding: 8px 6px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    .aqi-table input { width: 100%; padding: 6px 8px; border: 1px solid var(--c-border); border-radius: 4px; font-size: 12px; font-family: var(--font); }
+    .aqi-table input[type=color] { width: 44px; height: 30px; padding: 2px; cursor: pointer; }
+    .aqi-preview { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+    /* ── Province table ── */
+    .prov-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .prov-table th { background: #f0f4f8; padding: 8px 10px; text-align: left; font-size: 11px; color: #555; border-bottom: 2px solid var(--c-border); }
+    .prov-table td { padding: 8px 6px; border-bottom: 1px solid #f0f0f0; }
+    .prov-table input { width: 100%; padding: 6px 8px; border: 1px solid var(--c-border); border-radius: 4px; font-size: 12px; font-family: var(--font); }
+    .prov-table input[type=color] { width: 50px; height: 30px; padding: 2px; cursor: pointer; }
+
+    /* ── Rec editor ── */
+    .rec-item { display: grid; grid-template-columns: 50px 160px 160px 1fr; gap: 8px; align-items: start; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px; }
+    .rec-item label { font-size: 10px; color: #888; margin-bottom: 3px; display: block; }
+    .rec-item input, .rec-item textarea { width: 100%; padding: 6px; border: 1px solid var(--c-border); border-radius: 4px; font-family: var(--font); font-size: 12px; }
+    .rec-item textarea { resize: vertical; min-height: 50px; }
+
+    /* ── Layout editor ── */
+    .layout-total { font-size: 13px; font-weight: 700; padding: 10px 14px; border-radius: 6px; margin-top: 12px; }
+    .layout-ok   { background: #d4edda; color: #155724; }
+    .layout-warn { background: #fff3cd; color: #856404; }
+    .layout-err  { background: #f8d7da; color: #721c24; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 9px 20px; border-radius: 6px; border: none;
+      font-family: var(--font); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background .2s; display: inline-flex;
+      align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--c-primary); color: #fff; }
+    .btn-primary:hover { background: var(--c-accent); }
+    .btn-success { background: var(--c-success); color: #fff; }
+    .btn-success:hover { background: #219150; }
+    .btn-danger  { background: var(--c-danger); color: #fff; }
+    .btn-danger:hover  { background: #c0392b; }
+    .btn-sm { padding: 5px 12px; font-size: 11.5px; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #333; color: #fff;
+      padding: 12px 20px; border-radius: 8px;
+      font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+      opacity: 0; transform: translateY(12px);
+      transition: all .3s; pointer-events: none; z-index: 9999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.ok   { background: var(--c-success); }
+    #toast.err  { background: var(--c-danger); }
+
+    /* ── Dashboard preview link ── */
+    .preview-banner {
+      background: linear-gradient(135deg, #1a4f7a, #2980b9);
+      color: #fff; border-radius: var(--radius);
+      padding: 16px 20px; margin-bottom: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .preview-banner p { font-size: 13px; opacity: .9; margin-top: 2px; }
+    .btn-preview {
+      background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.4);
+      padding: 8px 18px; border-radius: 6px; font-family: var(--font);
+      font-size: 12px; cursor: pointer; text-decoration: none;
+      transition: background .2s;
+    }
+    .btn-preview:hover { background: rgba(255,255,255,.35); }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════ LOGIN PAGE ════════════════ -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="logo">🏥</div>
+    <h1>Admin Panel</h1>
+    <p>PM2.5 Dashboard สคร.7 ขอนแก่น</p>
+    <input id="inp-user" type="text"     placeholder="ชื่อผู้ใช้" autocomplete="username" />
+    <input id="inp-pass" type="password" placeholder="รหัสผ่าน"  autocomplete="current-password" />
+    <div id="login-error"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">
+      🔐 เข้าสู่ระบบ
+    </button>
+    <p style="margin-top:14px;font-size:11px;color:#aaa;">
+      รหัสเริ่มต้น: admin / password
+    </p>
+  </div>
+</div>
+
+<!-- ════════════════ ADMIN PAGE ════════════════ -->
+<div id="admin-page">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <h1>🏥 Admin Panel — PM2.5 Dashboard สคร.7 ขอนแก่น</h1>
+    <div class="topbar-right">
+      <a href="/index.html" target="_blank">🔗 ดู Dashboard</a>
+      <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="admin-body">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">ภาพรวม</div>
+        <div class="sidebar-item active" onclick="showSection('overview')">
+          <span class="icon">📊</span> ภาพรวม
+        </div>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">ตั้งค่า Dashboard</div>
+        <div class="sidebar-item" onclick="showSection('site')">
+          <span class="icon">📝</span> ข้อความ / Header
+        </div>
+        <div class="sidebar-item" onclick="showSection('theme')">
+          <span class="icon">🎨</span> สีธีม
+        </div>
+        <div class="sidebar-item" onclick="showSection('layout')">
+          <span class="icon">📐</span> Layout / ขนาด Zone
+        </div>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">ข้อมูล</div>
+        <div class="sidebar-item" onclick="showSection('provinces')">
+          <span class="icon">🗺️</span> จังหวัด
+        </div>
+        <div class="sidebar-item" onclick="showSection('aqi')">
+          <span class="icon">🌈</span> เกณฑ์ AQI
+        </div>
+        <div class="sidebar-item" onclick="showSection('recommendations')">
+          <span class="icon">💬</span> คำแนะนำประชาชน
+        </div>
+        <div class="sidebar-item" onclick="showSection('api')">
+          <span class="icon">🔑</span> API Keys
+        </div>
+        <div class="sidebar-item" onclick="showSection('map')">
+          <span class="icon">📍</span> ตั้งค่าแผนที่
+        </div>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">กราฟ</div>
+        <div class="sidebar-item" onclick="showSection('chart')">
+          <span class="icon">📈</span> เส้นเกณฑ์ / แนวโน้ม
+        </div>
+        <div class="sidebar-item" onclick="showSection('diseases')">
+          <span class="icon">🏥</span> โรคเฝ้าระวัง
+        </div>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">ระบบ</div>
+        <div class="sidebar-item" onclick="showSection('password')">
+          <span class="icon">🔒</span> เปลี่ยนรหัสผ่าน
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="main-content">
+
+      <!-- ── Overview ── -->
+      <div id="sec-overview" class="section active">
+        <div class="section-title">📊 ภาพรวมระบบ</div>
+        <div class="preview-banner">
+          <div>
+            <strong style="font-size:15px;">PM2.5 Dashboard พร้อมใช้งาน</strong>
+            <p>สคร.7 ขอนแก่น | ขอนแก่น · มหาสารคาม · ร้อยเอ็ด · กาฬสินธุ์</p>
+          </div>
+          <a href="/index.html" target="_blank" class="btn-preview">🔗 เปิด Dashboard</a>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+          <div class="card" style="text-align:center;">
+            <div style="font-size:32px;">🗺️</div>
+            <div style="font-size:13px;font-weight:700;margin-top:8px;">4 จังหวัด</div>
+            <div style="font-size:11px;color:#888;">ในเขตสุขภาพที่ 7</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:32px;">📡</div>
+            <div style="font-size:13px;font-weight:700;margin-top:8px;">Real-time</div>
+            <div style="font-size:11px;color:#888;">GISTDA Hotspot API</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:32px;">📄</div>
+            <div style="font-size:13px;font-weight:700;margin-top:8px;">Export PNG</div>
+            <div style="font-size:11px;color:#888;">ขนาด A4 พอดี</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚡ คำแนะนำการใช้งาน</div>
+          <ul style="font-size:13px;line-height:2;padding-left:18px;color:#555;">
+            <li>แก้ไขข้อความ/สี ทางเมนูซ้าย แล้วกด <strong>บันทึก</strong></li>
+            <li>การเปลี่ยน Layout — ผลรวมความสูงต้องได้ <strong>1123px</strong> (= A4)</li>
+            <li>หลังบันทึก รีเฟรช Dashboard เพื่อดูผล</li>
+            <li>เปลี่ยนรหัสผ่านทันทีหลังติดตั้งครั้งแรก</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ── Site / Header ── -->
+      <div id="sec-site" class="section">
+        <div class="section-title">📝 ข้อความ / Header</div>
+        <div class="card">
+          <div class="card-title">🏷️ ชื่อรายงานและหน่วยงาน</div>
+          <div class="form-row">
+            <label>ชื่อรายงาน (บรรทัด 1)</label>
+            <input type="text" id="site-title" />
+          </div>
+          <div class="form-row">
+            <label>ชื่อหน่วยงาน (บรรทัด 2)</label>
+            <input type="text" id="site-subtitle" />
+          </div>
+          <div class="form-row">
+            <label>ข้อความในโลโก้ (ใช้ \n แบ่งบรรทัด)</label>
+            <input type="text" id="site-logo" />
+          </div>
+          <div class="form-row">
+            <label>แหล่งข้อมูล (Footer)</label>
+            <textarea id="site-footer" rows="2"></textarea>
+          </div>
+          <button class="btn btn-success" onclick="saveSite()">💾 บันทึกข้อความ</button>
+        </div>
+      </div>
+
+      <!-- ── Theme ── -->
+      <div id="sec-theme" class="section">
+        <div class="section-title">🎨 สีธีม</div>
+        <div class="card">
+          <div class="card-title">🖌️ สีหลัก</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>สี Header</label>
+              <div class="color-row">
+                <input type="color" id="theme-header-picker" oninput="syncColor('theme-header-picker','theme-header-hex')" />
+                <input type="text"  id="theme-header-hex"   oninput="syncColor('theme-header-hex','theme-header-picker')" placeholder="#1a4f7a" />
+              </div>
+            </div>
+            <div class="form-row">
+              <label>สี Footer</label>
+              <div class="color-row">
+                <input type="color" id="theme-footer-picker" oninput="syncColor('theme-footer-picker','theme-footer-hex')" />
+                <input type="text"  id="theme-footer-hex"   oninput="syncColor('theme-footer-hex','theme-footer-picker')" placeholder="#1a4f7a" />
+              </div>
+            </div>
+            <div class="form-row">
+              <label>สีปุ่ม Export PNG</label>
+              <div class="color-row">
+                <input type="color" id="theme-export-picker" oninput="syncColor('theme-export-picker','theme-export-hex')" />
+                <input type="text"  id="theme-export-hex"   oninput="syncColor('theme-export-hex','theme-export-picker')" placeholder="#27ae60" />
+              </div>
+            </div>
+            <div class="form-row">
+              <label>สีหัวตาราง</label>
+              <div class="color-row">
+                <input type="color" id="theme-th-picker" oninput="syncColor('theme-th-picker','theme-th-hex')" />
+                <input type="text"  id="theme-th-hex"   oninput="syncColor('theme-th-hex','theme-th-picker')" placeholder="#1a4f7a" />
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-success" onclick="saveTheme()">💾 บันทึกสีธีม</button>
+        </div>
+      </div>
+
+      <!-- ── Layout ── -->
+      <div id="sec-layout" class="section">
+        <div class="section-title">📐 Layout / ขนาด Zone</div>
+        <div class="card">
+          <div class="card-title">📏 ความสูงแต่ละ Zone (px)</div>
+          <p style="font-size:11.5px;color:#888;margin-bottom:14px;">
+            ผลรวมทั้งหมดต้องเท่ากับ <strong>1123px</strong> (A4) — โปรแกรมจะคำนวณให้อัตโนมัติ
+          </p>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>Zone A — Header (px)</label>
+              <input type="number" id="lay-a" min="50" max="120" oninput="calcTotal()" />
+            </div>
+            <div class="form-row">
+              <label>Zone BC — แผนที่ + กราฟแนวโน้ม (px)</label>
+              <input type="number" id="lay-bc" min="150" max="400" oninput="calcTotal()" />
+            </div>
+            <div class="form-row">
+              <label>Zone D — ตาราง 7 วัน (px)</label>
+              <input type="number" id="lay-d" min="100" max="250" oninput="calcTotal()" />
+            </div>
+            <div class="form-row">
+              <label>Zone EF — Hotspot + กราฟโรค (px)</label>
+              <input type="number" id="lay-ef" min="150" max="400" oninput="calcTotal()" />
+            </div>
+            <div class="form-row">
+              <label>Zone G — คำแนะนำ (px)</label>
+              <input type="number" id="lay-g" min="100" max="300" oninput="calcTotal()" />
+            </div>
+            <div class="form-row">
+              <label>Footer (px)</label>
+              <input type="number" id="lay-footer" min="28" max="60" oninput="calcTotal()" />
+            </div>
+          </div>
+          <div id="layout-total" class="layout-total">ผลรวม: คำนวณ...</div>
+          <br/>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>สัดส่วน Zone B : C (แผนที่ : กราฟแนวโน้ม)</label>
+              <input type="text" id="lay-col-bc" placeholder="36% 64%" />
+              <div class="form-hint">เช่น 36% 64% หรือ 40% 60%</div>
+            </div>
+            <div class="form-row">
+              <label>สัดส่วน Zone E : F (Hotspot : กราฟโรค)</label>
+              <input type="text" id="lay-col-ef" placeholder="38% 62%" />
+            </div>
+          </div>
+          <button class="btn btn-success" onclick="saveLayout()">💾 บันทึก Layout</button>
+        </div>
+      </div>
+
+      <!-- ── Provinces ── -->
+      <div id="sec-provinces" class="section">
+        <div class="section-title">🗺️ ตั้งค่าจังหวัด</div>
+        <div class="card">
+          <div class="card-title">📍 จังหวัดในเขตสุขภาพที่ 7</div>
+          <table class="prov-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ชื่อจังหวัด</th>
+                <th>pv_idn (GISTDA)</th>
+                <th>คอลัมน์ Sheet</th>
+                <th>สีกราฟ</th>
+              </tr>
+            </thead>
+            <tbody id="prov-tbody"></tbody>
+          </table>
+          <br/>
+          <button class="btn btn-success" onclick="saveProvinces()">💾 บันทึกจังหวัด</button>
+        </div>
+      </div>
+
+      <!-- ── AQI ── -->
+      <div id="sec-aqi" class="section">
+        <div class="section-title">🌈 เกณฑ์ระดับ AQI</div>
+        <div class="card">
+          <div class="card-title">📊 กำหนดค่า PM2.5 และสีแต่ละระดับ</div>
+          <table class="aqi-table">
+            <thead>
+              <tr>
+                <th>ชื่อระดับ</th>
+                <th>ค่าสูงสุด (µg/m³)</th>
+                <th>สีพื้นหลัง</th>
+                <th>สีข้อความ</th>
+                <th>ตัวอย่าง</th>
+              </tr>
+            </thead>
+            <tbody id="aqi-tbody"></tbody>
+          </table>
+          <br/>
+          <button class="btn btn-success" onclick="saveAQI()">💾 บันทึกเกณฑ์ AQI</button>
+        </div>
+      </div>
+
+      <!-- ── Recommendations ── -->
+      <div id="sec-recommendations" class="section">
+        <div class="section-title">💬 คำแนะนำประชาชน</div>
+        <div class="card">
+          <div class="card-title">✏️ แก้ไขคำแนะนำแต่ละระดับ</div>
+          <div id="rec-editor"></div>
+          <button class="btn btn-success" onclick="saveRec()">💾 บันทึกคำแนะนำ</button>
+        </div>
+      </div>
+
+      <!-- ── API Keys ── -->
+      <div id="sec-api" class="section">
+        <div class="section-title">🔑 API Keys</div>
+        <div class="card">
+          <div class="card-title">🔐 ตั้งค่า API Key</div>
+          <div class="form-row">
+            <label>GISTDA API Key</label>
+            <input type="text" id="api-gistda" />
+            <div class="form-hint">ใช้สำหรับดึงข้อมูล Hotspot จาก GISTDA</div>
+          </div>
+          <div class="form-row">
+            <label>Google Sheet ID</label>
+            <input type="text" id="api-sheet" />
+            <div class="form-hint">ID จาก URL ของ Google Sheet</div>
+          </div>
+          <button class="btn btn-success" onclick="saveAPI()">💾 บันทึก API Keys</button>
+        </div>
+      </div>
+
+      <!-- ── Map ── -->
+      <div id="sec-map" class="section">
+        <div class="section-title">📍 ตั้งค่าแผนที่</div>
+        <div class="card">
+          <div class="card-title">🗺️ จุดศูนย์กลางและระดับ Zoom</div>
+          <div class="form-grid-3">
+            <div class="form-row">
+              <label>Latitude (จุดกึ่งกลาง)</label>
+              <input type="number" id="map-lat" step="0.01" />
+            </div>
+            <div class="form-row">
+              <label>Longitude (จุดกึ่งกลาง)</label>
+              <input type="number" id="map-lng" step="0.01" />
+            </div>
+            <div class="form-row">
+              <label>Zoom Level (1–18)</label>
+              <input type="number" id="map-zoom" min="1" max="18" />
+            </div>
+          </div>
+          <div class="form-hint" style="margin-bottom:12px;">
+            💡 ขอนแก่น ≈ lat 16.44, lng 102.83 | ศูนย์กลาง 4 จังหวัด ≈ lat 16.2, lng 103.5
+          </div>
+          <button class="btn btn-success" onclick="saveMap()">💾 บันทึกตั้งค่าแผนที่</button>
+        </div>
+      </div>
+
+      <!-- ── Diseases ── -->
+      <div id="sec-diseases" class="section">
+        <div class="section-title">🏥 โรคเฝ้าระวัง (Zone F)</div>
+        <div class="card">
+          <div class="card-title">⚙️ ตั้งค่ากลุ่มโรค — ชื่อ ไอคอน สี และ Key จาก Google Sheet</div>
+          <p style="font-size:11px;color:#888;margin-bottom:14px;">
+            <b>Key</b> คือคำที่ใช้จับคู่กับชื่อคอลัมน์ใน Google Sheet เช่น "ทางเดินหายใจ"
+          </p>
+          <div id="disease-editor"></div>
+        </div>
+        <button class="btn btn-success" onclick="saveDiseases()">💾 บันทึกโรคเฝ้าระวัง</button>
+      </div>
+
+      <!-- ── Chart / Thresholds ── -->
+      <div id="sec-chart" class="section">
+        <div class="section-title">📈 เส้นเกณฑ์ / ตั้งค่ากราฟแนวโน้ม</div>
+
+        <div class="card">
+          <div class="card-title">📅 จำนวนวันที่แสดงในกราฟแนวโน้ม</div>
+          <div class="form-row" style="max-width:200px;">
+            <label>จำนวนวัน (Zone C)</label>
+            <input type="number" id="chart-days" min="7" max="365" />
+            <div class="form-hint">แนะนำ 30–90 วัน</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📏 เส้นเกณฑ์บนกราฟ</div>
+          <p style="font-size:11.5px;color:#888;margin-bottom:14px;">
+            เส้นประแนวนอนที่แสดงบนกราฟแนวโน้ม PM2.5 — แก้ได้ทั้งค่า ชื่อ และสี
+          </p>
+          <div id="threshold-editor"></div>
+          <div style="margin-top:10px;">
+            <button class="btn btn-primary btn-sm" onclick="addThreshold()">+ เพิ่มเส้นเกณฑ์</button>
+          </div>
+        </div>
+
+        <button class="btn btn-success" onclick="saveChart()">💾 บันทึกตั้งค่ากราฟ</button>
+      </div>
+
+      <!-- ── Password ── -->
+      <div id="sec-password" class="section">
+        <div class="section-title">🔒 เปลี่ยนรหัสผ่าน Admin</div>
+        <div class="card" style="max-width:420px;">
+          <div class="card-title">🔑 เปลี่ยนรหัสผ่าน</div>
+          <div class="form-row">
+            <label>รหัสผ่านปัจจุบัน</label>
+            <input type="password" id="pw-current" autocomplete="current-password" />
+          </div>
+          <div class="form-row">
+            <label>รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label>
+            <input type="password" id="pw-new" autocomplete="new-password" />
+          </div>
+          <div class="form-row">
+            <label>ยืนยันรหัสผ่านใหม่</label>
+            <input type="password" id="pw-confirm" autocomplete="new-password" />
+          </div>
+          <button class="btn btn-danger" onclick="changePassword()">🔒 เปลี่ยนรหัสผ่าน</button>
+        </div>
+      </div>
+
+    </main><!-- /.main-content -->
+  </div><!-- /.admin-body -->
+</div><!-- /#admin-page -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════ */
+let CFG = {};
+
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  setTimeout(() => { t.className = ''; }, 3200);
+}
+
+async function api(url, opts={}) {
+  const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
+  return r.json();
+}
+
+function syncColor(srcId, dstId) {
+  const val = document.getElementById(srcId).value;
+  document.getElementById(dstId).value = val;
+  updateAQIPreviews();
+}
+
+/* ════════════════════════════════════════════
+   AUTH
+════════════════════════════════════════════ */
+async function init() {
+  const r = await api('/api/admin/check');
+  if (r.ok) showAdmin();
+}
+
+async function doLogin() {
+  const u = document.getElementById('inp-user').value.trim();
+  const p = document.getElementById('inp-pass').value;
+  const r = await api('/api/admin/login', {
+    method:'POST', body: JSON.stringify({ username: u, password: p })
+  });
+  if (r.ok) { showAdmin(); }
+  else { document.getElementById('login-error').textContent = r.message; }
+}
+document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogout() {
+  await api('/api/admin/logout', { method:'POST' });
+  location.reload();
+}
+
+async function showAdmin() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('admin-page').style.display = 'block';
+  await loadConfig();
+}
+
+/* ════════════════════════════════════════════
+   LOAD CONFIG
+════════════════════════════════════════════ */
+async function loadConfig() {
+  CFG = await api('/api/admin/config');
+
+  // Site
+  document.getElementById('site-title').value    = CFG.site.title;
+  document.getElementById('site-subtitle').value = CFG.site.subtitle;
+  document.getElementById('site-logo').value     = CFG.site.logo_text.replace('\n','\\n');
+  document.getElementById('site-footer').value   = CFG.site.footer_source;
+
+  // Theme
+  setColorPair('theme-header', CFG.theme.color_header);
+  setColorPair('theme-footer', CFG.theme.color_footer);
+  setColorPair('theme-export', CFG.theme.color_export_btn);
+  setColorPair('theme-th',     CFG.theme.color_table_header);
+
+  // Layout
+  const L = CFG.layout;
+  document.getElementById('lay-a').value      = L.h_header;
+  document.getElementById('lay-bc').value     = L.h_bc;
+  document.getElementById('lay-d').value      = L.h_d;
+  document.getElementById('lay-ef').value     = L.h_ef;
+  document.getElementById('lay-g').value      = L.h_g;
+  document.getElementById('lay-footer').value = L.h_footer;
+  document.getElementById('lay-col-bc').value = L.col_bc;
+  document.getElementById('lay-col-ef').value = L.col_ef;
+  calcTotal();
+
+  // Provinces
+  renderProvinces();
+
+  // AQI
+  renderAQI();
+
+  // Recommendations
+  renderRec();
+
+  // API
+  document.getElementById('api-gistda').value = CFG.api.gistda_key;
+  document.getElementById('api-sheet').value  = CFG.api.sheet_id;
+
+  // Map
+  document.getElementById('map-lat').value  = CFG.map.center_lat;
+  document.getElementById('map-lng').value  = CFG.map.center_lng;
+  document.getElementById('map-zoom').value = CFG.map.zoom;
+
+  // Chart / Thresholds
+  renderThresholds();
+
+  // Diseases
+  renderDiseases();
+}
+
+function setColorPair(base, val) {
+  document.getElementById(base+'-picker').value = val;
+  document.getElementById(base+'-hex').value    = val;
+}
+
+/* ════════════════════════════════════════════
+   SECTION NAV
+════════════════════════════════════════════ */
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+/* ════════════════════════════════════════════
+   LAYOUT CALCULATOR
+════════════════════════════════════════════ */
+function calcTotal() {
+  const ids = ['lay-a','lay-bc','lay-d','lay-ef','lay-g','lay-footer'];
+  const vals = ids.map(id => parseInt(document.getElementById(id).value)||0);
+  const sum  = vals.reduce((a,b)=>a+b,0);
+  const gap  = 5 * 5;   // 5 gaps × 5px
+  const pad  = 2 * 10;  // 2 sides × 10px
+  const total = sum + gap + pad;
+  const el = document.getElementById('layout-total');
+  el.textContent = `ผลรวม: ${total}px / 1123px (A4)`;
+  el.className = 'layout-total ' + (total === 1123 ? 'layout-ok' : total < 1123 ? 'layout-warn' : 'layout-err');
+}
+
+/* ════════════════════════════════════════════
+   PROVINCES RENDER
+════════════════════════════════════════════ */
+function renderProvinces() {
+  const tbody = document.getElementById('prov-tbody');
+  tbody.innerHTML = CFG.provinces.map((p,i) => `
+    <tr>
+      <td style="text-align:center;color:#888;font-size:12px;">${i+1}</td>
+      <td><input type="text"   id="pv-name-${i}"  value="${p.name}" /></td>
+      <td><input type="number" id="pv-idn-${i}"   value="${p.pv_idn}" /></td>
+      <td><input type="number" id="pv-col-${i}"   value="${p.sheet_col}" /></td>
+      <td><input type="color"  id="pv-color-${i}" value="${p.color}" style="width:60px;height:30px;padding:2px;border-radius:4px;border:1px solid #d0d7de;cursor:pointer;" /></td>
+    </tr>
+  `).join('');
+}
+
+/* ════════════════════════════════════════════
+   AQI RENDER
+════════════════════════════════════════════ */
+function renderAQI() {
+  const tbody = document.getElementById('aqi-tbody');
+  tbody.innerHTML = CFG.aqi.map((a,i) => `
+    <tr>
+      <td><input type="text"   id="aqi-label-${i}" value="${a.label}" style="width:160px;" /></td>
+      <td><input type="number" id="aqi-max-${i}"   value="${a.max === 9999 ? '' : a.max}" placeholder="(ไม่จำกัด)" step="0.5" /></td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="color"  id="aqi-bg-p-${i}"  value="${a.bg}"   oninput="syncAQIColor(${i},'bg')" style="width:44px;height:28px;padding:2px;cursor:pointer;border-radius:4px;border:1px solid #ccc;" />
+          <input type="text"   id="aqi-bg-h-${i}"  value="${a.bg}"   oninput="syncAQIColor(${i},'bg-hex')" style="width:80px;" />
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="color"  id="aqi-txt-p-${i}" value="${a.text}" oninput="syncAQIColor(${i},'txt')" style="width:44px;height:28px;padding:2px;cursor:pointer;border-radius:4px;border:1px solid #ccc;" />
+          <input type="text"   id="aqi-txt-h-${i}" value="${a.text}" oninput="syncAQIColor(${i},'txt-hex')" style="width:80px;" />
+        </div>
+      </td>
+      <td>
+        <span class="aqi-preview" id="aqi-prev-${i}"
+          style="background:${a.bg};color:${a.text};">${a.label}</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function syncAQIColor(i, type) {
+  if (type==='bg')      { document.getElementById(`aqi-bg-h-${i}`).value  = document.getElementById(`aqi-bg-p-${i}`).value; }
+  if (type==='bg-hex')  { document.getElementById(`aqi-bg-p-${i}`).value  = document.getElementById(`aqi-bg-h-${i}`).value; }
+  if (type==='txt')     { document.getElementById(`aqi-txt-h-${i}`).value = document.getElementById(`aqi-txt-p-${i}`).value; }
+  if (type==='txt-hex') { document.getElementById(`aqi-txt-p-${i}`).value = document.getElementById(`aqi-txt-h-${i}`).value; }
+  const prev = document.getElementById(`aqi-prev-${i}`);
+  prev.style.background = document.getElementById(`aqi-bg-h-${i}`).value;
+  prev.style.color      = document.getElementById(`aqi-txt-h-${i}`).value;
+  prev.textContent      = document.getElementById(`aqi-label-${i}`).value;
+}
+
+function updateAQIPreviews() {
+  CFG.aqi.forEach((_,i) => { try { syncAQIColor(i,'bg'); } catch(e){} });
+}
+
+/* ════════════════════════════════════════════
+   RECOMMENDATIONS RENDER
+════════════════════════════════════════════ */
+function renderRec() {
+  const ed = document.getElementById('rec-editor');
+  ed.innerHTML = CFG.recommendations.map((r,i) => `
+    <div class="rec-item">
+      <div>
+        <label>ไอคอน</label>
+        <input type="text" id="rec-icon-${i}" value="${r.icon}" />
+      </div>
+      <div>
+        <label>ระดับ</label>
+        <input type="text" id="rec-level-${i}" value="${r.level}" />
+      </div>
+      <div>
+        <label>ช่วงค่า</label>
+        <input type="text" id="rec-range-${i}" value="${r.range}" />
+      </div>
+      <div>
+        <label>คำแนะนำ</label>
+        <textarea id="rec-body-${i}" rows="2">${r.body}</textarea>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ════════════════════════════════════════════
+   SAVE FUNCTIONS
+════════════════════════════════════════════ */
+async function saveSite() {
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({
+    site: {
+      title:         document.getElementById('site-title').value,
+      subtitle:      document.getElementById('site-subtitle').value,
+      logo_text:     document.getElementById('site-logo').value.replace('\\n','\n'),
+      footer_source: document.getElementById('site-footer').value,
+    }
+  })});
+  toast(r.ok ? '✅ บันทึกข้อความสำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveTheme() {
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({
+    theme: {
+      color_header:       document.getElementById('theme-header-hex').value,
+      color_footer:       document.getElementById('theme-footer-hex').value,
+      color_export_btn:   document.getElementById('theme-export-hex').value,
+      color_table_header: document.getElementById('theme-th-hex').value,
+    }
+  })});
+  toast(r.ok ? '✅ บันทึกสีสำเร็จ — รีเฟรช Dashboard เพื่อดูผล' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveLayout() {
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({
+    layout: {
+      h_header: parseInt(document.getElementById('lay-a').value),
+      h_bc:     parseInt(document.getElementById('lay-bc').value),
+      h_d:      parseInt(document.getElementById('lay-d').value),
+      h_ef:     parseInt(document.getElementById('lay-ef').value),
+      h_g:      parseInt(document.getElementById('lay-g').value),
+      h_footer: parseInt(document.getElementById('lay-footer').value),
+      col_bc:   document.getElementById('lay-col-bc').value,
+      col_ef:   document.getElementById('lay-col-ef').value,
+    }
+  })});
+  toast(r.ok ? '✅ บันทึก Layout สำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveProvinces() {
+  const provinces = CFG.provinces.map((_,i) => ({
+    name:      document.getElementById(`pv-name-${i}`).value,
+    pv_idn:    parseInt(document.getElementById(`pv-idn-${i}`).value),
+    sheet_col: parseInt(document.getElementById(`pv-col-${i}`).value),
+    color:     document.getElementById(`pv-color-${i}`).value,
+  }));
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({ provinces }) });
+  toast(r.ok ? '✅ บันทึกจังหวัดสำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveAQI() {
+  const aqi = CFG.aqi.map((_,i) => ({
+    label: document.getElementById(`aqi-label-${i}`).value,
+    max:   parseFloat(document.getElementById(`aqi-max-${i}`).value) || 9999,
+    bg:    document.getElementById(`aqi-bg-h-${i}`).value,
+    text:  document.getElementById(`aqi-txt-h-${i}`).value,
+  }));
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({ aqi }) });
+  toast(r.ok ? '✅ บันทึกเกณฑ์ AQI สำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveRec() {
+  const recommendations = CFG.recommendations.map((_,i) => ({
+    icon:  document.getElementById(`rec-icon-${i}`).value,
+    level: document.getElementById(`rec-level-${i}`).value,
+    range: document.getElementById(`rec-range-${i}`).value,
+    body:  document.getElementById(`rec-body-${i}`).value,
+  }));
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({ recommendations }) });
+  toast(r.ok ? '✅ บันทึกคำแนะนำสำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveAPI() {
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({
+    api: {
+      gistda_key: document.getElementById('api-gistda').value.trim(),
+      sheet_id:   document.getElementById('api-sheet').value.trim(),
+    }
+  })});
+  toast(r.ok ? '✅ บันทึก API Keys สำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveMap() {
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({
+    map: {
+      center_lat: parseFloat(document.getElementById('map-lat').value),
+      center_lng: parseFloat(document.getElementById('map-lng').value),
+      zoom:       parseInt(document.getElementById('map-zoom').value),
+    }
+  })});
+  toast(r.ok ? '✅ บันทึกตั้งค่าแผนที่สำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+/* ── Diseases ── */
+function renderDiseases() {
+  const ed = document.getElementById('disease-editor');
+  const ds = CFG.diseases || [];
+  ed.innerHTML = ds.map((d, i) => `
+    <div class="rec-item" style="grid-template-columns:50px 1fr 1fr 120px;align-items:end;margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:6px;">
+      <div>
+        <label>ไอคอน</label>
+        <input type="text" id="ds-icon-${i}" value="${d.icon || ''}" style="text-align:center;font-size:16px;" />
+      </div>
+      <div>
+        <label>ชื่อแสดงผล (label)</label>
+        <input type="text" id="ds-label-${i}" value="${d.label || ''}" />
+      </div>
+      <div>
+        <label>Key จับคู่ Sheet</label>
+        <input type="text" id="ds-key-${i}" value="${d.key || ''}" />
+        <div class="form-hint">คำที่อยู่ในชื่อคอลัมน์ของ Sheet</div>
+      </div>
+      <div>
+        <label>สีกราฟ</label>
+        <div class="color-row">
+          <input type="color" id="ds-clr-p-${i}" value="${d.color || '#999'}"
+            oninput="document.getElementById('ds-clr-h-${i}').value=this.value" />
+          <input type="text"  id="ds-clr-h-${i}" value="${d.color || '#999'}" style="width:78px;"
+            oninput="document.getElementById('ds-clr-p-${i}').value=this.value" />
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function saveDiseases() {
+  const ds = (CFG.diseases || []).map((_, i) => ({
+    icon:  document.getElementById(`ds-icon-${i}`).value,
+    label: document.getElementById(`ds-label-${i}`).value,
+    key:   document.getElementById(`ds-key-${i}`).value,
+    color: document.getElementById(`ds-clr-h-${i}`).value,
+  }));
+  const r = await api('/api/admin/config', {
+    method: 'POST', body: JSON.stringify({ diseases: ds })
+  });
+  if (r.ok) { CFG.diseases = ds; renderDiseases(); }
+  toast(r.ok ? '✅ บันทึกโรคเฝ้าระวังสำเร็จ' : '❌ ' + r.message, r.ok ? 'ok' : 'err');
+}
+
+/* ── Chart / Threshold ── */
+function renderThresholds() {
+  const ed = document.getElementById('threshold-editor');
+  const ts = CFG.chart?.thresholds || [];
+  document.getElementById('chart-days').value = CFG.chart?.days_trend || 60;
+
+  ed.innerHTML = ts.map((t, i) => `
+    <div class="rec-item" id="thr-row-${i}" style="grid-template-columns:90px 1fr 120px 44px;align-items:end;">
+      <div>
+        <label>ค่า (µg/m³)</label>
+        <input type="number" id="thr-val-${i}" value="${t.value}" step="0.5" min="0" />
+      </div>
+      <div>
+        <label>ชื่อ label</label>
+        <input type="text" id="thr-lbl-${i}" value="${t.label}" />
+      </div>
+      <div>
+        <label>สีเส้น</label>
+        <div class="color-row">
+          <input type="color"  id="thr-clr-p-${i}" value="${t.color}"
+            oninput="document.getElementById('thr-clr-h-${i}').value=this.value" />
+          <input type="text"   id="thr-clr-h-${i}" value="${t.color}" style="width:80px;"
+            oninput="document.getElementById('thr-clr-p-${i}').value=this.value" />
+        </div>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button class="btn btn-danger btn-sm" onclick="removeThreshold(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function addThreshold() {
+  if (!CFG.chart) CFG.chart = { days_trend: 60, thresholds: [] };
+  CFG.chart.thresholds.push({ value: 50, label: 'เกณฑ์ใหม่', color: '#999999' });
+  renderThresholds();
+}
+
+function removeThreshold(i) {
+  CFG.chart.thresholds.splice(i, 1);
+  renderThresholds();
+}
+
+async function saveChart() {
+  const days = parseInt(document.getElementById('chart-days').value) || 60;
+  const ts   = (CFG.chart?.thresholds || []).map((_, i) => ({
+    value: parseFloat(document.getElementById(`thr-val-${i}`).value),
+    label: document.getElementById(`thr-lbl-${i}`).value,
+    color: document.getElementById(`thr-clr-h-${i}`).value,
+  }));
+  const r = await api('/api/admin/config', {
+    method: 'POST',
+    body: JSON.stringify({ chart: { days_trend: days, thresholds: ts } })
+  });
+  if (r.ok) { CFG.chart = { days_trend: days, thresholds: ts }; renderThresholds(); }
+  toast(r.ok ? '✅ บันทึกตั้งค่ากราฟสำเร็จ' : '❌ ' + r.message, r.ok ? 'ok' : 'err');
+}
+
+async function changePassword() {
+  const cur = document.getElementById('pw-current').value;
+  const nw  = document.getElementById('pw-new').value;
+  const cf  = document.getElementById('pw-confirm').value;
+  if (nw !== cf) { toast('❌ รหัสผ่านใหม่ไม่ตรงกัน', 'err'); return; }
+  const r = await api('/api/admin/change-password', {
+    method:'POST', body: JSON.stringify({ current_password: cur, new_password: nw })
+  });
+  toast(r.ok ? '✅ เปลี่ยนรหัสผ่านสำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+  if (r.ok) { document.getElementById('pw-current').value = ''; document.getElementById('pw-new').value = ''; document.getElementById('pw-confirm').value = ''; }
+}
+
+/* ── Boot ── */
+init();
+</script>
+</body>
+</html>

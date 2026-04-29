@@ -1,0 +1,168 @@
+{
+  "site": {
+    "title": "รายงานสถานการณ์ฝุ่นละออง PM2.5 เขตสุขภาพที่ 7",
+    "subtitle": "สำนักงานป้องกันควบคุมโรคที่ 7 จังหวัดขอนแก่น",
+    "logo_text": "สคร.7\nขอนแก่น",
+    "footer_source": "Air4Thai (กรมควบคุมมลพิษ) | GISTDA | กรมควบคุมโรค / สคร.7 ขอนแก่น"
+  },
+  "api": {
+    "gistda_key": "efh2yqYzAh017BbGIbO7L3QYpXFWjezxUM1v1UD8wpU1d0eUPUFS0FOCSgnLDyCz",
+    "sheet_id": "1bBOvPusSvh7R0AXG5ej9CxagtRkJXLaaJo79I4s9PX8"
+  },
+  "map": {
+    "center_lat": 16.2,
+    "center_lng": 103.5,
+    "zoom": 8
+  },
+  "provinces": [
+    {
+      "name": "ขอนแก่น",
+      "pv_idn": 40,
+      "sheet_col": 1,
+      "color": "#e74c3c"
+    },
+    {
+      "name": "มหาสารคาม",
+      "pv_idn": 44,
+      "sheet_col": 2,
+      "color": "#9b59b6"
+    },
+    {
+      "name": "ร้อยเอ็ด",
+      "pv_idn": 45,
+      "sheet_col": 3,
+      "color": "#2980b9"
+    },
+    {
+      "name": "กาฬสินธุ์",
+      "pv_idn": 46,
+      "sheet_col": 4,
+      "color": "#27ae60"
+    }
+  ],
+  "aqi": [
+    {
+      "label": "ดีมาก",
+      "max": 15,
+      "bg": "#009ede",
+      "text": "#ffffff"
+    },
+    {
+      "label": "ดี",
+      "max": 25,
+      "bg": "#52b447",
+      "text": "#ffffff"
+    },
+    {
+      "label": "ปานกลาง",
+      "max": 37.5,
+      "bg": "#f5ce00",
+      "text": "#333333"
+    },
+    {
+      "label": "เริ่มมีผลต่อสุขภาพ",
+      "max": 75,
+      "bg": "#f07d00",
+      "text": "#ffffff"
+    },
+    {
+      "label": "มีผลต่อสุขภาพ",
+      "max": 9999,
+      "bg": "#e8192c",
+      "text": "#ffffff"
+    }
+  ],
+  "recommendations": [
+    {
+      "level": "ดีมาก",
+      "range": "0 – 15 µg/m³",
+      "icon": "😊",
+      "body": "ทำกิจกรรมกลางแจ้งได้ตามปกติ ไม่มีข้อจำกัด"
+    },
+    {
+      "level": "ดี",
+      "range": "16 – 25 µg/m³",
+      "icon": "🙂",
+      "body": "ทำกิจกรรมได้ตามปกติ ไม่มีผลกระทบต่อประชาชนทั่วไป"
+    },
+    {
+      "level": "ปานกลาง",
+      "range": "26 – 37.5 µg/m³",
+      "icon": "😐",
+      "body": "กลุ่มเสี่ยง* ควรลดกิจกรรมกลางแจ้งที่ใช้แรงมาก"
+    },
+    {
+      "level": "เริ่มมีผลต่อสุขภาพ",
+      "range": "37.6 – 75 µg/m³",
+      "icon": "😷",
+      "body": "ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95"
+    },
+    {
+      "level": "มีผลต่อสุขภาพ",
+      "range": "> 75 µg/m³",
+      "icon": "🚨",
+      "body": "หลีกเลี่ยงกิจกรรมกลางแจ้ง อยู่ในอาคาร ปิดประตูหน้าต่าง"
+    }
+  ],
+  "diseases": [
+    {
+      "key": "ทางเดินหายใจ",
+      "label": "ระบบทางเดินหายใจ",
+      "icon": "😷",
+      "color": "#2980b9"
+    },
+    {
+      "key": "หัวใจ",
+      "label": "หัวใจ/หลอดเลือด",
+      "icon": "❤️",
+      "color": "#e74c3c"
+    },
+    {
+      "key": "ตาอักเสบ",
+      "label": "ตาอักเสบ",
+      "icon": "👁️",
+      "color": "#27ae60"
+    },
+    {
+      "key": "ผิวหนัง",
+      "label": "ผิวหนัง",
+      "icon": "🧴",
+      "color": "#f39c12"
+    }
+  ],
+  "chart": {
+    "days_trend": 60,
+    "thresholds": [
+      {
+        "value": 37.5,
+        "label": "เกณฑ์พิจารณา",
+        "color": "#f07d00"
+      },
+      {
+        "value": 75,
+        "label": "มาตรฐาน",
+        "color": "#e8192c"
+      }
+    ]
+  },
+  "theme": {
+    "color_header": "#1a4f7a",
+    "color_footer": "#1a4f7a",
+    "color_export_btn": "#27ae60",
+    "color_table_header": "#1a4f7a"
+  },
+  "layout": {
+    "h_header": 100,
+    "h_bc": 290,
+    "h_d": 165,
+    "h_ef": 270,
+    "h_g": 200,
+    "h_footer": 38,
+    "col_bc": "36% 64%",
+    "col_ef": "38% 62%"
+  },
+  "admin": {
+    "username": "admin",
+    "password_hash": "$2a$10$6mDbaQASMJhCB8.l6Ml48.WuoRpNoGIrx7.0CQO0aiYYDT.9j3MJe"
+  }
+}

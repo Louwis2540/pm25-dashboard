@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: pm25-dashboard-odpc7
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: GISTDA_KEY
+        sync: false
+      - key: SHEET_ID
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: NODE_ENV
+        value: production
