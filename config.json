@@ -1,18 +1,104 @@
 {
   "site": {
-    "title": "รายงานสถานการณ์ฝุ่นละออง PM2.5 เขตสุขภาพที่ 7",
-    "subtitle": "สำนักงานป้องกันควบคุมโรคที่ 7 จังหวัดขอนแก่น",
-    "logo_text": "สคร.7\nขอนแก่น",
-    "footer_source": "Air4Thai (กรมควบคุมมลพิษ) | GISTDA | กรมควบคุมโรค / สคร.7 ขอนแก่น"
+    "footer_source": "Air4Thai (กรมควบคุมมลพิษ) | GISTDA | HDC กระทรวงสาธารณสุข ",
+    "data_time": "07.00",
+    "developer_credit": "กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น | Dev: วัฒนพงษ์ พลแสน",
+    "header_date_color": "#0c0d0d"
+  },
+  "zone_titles": {
+    "b": "ค่า PM2.5 รายจังหวัด (µg/m³)",
+    "c": "แนวโน้ม PM2.5 รายวัน ราย 4 จังหวัด (ต.ค. 2568 – ปัจจุบัน)",
+    "d": "ค่าฝุ่น PM2.5 ย้อนหลัง 7 วันล่าสุด รายจังหวัด (µg/m³)",
+    "e": "🔥 จุด Hotspot ในเขตสุขภาพที่ 7",
+    "f": "สถานการณ์โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น PM2.5",
+    "g": "คำแนะนำประชาชน ตามระดับคุณภาพอากาศ PM2.5",
+    "rec_note": "* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด"
+  },
+  "zone_styles": {
+    "b": {
+      "icon": "🗺️",
+      "type": "gradient",
+      "c1": "#dbeafe",
+      "c2": "#bfdbfe",
+      "deg": "135deg",
+      "tc": "#0c2a5e"
+    },
+    "c": {
+      "icon": "📈",
+      "type": "gradient",
+      "c1": "#d1fae5",
+      "c2": "#6ee7b7",
+      "deg": "135deg",
+      "tc": "#064e3b"
+    },
+    "d": {
+      "icon": "📅",
+      "type": "gradient",
+      "c1": "#ede9fe",
+      "c2": "#c4b5fd",
+      "deg": "135deg",
+      "tc": "#2e1065"
+    },
+    "e": {
+      "icon": "🔥",
+      "type": "gradient",
+      "c1": "#fef3c7",
+      "c2": "#fcd34d",
+      "deg": "135deg",
+      "tc": "#78350f"
+    },
+    "f": {
+      "icon": "🏥",
+      "type": "gradient",
+      "c1": "#fce7f3",
+      "c2": "#f9a8d4",
+      "deg": "135deg",
+      "tc": "#831843"
+    },
+    "g": {
+      "icon": "💡",
+      "type": "gradient",
+      "c1": "#ecfdf5",
+      "c2": "#6ee7b7",
+      "deg": "135deg",
+      "tc": "#064e3b"
+    }
+  },
+  "typography": {
+    "font_family": "Kanit",
+    "zone_title_size": 16,
+    "zone_title_color": "#08407d",
+    "cell_size": 10.5,
+    "label_size": 9.5,
+    "small_size": 8.5,
+    "hdr_date_size": 12,
+    "hdr_time_size": 10,
+    "th_size": 10.5,
+    "map_name_size": 12,
+    "map_val_size": 18,
+    "map_label_color": "#1a2e3d",
+    "rec_level_size": 11,
+    "rec_range_size": 9.5,
+    "rec_body_size": 9.5,
+    "disease_size": 9,
+    "disease_total_size": 12
   },
   "api": {
     "gistda_key": "efh2yqYzAh017BbGIbO7L3QYpXFWjezxUM1v1UD8wpU1d0eUPUFS0FOCSgnLDyCz",
     "sheet_id": "1bBOvPusSvh7R0AXG5ej9CxagtRkJXLaaJo79I4s9PX8"
   },
   "map": {
-    "center_lat": 16.2,
-    "center_lng": 103.5,
-    "zoom": 8
+    "center_lat": 16.31478,
+    "center_lng": 103.24951,
+    "zoom": 7
+  },
+  "map_export": {
+    "b_lat": 16.31478,
+    "b_lng": 103.24951,
+    "b_zoom": 7,
+    "e_lat": 16.31478,
+    "e_lng": 103.24951,
+    "e_zoom": 7
   },
   "provinces": [
     {
@@ -25,7 +111,7 @@
       "name": "มหาสารคาม",
       "pv_idn": 44,
       "sheet_col": 2,
-      "color": "#9b59b6"
+      "color": "#bd2eff"
     },
     {
       "name": "ร้อยเอ็ด",
@@ -50,83 +136,83 @@
     {
       "label": "ดี",
       "max": 25,
-      "bg": "#52b447",
+      "bg": "#0e8a00",
       "text": "#ffffff"
     },
     {
       "label": "ปานกลาง",
       "max": 37.5,
-      "bg": "#f5ce00",
+      "bg": "#ffd500",
       "text": "#333333"
     },
     {
       "label": "เริ่มมีผลต่อสุขภาพ",
       "max": 75,
-      "bg": "#f07d00",
+      "bg": "#ff8400",
       "text": "#ffffff"
     },
     {
       "label": "มีผลต่อสุขภาพ",
       "max": 9999,
-      "bg": "#e8192c",
+      "bg": "#d10000",
       "text": "#ffffff"
     }
   ],
   "recommendations": [
     {
       "level": "ดีมาก",
-      "range": "0 – 15 µg/m³",
+      "range": "ค่าฝุ่น PM2.5 : 0 – 15 µg/m³",
       "icon": "😊",
       "body": "ทำกิจกรรมกลางแจ้งได้ตามปกติ ไม่มีข้อจำกัด"
     },
     {
       "level": "ดี",
-      "range": "16 – 25 µg/m³",
+      "range": "ค่าฝุ่น PM2.5 : 16 – 25 µg/m³",
       "icon": "🙂",
       "body": "ทำกิจกรรมได้ตามปกติ ไม่มีผลกระทบต่อประชาชนทั่วไป"
     },
     {
       "level": "ปานกลาง",
-      "range": "26 – 37.5 µg/m³",
+      "range": "ค่าฝุ่น PM2.5 : 26 – 37.5 µg/m³",
       "icon": "😐",
       "body": "กลุ่มเสี่ยง* ควรลดกิจกรรมกลางแจ้งที่ใช้แรงมาก"
     },
     {
       "level": "เริ่มมีผลต่อสุขภาพ",
-      "range": "37.6 – 75 µg/m³",
+      "range": "ค่าฝุ่น PM2.5 : 37.6 – 75 µg/m³",
       "icon": "😷",
       "body": "ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95"
     },
     {
       "level": "มีผลต่อสุขภาพ",
-      "range": "> 75 µg/m³",
+      "range": "ค่าฝุ่น PM2.5 : มากกว่า 75 µg/m³",
       "icon": "🚨",
       "body": "หลีกเลี่ยงกิจกรรมกลางแจ้ง อยู่ในอาคาร ปิดประตูหน้าต่าง"
     }
   ],
   "diseases": [
     {
-      "key": "ทางเดินหายใจ",
-      "label": "ระบบทางเดินหายใจ",
       "icon": "😷",
+      "label": "ระบบทางเดินหายใจ",
+      "key": "ทางเดินหายใจ",
       "color": "#2980b9"
     },
     {
-      "key": "หัวใจ",
-      "label": "หัวใจ/หลอดเลือด",
       "icon": "❤️",
+      "label": "ระบบหัวใจ/หลอดเลือด",
+      "key": "หัวใจ",
       "color": "#e74c3c"
     },
     {
-      "key": "ตาอักเสบ",
-      "label": "ตาอักเสบ",
       "icon": "👁️",
+      "label": "เยื่อบุตาอักเสบ",
+      "key": "ตาอักเสบ",
       "color": "#27ae60"
     },
     {
-      "key": "ผิวหนัง",
-      "label": "ผิวหนัง",
       "icon": "🧴",
+      "label": "กลุ่มโรคผิวหนังอักเสบ",
+      "key": "ผิวหนัง",
       "color": "#f39c12"
     }
   ],
@@ -147,9 +233,10 @@
   },
   "theme": {
     "color_header": "#1a4f7a",
-    "color_footer": "#1a4f7a",
+    "color_footer": "#d2ebf3",
+    "color_footer_text": "#0e2a47",
     "color_export_btn": "#27ae60",
-    "color_table_header": "#1a4f7a"
+    "color_table_header": "#42627b"
   },
   "layout": {
     "h_header": 100,
@@ -163,6 +250,6 @@
   },
   "admin": {
     "username": "admin",
-    "password_hash": "$2a$10$6mDbaQASMJhCB8.l6Ml48.WuoRpNoGIrx7.0CQO0aiYYDT.9j3MJe"
+    "password_hash": "$2a$10$AjJbS7sM9CDB5cWFGJc/DOmfTd7j22mmZ1XsX0qSVva0ONjjjZ8aC"
   }
 }

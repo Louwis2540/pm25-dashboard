@@ -6,12 +6,16 @@ services:
     startCommand: node server.js
     envVars:
       - key: PORT
-        value: 3000
-      - key: GISTDA_KEY
-        sync: false
-      - key: SHEET_ID
-        sync: false
-      - key: ADMIN_USERNAME
-        sync: false
+        value: 10000
       - key: NODE_ENV
         value: production
+      - key: SESSION_SECRET
+        generateValue: true          # Render สร้าง random secret ให้อัตโนมัติ
+      - key: GISTDA_KEY
+        sync: false                  # กรอกใน Render dashboard
+      - key: SHEET_ID
+        sync: false                  # กรอกใน Render dashboard
+      - key: ADMIN_USERNAME
+        sync: false                  # กรอกใน Render dashboard (ถ้าต้องการเปลี่ยน)
+      - key: ADMIN_PASSWORD_HASH
+        sync: false                  # bcrypt hash ของ password ใหม่

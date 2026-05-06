@@ -3,3 +3,11 @@ provinces.geojson
 .env
 *.bat
 pm2.5/
+
+# uploads — เก็บ folder แต่ไม่เก็บไฟล์ข้างใน
+uploads/*
+!uploads/.gitkeep
+
+# ไฟล์ที่ไม่จำเป็น
+*.log
+"Seal_of_the_Department_of_Disease_Control.svg - Copy.png"

@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>Admin Panel — PM2.5 Dashboard สคร.7</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root {
       --c-primary: #1a4f7a;
@@ -218,7 +220,7 @@
     .btn-preview:hover { background: rgba(255,255,255,.35); }
   </style>
 </head>
-<body>
+<body>  
 
 <!-- ════════════════ LOGIN PAGE ════════════════ -->
 <div id="login-page">
@@ -243,7 +245,12 @@
 
   <!-- Topbar -->
   <div class="topbar">
-    <h1>🏥 Admin Panel — PM2.5 Dashboard สคร.7 ขอนแก่น</h1>
+    <div>
+      <h1>🏥 Admin Panel — PM2.5 Dashboard สคร.7 ขอนแก่น</h1>
+      <div style="font-size:10px;opacity:.75;margin-top:1px;">
+        กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น &nbsp;|&nbsp; Dev: วัฒนพงษ์ พลแสน
+      </div>
+    </div>
     <div class="topbar-right">
       <a href="/index.html" target="_blank">🔗 ดู Dashboard</a>
       <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
@@ -265,8 +272,17 @@
         <div class="sidebar-item" onclick="showSection('site')">
           <span class="icon">📝</span> ข้อความ / Header
         </div>
+        <div class="sidebar-item" onclick="showSection('zonetitles')">
+          <span class="icon">📋</span> ชื่อ Zone / ข้อความ
+        </div>
+        <div class="sidebar-item" onclick="showSection('typography')">
+          <span class="icon">🔤</span> ฟอนต์ / Typography
+        </div>
+        <div class="sidebar-item" onclick="showSection('zonestyles')">
+          <span class="icon">🎨</span> Zone Styles
+        </div>
         <div class="sidebar-item" onclick="showSection('theme')">
-          <span class="icon">🎨</span> สีธีม
+          <span class="icon">🖌️</span> สีธีม
         </div>
         <div class="sidebar-item" onclick="showSection('layout')">
           <span class="icon">📐</span> Layout / ขนาด Zone
@@ -348,28 +364,308 @@
         </div>
       </div>
 
+      <!-- ── Zone Styles ── -->
+      <div id="sec-zonestyles" class="section">
+        <div class="section-title">🎨 Zone Styles — หัวข้อแต่ละ Zone</div>
+        <div class="card">
+          <div class="card-title">✏️ ปรับ Background + ไอคอน 3D แต่ละ Zone</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:#f0f4f8;">
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #d0d7de;width:110px;">Zone</th>
+                <th style="padding:8px;text-align:center;border-bottom:2px solid #d0d7de;width:60px;">ไอคอน</th>
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #d0d7de;width:100px;">ประเภท</th>
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #d0d7de;">สี 1</th>
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #d0d7de;">สี 2</th>
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #d0d7de;width:70px;">Angle</th>
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #d0d7de;">สีตัวอักษร</th>
+                <th style="padding:8px;text-align:center;border-bottom:2px solid #d0d7de;width:80px;">Preview</th>
+              </tr>
+            </thead>
+            <tbody id="zs-tbody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-success" onclick="saveZoneStyles()">💾 บันทึก Zone Styles</button>
+      </div>
+
+      <!-- ── Typography ── -->
+      <div id="sec-typography" class="section">
+        <div class="section-title">🔤 ฟอนต์ / Typography</div>
+        <div class="card">
+          <div class="card-title">🖊️ ฟอนต์หลัก</div>
+          <div class="form-row">
+            <label>เลือกฟอนต์</label>
+            <select id="ty-font" onchange="previewFont(this.value)" style="font-size:14px;">
+              <option value="IBM Plex Sans Thai">IBM Plex Sans Thai — สะอาด ทันสมัย</option>
+              <option value="Sarabun">Sarabun — มาตรฐาน ราชการ</option>
+              <option value="Noto Sans Thai">Noto Sans Thai — อ่านง่าย ชัดเจน</option>
+              <option value="Kanit">Kanit — โค้งมน สบายตา</option>
+              <option value="Prompt">Prompt — กลม นุ่มนวล</option>
+              <option value="Mitr">Mitr — เรียบ มินิมอล</option>
+              <option value="Bai Jamjuree">Bai Jamjuree — เรียว ทันสมัย</option>
+              <option value="K2D">K2D — เหลี่ยม เทคนิค</option>
+            </select>
+          </div>
+          <div id="ty-preview" style="padding:12px;background:#f8f9fa;border-radius:6px;font-size:14px;margin-top:8px;border:1px solid #e0e0e0;">
+            ตัวอย่างข้อความ: รายงานสถานการณ์ฝุ่นละออง PM2.5 เขตสุขภาพที่ 7
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📏 หัวข้อ Zone</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>ขนาดหัวข้อ Zone (px)</label>
+              <input type="number" id="ty-title-size" min="8" max="22" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>สีหัวข้อ Zone</label>
+              <div class="color-row">
+                <input type="color" id="ty-title-color-picker"
+                  oninput="document.getElementById('ty-title-color-hex').value=this.value" />
+                <input type="text"  id="ty-title-color-hex" placeholder="#0e2a47"
+                  oninput="document.getElementById('ty-title-color-picker').value=this.value" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗓️ วันที่ / เวลา (Header)</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>ขนาดวันที่ใหญ่ (px)</label>
+              <input type="number" id="ty-hdr-date-size" min="8" max="20" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ขนาดเวลา (px)</label>
+              <input type="number" id="ty-hdr-time-size" min="7" max="16" step="0.5" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗺️ ป้ายชื่อบนแผนที่จังหวัด</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>ขนาดชื่อจังหวัด (px)</label>
+              <input type="number" id="ty-map-name-size" min="8" max="18" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ขนาดค่า PM2.5 (px)</label>
+              <input type="number" id="ty-map-val-size" min="10" max="28" step="0.5" />
+            </div>
+            <div class="form-row" style="grid-column:span 2;">
+              <label>สีตัวอักษรบนแผนที่</label>
+              <div class="color-row">
+                <input type="color" id="ty-map-color-picker"
+                  oninput="document.getElementById('ty-map-color-hex').value=this.value" />
+                <input type="text"  id="ty-map-color-hex" placeholder="#1a2e3d"
+                  oninput="document.getElementById('ty-map-color-picker').value=this.value" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📅 ตาราง 7 วัน</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>ขนาด Header ตาราง (px)</label>
+              <input type="number" id="ty-th-size" min="7" max="16" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ขนาดข้อความในเซลล์ (px)</label>
+              <input type="number" id="ty-cell-size" min="7" max="16" step="0.5" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">💡 คำแนะนำประชาชน (Zone G)</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>ขนาดชื่อระดับ AQI (px)</label>
+              <input type="number" id="ty-rec-level-size" min="8" max="18" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ขนาดช่วงค่า (px)</label>
+              <input type="number" id="ty-rec-range-size" min="7" max="14" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ขนาดข้อความคำแนะนำ (px)</label>
+              <input type="number" id="ty-rec-body-size" min="7" max="14" step="0.5" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🏥 กราฟโรค (Zone F)</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>ขนาดชื่อโรค (px)</label>
+              <input type="number" id="ty-disease-size" min="7" max="14" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ขนาดตัวเลขรวม (px)</label>
+              <input type="number" id="ty-disease-total-size" min="8" max="20" step="0.5" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📝 ทั่วไป</div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>Label / คำอธิบาย (px)</label>
+              <input type="number" id="ty-label-size" min="7" max="14" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ตัวอักษรเล็ก / Footer (px)</label>
+              <input type="number" id="ty-small-size" min="6" max="14" step="0.5" />
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-success" onclick="saveTypography()">💾 บันทึก Typography ทั้งหมด</button>
+      </div>
+
       <!-- ── Site / Header ── -->
       <div id="sec-site" class="section">
         <div class="section-title">📝 ข้อความ / Header</div>
+
+        <!-- อัปโหลดรูปปก Header -->
         <div class="card">
-          <div class="card-title">🏷️ ชื่อรายงานและหน่วยงาน</div>
-          <div class="form-row">
-            <label>ชื่อรายงาน (บรรทัด 1)</label>
-            <input type="text" id="site-title" />
+          <div class="card-title">🖼️ รูปปก Header (Zone A)</div>
+          <p style="font-size:11.5px;color:#888;margin-bottom:14px;">
+            อัปโหลดรูปปกที่ออกแบบไว้ล่วงหน้า — จะแสดงเต็ม Zone A · รองรับ PNG, JPG, WebP<br>
+            <b>ลากรูป Preview</b> เพื่อปรับตำแหน่งการครอป แล้วกด "บันทึกตำแหน่ง"
+          </p>
+
+          <!-- Preview — draggable -->
+          <div style="font-size:11px;color:#888;margin-bottom:6px;">
+            Preview &nbsp;<span id="hdr-pos-label" style="color:#1a4f7a;font-weight:600;"></span>
           </div>
-          <div class="form-row">
-            <label>ชื่อหน่วยงาน (บรรทัด 2)</label>
-            <input type="text" id="site-subtitle" />
+          <div style="overflow-x:auto;border-radius:6px;">
+          <div id="hdr-preview-wrap"
+            style="width:794px;height:100px;overflow:hidden;border-radius:6px;
+                   border:2px solid var(--c-border);background:#e8f0f8;
+                   cursor:grab;position:relative;user-select:none;flex-shrink:0;"
+            title="ลากเพื่อปรับตำแหน่ง">
+            <img id="hdr-preview" src="/header.png?t=1" alt="header"
+              style="width:100%;height:100%;object-fit:cover;object-position:50% 50%;
+                     pointer-events:none;display:block;"
+              onerror="this.style.opacity='0'" />
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+                        font-size:11px;color:#aaa;pointer-events:none;" id="hdr-drag-hint">
+              ↔ ลากเพื่อปรับตำแหน่ง
+            </div>
           </div>
-          <div class="form-row">
-            <label>ข้อความในโลโก้ (ใช้ \n แบ่งบรรทัด)</label>
-            <input type="text" id="site-logo" />
           </div>
+
+          <!-- Controls -->
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center;">
+            <input type="file" id="hdr-file" accept="image/*" style="display:none" onchange="previewHeader(this)" />
+            <button class="btn btn-primary btn-sm" type="button" onclick="document.getElementById('hdr-file').click()">📁 เลือกรูปปก</button>
+            <button class="btn btn-success btn-sm" id="btn-upload-hdr" type="button" onclick="uploadHeader()" disabled>⬆️ อัปโหลด</button>
+            <button class="btn btn-primary btn-sm" id="btn-save-pos" type="button" onclick="saveHeaderPosition()" disabled>📌 บันทึกตำแหน่ง</button>
+            <span style="font-size:11px;color:#888;">ตำแหน่ง: <b id="hdr-pos-display">50% 50%</b></span>
+          </div>
+
+          <!-- สีวันเดือนปี -->
+          <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:600;color:#555;">🗓️ สีวันเดือนปี / เวลา</span>
+            <div class="color-row" style="margin:0;">
+              <input type="color" id="hdr-date-color-picker" value="#ffffff"
+                oninput="document.getElementById('hdr-date-color-hex').value=this.value;previewDateColor(this.value)" />
+              <input type="text" id="hdr-date-color-hex" value="#ffffff" placeholder="#ffffff"
+                oninput="document.getElementById('hdr-date-color-picker').value=this.value;previewDateColor(this.value)"
+                style="width:80px;" />
+            </div>
+            <button class="btn btn-success btn-sm" onclick="saveDateColor()">💾 บันทึกสี</button>
+          </div>
+        </div>
+
+        <!-- โลโก้ -->
+        <div class="card">
+          <div class="card-title">🏷️ โลโก้ (Logo)</div>
+          <p style="font-size:11.5px;color:#888;margin-bottom:14px;">
+            อัปโหลดโลโก้หน่วยงาน — แสดงที่มุมซ้ายบนใน Zone A (Header)<br>
+            รองรับ PNG, JPG, WebP · แนะนำขนาด 80×80px ขึ้นไป (สัดส่วน 1:1)
+          </p>
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+            <img id="logo-preview" src="/logo.png?t=1" alt="logo"
+              style="width:80px;height:80px;object-fit:contain;border-radius:8px;
+                     border:2px solid var(--c-border);background:#f0f4f8;"
+              onerror="this.style.opacity='0.25'" />
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="previewLogo(this)" />
+              <button class="btn btn-primary btn-sm" type="button" onclick="document.getElementById('logo-file').click()">📁 เลือกโลโก้</button>
+              <button class="btn btn-success btn-sm" id="btn-upload-logo" type="button" onclick="uploadLogo()" disabled>⬆️ อัปโหลด</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer text -->
+        <div class="card">
+          <div class="card-title">📄 แหล่งข้อมูล (Footer)</div>
           <div class="form-row">
-            <label>แหล่งข้อมูล (Footer)</label>
+            <label>ข้อความแถบล่าง</label>
             <textarea id="site-footer" rows="2"></textarea>
           </div>
-          <button class="btn btn-success" onclick="saveSite()">💾 บันทึกข้อความ</button>
+          <div class="form-row" style="margin-top:14px;">
+            <label>🕖 เวลาข้อมูล (แสดงบน Header และแผนที่)</label>
+            <input type="text" id="site-data-time" placeholder="เช่น 07.00 หรือ 13.00" style="max-width:200px;" />
+            <div class="form-hint">ใส่เฉพาะตัวเลขเวลา เช่น <b>07.00</b> — จะแสดงเป็น "ข้อมูล ณ เวลา 07.00 น."</div>
+          </div>
+          <button class="btn btn-success" onclick="saveSite()">💾 บันทึก</button>
+        </div>
+      </div>
+
+      <!-- ── Zone Titles ── -->
+      <div id="sec-zonetitles" class="section">
+        <div class="section-title">📋 ชื่อ Zone / ข้อความ</div>
+        <div class="card">
+          <div class="card-title">🗺️ ชื่อหัวข้อแต่ละ Zone</div>
+          <p style="font-size:11.5px;color:#888;margin-bottom:16px;">พิมพ์ <b>PM2.5</b> ตัวเลขธรรมดา — ระบบจะแปลงเป็น PM<sub>2.5</sub> ให้อัตโนมัติ</p>
+          <div class="form-row">
+            <label>🗺️ Zone B — แผนที่จังหวัด</label>
+            <input type="text" id="zt-b" />
+          </div>
+          <div class="form-row">
+            <label>📈 Zone C — กราฟแนวโน้ม</label>
+            <input type="text" id="zt-c" />
+          </div>
+          <div class="form-row">
+            <label>📅 Zone D — ตาราง 7 วัน</label>
+            <input type="text" id="zt-d" />
+          </div>
+          <div class="form-row">
+            <label>🔥 Zone E — Hotspot Map</label>
+            <input type="text" id="zt-e" />
+          </div>
+          <div class="form-row">
+            <label>🏥 Zone F — กราฟโรค</label>
+            <input type="text" id="zt-f" />
+          </div>
+          <div class="form-row">
+            <label>💡 Zone G — คำแนะนำประชาชน</label>
+            <input type="text" id="zt-g" />
+          </div>
+          <div class="form-row" style="margin-top:8px;">
+            <label>📌 หมายเหตุกลุ่มเสี่ยง (ใต้ Zone G)</label>
+            <input type="text" id="zt-rec-note" />
+          </div>
+          <button class="btn btn-success" style="margin-top:4px;" onclick="saveZoneTitles()">💾 บันทึกชื่อ Zone</button>
+        </div>
+        <div class="card">
+          <div class="card-title">👨‍💻 เครดิตผู้พัฒนา (Footer)</div>
+          <div class="form-row">
+            <label>ข้อความผู้พัฒนา</label>
+            <input type="text" id="site-dev-credit" placeholder="ชื่อหน่วยงาน | Dev: ชื่อ" />
+            <div class="form-hint">ใช้ | คั่นบรรทัด — จะแสดงเป็น 2 บรรทัดใน footer</div>
+          </div>
+          <button class="btn btn-success" onclick="saveDevCredit()">💾 บันทึก</button>
         </div>
       </div>
 
@@ -387,10 +683,17 @@
               </div>
             </div>
             <div class="form-row">
-              <label>สี Footer</label>
+              <label>สีพื้นหลัง Footer</label>
               <div class="color-row">
                 <input type="color" id="theme-footer-picker" oninput="syncColor('theme-footer-picker','theme-footer-hex')" />
                 <input type="text"  id="theme-footer-hex"   oninput="syncColor('theme-footer-hex','theme-footer-picker')" placeholder="#1a4f7a" />
+              </div>
+            </div>
+            <div class="form-row">
+              <label>สีตัวอักษร Footer</label>
+              <div class="color-row">
+                <input type="color" id="theme-footer-text-picker" oninput="syncColor('theme-footer-text-picker','theme-footer-text-hex')" />
+                <input type="text"  id="theme-footer-text-hex"   oninput="syncColor('theme-footer-text-hex','theme-footer-text-picker')" placeholder="#0e2a47" />
               </div>
             </div>
             <div class="form-row">
@@ -541,24 +844,46 @@
         <div class="section-title">📍 ตั้งค่าแผนที่</div>
         <div class="card">
           <div class="card-title">🗺️ จุดศูนย์กลางและระดับ Zoom</div>
+          <p style="font-size:11.5px;color:#888;margin-bottom:10px;">
+            <b>ลากแผนที่</b> เพื่อปรับศูนย์กลาง · <b>Scroll</b> เพื่อ zoom · ⊕ คือจุดที่จะบันทึก
+          </p>
+
+          <!-- Mini interactive map -->
+          <div style="position:relative;height:240px;border-radius:8px;overflow:hidden;border:2px solid var(--c-border);margin-bottom:12px;">
+            <div id="admin-map" style="width:100%;height:100%;"></div>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                        pointer-events:none;z-index:1000;font-size:30px;line-height:1;
+                        color:#e8192c;text-shadow:0 0 5px #fff,0 0 10px #fff;">⊕</div>
+          </div>
+
+          <!-- Coordinate readout -->
           <div class="form-grid-3">
             <div class="form-row">
-              <label>Latitude (จุดกึ่งกลาง)</label>
-              <input type="number" id="map-lat" step="0.01" />
+              <label>Latitude</label>
+              <input type="number" id="map-lat" step="0.001" oninput="syncAdminMapFromInputs()" />
             </div>
             <div class="form-row">
-              <label>Longitude (จุดกึ่งกลาง)</label>
-              <input type="number" id="map-lng" step="0.01" />
+              <label>Longitude</label>
+              <input type="number" id="map-lng" step="0.001" oninput="syncAdminMapFromInputs()" />
             </div>
             <div class="form-row">
               <label>Zoom Level (1–18)</label>
-              <input type="number" id="map-zoom" min="1" max="18" />
+              <input type="number" id="map-zoom" min="1" max="18" oninput="syncAdminMapFromInputs()" />
             </div>
           </div>
-          <div class="form-hint" style="margin-bottom:12px;">
-            💡 ขอนแก่น ≈ lat 16.44, lng 102.83 | ศูนย์กลาง 4 จังหวัด ≈ lat 16.2, lng 103.5
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button class="btn btn-success" onclick="saveMap()">💾 บันทึกศูนย์กลาง</button>
+            <button class="btn btn-primary" onclick="lockExportFromAdminMap()">🔒 ล็อกสำหรับ Export PNG</button>
           </div>
-          <button class="btn btn-success" onclick="saveMap()">💾 บันทึกตั้งค่าแผนที่</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔒 ตำแหน่งล็อกสำหรับ Export</div>
+          <div id="map-lock-display" style="font-size:12px;line-height:2;color:#555;background:#f8f9fa;padding:10px 14px;border-radius:6px;border:1px solid var(--c-border);margin-bottom:10px;">
+            กำลังโหลด...
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="clearMapLock()">🗑 ล้างค่าล็อก (ใช้ Auto-fit)</button>
         </div>
       </div>
 
@@ -691,16 +1016,29 @@ async function loadConfig() {
   CFG = await api('/api/admin/config');
 
   // Site
-  document.getElementById('site-title').value    = CFG.site.title;
-  document.getElementById('site-subtitle').value = CFG.site.subtitle;
-  document.getElementById('site-logo').value     = CFG.site.logo_text.replace('\n','\\n');
-  document.getElementById('site-footer').value   = CFG.site.footer_source;
+  document.getElementById('site-footer').value    = CFG.site.footer_source;
+  document.getElementById('site-data-time').value = CFG.site.data_time || '07.00';
+  document.getElementById('site-dev-credit').value = CFG.site.developer_credit || '';
+  document.getElementById('hdr-preview').src   = '/header.png?t=' + Date.now();
+
+  // Zone Titles
+  const zt = CFG.zone_titles || {};
+  ['b','c','d','e','f','g'].forEach(k => {
+    const el = document.getElementById('zt-' + k);
+    if (el) el.value = zt[k] || '';
+  });
+  document.getElementById('zt-rec-note').value = zt.rec_note || '';
+  setHdrPosFromConfig();
+  const dc = CFG.site?.header_date_color || '#ffffff';
+  document.getElementById('hdr-date-color-picker').value = dc;
+  document.getElementById('hdr-date-color-hex').value    = dc;
 
   // Theme
-  setColorPair('theme-header', CFG.theme.color_header);
-  setColorPair('theme-footer', CFG.theme.color_footer);
-  setColorPair('theme-export', CFG.theme.color_export_btn);
-  setColorPair('theme-th',     CFG.theme.color_table_header);
+  setColorPair('theme-header',      CFG.theme.color_header);
+  setColorPair('theme-footer',      CFG.theme.color_footer);
+  setColorPair('theme-footer-text', CFG.theme.color_footer_text || '#0e2a47');
+  setColorPair('theme-export',      CFG.theme.color_export_btn);
+  setColorPair('theme-th',          CFG.theme.color_table_header);
 
   // Layout
   const L = CFG.layout;
@@ -731,12 +1069,19 @@ async function loadConfig() {
   document.getElementById('map-lat').value  = CFG.map.center_lat;
   document.getElementById('map-lng').value  = CFG.map.center_lng;
   document.getElementById('map-zoom').value = CFG.map.zoom;
+  renderMapLock();
 
   // Chart / Thresholds
   renderThresholds();
 
   // Diseases
   renderDiseases();
+
+  // Zone Styles
+  renderZoneStyles();
+
+  // Typography
+  loadTypography();
 }
 
 function setColorPair(base, val) {
@@ -752,6 +1097,7 @@ function showSection(id) {
   document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
   event.currentTarget.classList.add('active');
+  if (id === 'map') setTimeout(initAdminMap, 120);
 }
 
 /* ════════════════════════════════════════════
@@ -862,13 +1208,191 @@ function renderRec() {
 async function saveSite() {
   const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({
     site: {
-      title:         document.getElementById('site-title').value,
-      subtitle:      document.getElementById('site-subtitle').value,
-      logo_text:     document.getElementById('site-logo').value.replace('\\n','\n'),
+      ...CFG.site,
       footer_source: document.getElementById('site-footer').value,
+      data_time:     document.getElementById('site-data-time').value.trim() || '07.00',
     }
   })});
-  toast(r.ok ? '✅ บันทึกข้อความสำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+  if (r.ok) { CFG.site.footer_source = document.getElementById('site-footer').value; CFG.site.data_time = document.getElementById('site-data-time').value.trim() || '07.00'; }
+  toast(r.ok ? '✅ บันทึกสำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveDevCredit() {
+  const val = document.getElementById('site-dev-credit').value.trim();
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({
+    site: { ...CFG.site, developer_credit: val }
+  })});
+  if (r.ok) CFG.site.developer_credit = val;
+  toast(r.ok ? '✅ บันทึกสำเร็จ — รีเฟรช Dashboard เพื่อดูผล' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+async function saveZoneTitles() {
+  const zt = {};
+  ['b','c','d','e','f','g'].forEach(k => {
+    const v = document.getElementById('zt-' + k)?.value.trim();
+    if (v) zt[k] = v;
+  });
+  const recNote = document.getElementById('zt-rec-note')?.value.trim();
+  if (recNote) zt.rec_note = recNote;
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({ zone_titles: zt }) });
+  if (r.ok) CFG.zone_titles = zt;
+  toast(r.ok ? '✅ บันทึกชื่อ Zone สำเร็จ — รีเฟรช Dashboard เพื่อดูผล' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+/* ── Header drag-to-reposition ── */
+let _hdrPosX = 50, _hdrPosY = 50;
+
+function initHeaderDrag() {
+  const wrap = document.getElementById('hdr-preview-wrap');
+  const img  = document.getElementById('hdr-preview');
+  let dragging = false, sx = 0, sy = 0;
+
+  wrap.addEventListener('mousedown', e => {
+    dragging = true; sx = e.clientX; sy = e.clientY;
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    sx = e.clientX; sy = e.clientY;
+    _hdrPosX = Math.max(0, Math.min(100, _hdrPosX - dx * 0.25));
+    _hdrPosY = Math.max(0, Math.min(100, _hdrPosY - dy * 0.25));
+    applyHdrPos(img);
+  });
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    wrap.style.cursor = 'grab';
+    document.getElementById('btn-save-pos').disabled = false;
+  });
+
+  // Touch support
+  wrap.addEventListener('touchstart', e => {
+    const t = e.touches[0]; dragging = true; sx = t.clientX; sy = t.clientY;
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const t = e.touches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    sx = t.clientX; sy = t.clientY;
+    _hdrPosX = Math.max(0, Math.min(100, _hdrPosX - dx * 0.25));
+    _hdrPosY = Math.max(0, Math.min(100, _hdrPosY - dy * 0.25));
+    applyHdrPos(img);
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.getElementById('btn-save-pos').disabled = false;
+  });
+}
+
+function applyHdrPos(img) {
+  const pos = `${Math.round(_hdrPosX)}% ${Math.round(_hdrPosY)}%`;
+  img.style.objectPosition = pos;
+  document.getElementById('hdr-pos-display').textContent = pos;
+  const hint = document.getElementById('hdr-drag-hint');
+  if (hint) hint.style.display = 'none';
+}
+
+function setHdrPosFromConfig() {
+  const pos = CFG.site?.header_position || '50% 50%';
+  const parts = pos.replace(/%/g, '').trim().split(/\s+/).map(Number);
+  _hdrPosX = isNaN(parts[0]) ? 50 : parts[0];
+  _hdrPosY = isNaN(parts[1]) ? 50 : parts[1];
+  const img = document.getElementById('hdr-preview');
+  if (img) applyHdrPos(img);
+}
+
+function previewDateColor(color) {
+  // แสดง preview สีตัวอักษรบน preview wrap
+  const wrap = document.getElementById('hdr-preview-wrap');
+  if (wrap) wrap.style.color = color;
+}
+
+async function saveDateColor() {
+  const color = document.getElementById('hdr-date-color-hex').value || '#ffffff';
+  const r = await api('/api/admin/config', { method: 'POST',
+    body: JSON.stringify({ site: { ...CFG.site, header_date_color: color } })
+  });
+  if (r.ok) CFG.site.header_date_color = color;
+  toast(r.ok ? `✅ บันทึกสีวันเดือนปีสำเร็จ — รีเฟรช Dashboard เพื่อดูผล` : '❌ ' + r.message, r.ok ? 'ok' : 'err');
+}
+
+async function saveHeaderPosition() {
+  const pos = `${Math.round(_hdrPosX)}% ${Math.round(_hdrPosY)}%`;
+  const r = await api('/api/admin/config', { method: 'POST',
+    body: JSON.stringify({ site: { ...CFG.site, header_position: pos } })
+  });
+  if (r.ok) CFG.site.header_position = pos;
+  document.getElementById('btn-save-pos').disabled = true;
+  toast(r.ok ? `✅ บันทึกตำแหน่ง ${pos} สำเร็จ` : '❌ ' + r.message, r.ok ? 'ok' : 'err');
+}
+
+function previewHeader(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('hdr-preview');
+    img.src = e.target.result;
+    img.style.opacity = '1';
+    document.getElementById('btn-upload-hdr').disabled = false;
+    document.getElementById('hdr-drag-hint').style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadHeader() {
+  const file = document.getElementById('hdr-file').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const r = await fetch('/api/admin/upload-header', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: e.target.result }),
+    }).then(res => res.json());
+    if (r.ok) {
+      document.getElementById('btn-upload-hdr').disabled = true;
+      document.getElementById('hdr-preview').src = '/header.png?t=' + Date.now();
+    }
+    toast(r.ok ? '✅ อัปโหลดรูปปก Header สำเร็จ — รีเฟรช Dashboard เพื่อดูผล' : '❌ ' + r.message, r.ok ? 'ok' : 'err');
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('logo-preview');
+    preview.src = e.target.result;
+    preview.style.opacity = '1';
+    document.getElementById('btn-upload-logo').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadLogo() {
+  const file = document.getElementById('logo-file').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const r = await fetch('/api/admin/upload-logo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: e.target.result }),
+    }).then(res => res.json());
+    if (r.ok) {
+      document.getElementById('btn-upload-logo').disabled = true;
+      document.getElementById('logo-preview').src = '/logo.png?t=' + Date.now();
+    }
+    toast(r.ok ? '✅ อัปโหลดโลโก้สำเร็จ — รีเฟรช Dashboard เพื่อดูผล' : '❌ ' + r.message, r.ok ? 'ok' : 'err');
+  };
+  reader.readAsDataURL(file);
 }
 
 async function saveTheme() {
@@ -876,6 +1400,7 @@ async function saveTheme() {
     theme: {
       color_header:       document.getElementById('theme-header-hex').value,
       color_footer:       document.getElementById('theme-footer-hex').value,
+      color_footer_text:  document.getElementById('theme-footer-text-hex').value,
       color_export_btn:   document.getElementById('theme-export-hex').value,
       color_table_header: document.getElementById('theme-th-hex').value,
     }
@@ -940,6 +1465,88 @@ async function saveAPI() {
     }
   })});
   toast(r.ok ? '✅ บันทึก API Keys สำเร็จ' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+/* ── Admin mini map ── */
+let _adminMap = null;
+let _adminMapMoved = false;
+
+function initAdminMap() {
+  if (_adminMap) { _adminMap.invalidateSize(); return; }
+  const lat  = parseFloat(document.getElementById('map-lat').value)  || 16.2;
+  const lng  = parseFloat(document.getElementById('map-lng').value)  || 103.5;
+  const zoom = parseInt(document.getElementById('map-zoom').value)   || 8;
+
+  _adminMap = L.map('admin-map', {
+    center: [lat, lng], zoom,
+    zoomControl: true,
+    attributionControl: false,
+  });
+  _adminMap.zoomControl.setPosition('bottomright');
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 0.8 }).addTo(_adminMap);
+
+  // โหลด province outline สำหรับ reference
+  fetch('/api/provinces-geojson').then(r => r.json()).then(geo => {
+    L.geoJSON(geo, {
+      style: { fillColor: '#1a4f7a', fillOpacity: 0.12, color: '#1a4f7a', weight: 2 }
+    }).addTo(_adminMap);
+  }).catch(() => {});
+
+  // Sync inputs เมื่อแผนที่เคลื่อน
+  _adminMap.on('move', () => {
+    const c = _adminMap.getCenter();
+    document.getElementById('map-lat').value  = c.lat.toFixed(5);
+    document.getElementById('map-lng').value  = c.lng.toFixed(5);
+    _adminMapMoved = true;
+  });
+  _adminMap.on('zoomend', () => {
+    document.getElementById('map-zoom').value = _adminMap.getZoom();
+  });
+}
+
+function syncAdminMapFromInputs() {
+  if (!_adminMap) return;
+  const lat  = parseFloat(document.getElementById('map-lat').value);
+  const lng  = parseFloat(document.getElementById('map-lng').value);
+  const zoom = parseInt(document.getElementById('map-zoom').value);
+  if (!isNaN(lat) && !isNaN(lng))
+    _adminMap.setView([lat, lng], isNaN(zoom) ? _adminMap.getZoom() : zoom, { animate: false });
+}
+
+async function lockExportFromAdminMap() {
+  const lat  = parseFloat(document.getElementById('map-lat').value);
+  const lng  = parseFloat(document.getElementById('map-lng').value);
+  const zoom = parseInt(document.getElementById('map-zoom').value);
+  if (isNaN(lat) || isNaN(lng)) { toast('❌ กรุณาตั้งค่าก่อน', 'err'); return; }
+  const map_export = {
+    b_lat: +lat.toFixed(5), b_lng: +lng.toFixed(5), b_zoom: zoom,
+    e_lat: +lat.toFixed(5), e_lng: +lng.toFixed(5), e_zoom: zoom,
+  };
+  const r = await api('/api/admin/config', { method: 'POST', body: JSON.stringify({ map_export }) });
+  if (r.ok) { CFG.map_export = map_export; renderMapLock(); }
+  toast(r.ok ? '✅ ล็อกตำแหน่ง Export สำเร็จ' : '❌ ' + r.message, r.ok ? 'ok' : 'err');
+}
+
+function renderMapLock() {
+  const me = CFG.map_export || {};
+  const el = document.getElementById('map-lock-display');
+  if (!el) return;
+  if (me.b_lat) {
+    el.innerHTML =
+      `<b>แผนที่จังหวัด (Zone B):</b> ${me.b_lat}, ${me.b_lng} | zoom ${me.b_zoom}<br>` +
+      `<b>แผนที่ Hotspot (Zone E):</b> ${me.e_lat}, ${me.e_lng} | zoom ${me.e_zoom}`;
+  } else {
+    el.textContent = 'ยังไม่ได้ล็อก — จะใช้ Auto-fit ตามพื้นที่จังหวัด';
+  }
+}
+
+async function clearMapLock() {
+  const r = await api('/api/admin/config', { method: 'POST',
+    body: JSON.stringify({ map_export: {} })
+  });
+  if (r.ok) { CFG.map_export = {}; renderMapLock(); }
+  toast(r.ok ? '✅ ล้างค่าล็อกแล้ว' : '❌ ' + r.message, r.ok ? 'ok' : 'err');
 }
 
 async function saveMap() {
@@ -1068,8 +1675,188 @@ async function changePassword() {
   if (r.ok) { document.getElementById('pw-current').value = ''; document.getElementById('pw-new').value = ''; document.getElementById('pw-confirm').value = ''; }
 }
 
+
+/* ── Zone Styles ── */
+const ZS_ZONES = [
+  { key:'b', label:'B — แผนที่จังหวัด' },
+  { key:'c', label:'C — กราฟแนวโน้ม' },
+  { key:'d', label:'D — ตาราง 7 วัน' },
+  { key:'e', label:'E — Hotspot Map' },
+  { key:'f', label:'F — กราฟโรค' },
+  { key:'g', label:'G — คำแนะนำ' },
+];
+
+function renderZoneStyles() {
+  const zs = CFG.zone_styles || {};
+  const tbody = document.getElementById('zs-tbody');
+  tbody.innerHTML = ZS_ZONES.map(({ key, label }) => {
+    const s = zs[key] || {};
+    const c1 = s.c1 || '#dbeafe', c2 = s.c2 || '#bfdbfe';
+    const tc = s.tc || '#0e2a47', deg = s.deg || '135deg';
+    const icon = s.icon || '●', type = s.type || 'gradient';
+    const bg = type === 'gradient' ? `linear-gradient(${deg},${c1},${c2})` : c1;
+    return `
+    <tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:6px 8px;font-size:11px;font-weight:600;color:#555;">${label}</td>
+      <td style="padding:6px;text-align:center;">
+        <input type="text" id="zs-icon-${key}" value="${icon}"
+          style="width:40px;text-align:center;font-size:16px;padding:3px;border:1px solid #d0d7de;border-radius:4px;"
+          oninput="zsPreview('${key}')" />
+      </td>
+      <td style="padding:6px;">
+        <select id="zs-type-${key}" style="font-size:11px;padding:4px;border:1px solid #d0d7de;border-radius:4px;width:90px;"
+          onchange="zsToggleC2('${key}');zsPreview('${key}')">
+          <option value="gradient" ${type==='gradient'?'selected':''}>Gradient</option>
+          <option value="solid"    ${type==='solid'   ?'selected':''}>Solid</option>
+        </select>
+      </td>
+      <td style="padding:6px;">
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="color" id="zs-c1p-${key}" value="${c1}"
+            oninput="document.getElementById('zs-c1h-${key}').value=this.value;zsPreview('${key}')"
+            style="width:32px;height:28px;padding:1px;border-radius:4px;border:1px solid #ccc;cursor:pointer;" />
+          <input type="text" id="zs-c1h-${key}" value="${c1}"
+            oninput="document.getElementById('zs-c1p-${key}').value=this.value;zsPreview('${key}')"
+            style="width:72px;font-size:11px;padding:4px;border:1px solid #d0d7de;border-radius:4px;" />
+        </div>
+      </td>
+      <td style="padding:6px;" id="zs-c2cell-${key}" ${type==='solid'?'style="opacity:.3;pointer-events:none;"':''}>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="color" id="zs-c2p-${key}" value="${c2}"
+            oninput="document.getElementById('zs-c2h-${key}').value=this.value;zsPreview('${key}')"
+            style="width:32px;height:28px;padding:1px;border-radius:4px;border:1px solid #ccc;cursor:pointer;" />
+          <input type="text" id="zs-c2h-${key}" value="${c2}"
+            oninput="document.getElementById('zs-c2p-${key}').value=this.value;zsPreview('${key}')"
+            style="width:72px;font-size:11px;padding:4px;border:1px solid #d0d7de;border-radius:4px;" />
+        </div>
+      </td>
+      <td style="padding:6px;">
+        <input type="text" id="zs-deg-${key}" value="${deg}"
+          oninput="zsPreview('${key}')"
+          style="width:58px;font-size:11px;padding:4px;border:1px solid #d0d7de;border-radius:4px;" />
+      </td>
+      <td style="padding:6px;">
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="color" id="zs-tcp-${key}" value="${tc}"
+            oninput="document.getElementById('zs-tch-${key}').value=this.value;zsPreview('${key}')"
+            style="width:32px;height:28px;padding:1px;border-radius:4px;border:1px solid #ccc;cursor:pointer;" />
+          <input type="text" id="zs-tch-${key}" value="${tc}"
+            oninput="document.getElementById('zs-tcp-${key}').value=this.value;zsPreview('${key}')"
+            style="width:72px;font-size:11px;padding:4px;border:1px solid #d0d7de;border-radius:4px;" />
+        </div>
+      </td>
+      <td style="padding:6px;text-align:center;">
+        <div id="zs-prev-${key}" style="padding:4px 8px;border-radius:4px;font-size:10px;font-weight:700;
+          background:${bg};color:${tc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${icon} ตัวอย่าง
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function zsToggleC2(key) {
+  const type = document.getElementById(`zs-type-${key}`).value;
+  const cell = document.getElementById(`zs-c2cell-${key}`);
+  cell.style.opacity = type === 'solid' ? '0.3' : '1';
+  cell.style.pointerEvents = type === 'solid' ? 'none' : '';
+}
+
+function zsPreview(key) {
+  const type = document.getElementById(`zs-type-${key}`).value;
+  const c1   = document.getElementById(`zs-c1h-${key}`).value;
+  const c2   = document.getElementById(`zs-c2h-${key}`).value;
+  const deg  = document.getElementById(`zs-deg-${key}`).value || '135deg';
+  const tc   = document.getElementById(`zs-tch-${key}`).value;
+  const icon = document.getElementById(`zs-icon-${key}`).value;
+  const bg   = type === 'gradient' ? `linear-gradient(${deg},${c1},${c2})` : c1;
+  const el   = document.getElementById(`zs-prev-${key}`);
+  if (el) { el.style.background = bg; el.style.color = tc; el.textContent = icon + ' ตัวอย่าง'; }
+}
+
+async function saveZoneStyles() {
+  const zone_styles = {};
+  ZS_ZONES.forEach(({ key }) => {
+    zone_styles[key] = {
+      icon: document.getElementById(`zs-icon-${key}`).value,
+      type: document.getElementById(`zs-type-${key}`).value,
+      c1:   document.getElementById(`zs-c1h-${key}`).value,
+      c2:   document.getElementById(`zs-c2h-${key}`).value,
+      deg:  document.getElementById(`zs-deg-${key}`).value || '135deg',
+      tc:   document.getElementById(`zs-tch-${key}`).value,
+    };
+  });
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({ zone_styles }) });
+  if (r.ok) CFG.zone_styles = zone_styles;
+  toast(r.ok ? '✅ บันทึก Zone Styles สำเร็จ — รีเฟรช Dashboard เพื่อดูผล' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
+/* ── Typography ── */
+const FONT_LIST = ['IBM Plex Sans Thai','Sarabun','Noto Sans Thai','Kanit','Prompt','Mitr','Bai Jamjuree','K2D'];
+
+function previewFont(family) {
+  document.getElementById('ty-preview').style.fontFamily = `'${family}', sans-serif`;
+}
+
+function loadTypography() {
+  const ty  = CFG.typography || {};
+  const sel = document.getElementById('ty-font');
+  if (ty.font_family) { sel.value = ty.font_family; previewFont(ty.font_family); }
+
+  const setNum = (id, v) => { if (v != null) { const el = document.getElementById(id); if (el) el.value = v; } };
+  const setCol = (base, v) => { if (v) { setColorPair(base, v); } };
+
+  setNum('ty-title-size',        ty.zone_title_size);
+  setCol('ty-title-color',       ty.zone_title_color);
+  setNum('ty-hdr-date-size',     ty.hdr_date_size);
+  setNum('ty-hdr-time-size',     ty.hdr_time_size);
+  setNum('ty-map-name-size',     ty.map_name_size);
+  setNum('ty-map-val-size',      ty.map_val_size);
+  setCol('ty-map-color',         ty.map_label_color);
+  setNum('ty-th-size',           ty.th_size);
+  setNum('ty-cell-size',         ty.cell_size);
+  setNum('ty-rec-level-size',    ty.rec_level_size);
+  setNum('ty-rec-range-size',    ty.rec_range_size);
+  setNum('ty-rec-body-size',     ty.rec_body_size);
+  setNum('ty-disease-size',      ty.disease_size);
+  setNum('ty-disease-total-size',ty.disease_total_size);
+  setNum('ty-label-size',        ty.label_size);
+  setNum('ty-small-size',        ty.small_size);
+}
+
+function _numVal(id) { const el = document.getElementById(id); return el && el.value ? parseFloat(el.value) : undefined; }
+function _hexVal(id) { const el = document.getElementById(id); return el && el.value ? el.value : undefined; }
+
+async function saveTypography() {
+  const ty = {
+    font_family:        document.getElementById('ty-font').value,
+    zone_title_size:    _numVal('ty-title-size'),
+    zone_title_color:   _hexVal('ty-title-color-hex'),
+    hdr_date_size:      _numVal('ty-hdr-date-size'),
+    hdr_time_size:      _numVal('ty-hdr-time-size'),
+    map_name_size:      _numVal('ty-map-name-size'),
+    map_val_size:       _numVal('ty-map-val-size'),
+    map_label_color:    _hexVal('ty-map-color-hex'),
+    th_size:            _numVal('ty-th-size'),
+    cell_size:          _numVal('ty-cell-size'),
+    rec_level_size:     _numVal('ty-rec-level-size'),
+    rec_range_size:     _numVal('ty-rec-range-size'),
+    rec_body_size:      _numVal('ty-rec-body-size'),
+    disease_size:       _numVal('ty-disease-size'),
+    disease_total_size: _numVal('ty-disease-total-size'),
+    label_size:         _numVal('ty-label-size'),
+    small_size:         _numVal('ty-small-size'),
+  };
+  // remove undefined keys
+  Object.keys(ty).forEach(k => ty[k] === undefined && delete ty[k]);
+  const r = await api('/api/admin/config', { method:'POST', body: JSON.stringify({ typography: ty }) });
+  if (r.ok) CFG.typography = { ...CFG.typography, ...ty };
+  toast(r.ok ? '✅ บันทึก Typography สำเร็จ — รีเฟรช Dashboard เพื่อดูผล' : '❌ '+r.message, r.ok?'ok':'err');
+}
+
 /* ── Boot ── */
 init();
+initHeaderDrag();
 </script>
 </body>
 </html>

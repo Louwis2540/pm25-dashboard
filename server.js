@@ -5,117 +5,326 @@ const cors     = require('cors');
 const fs       = require('fs');
 const path     = require('path');
 
-const app      = express();
-const PORT     = process.env.PORT || 3000;
-const CFG_PATH = path.join(__dirname, 'config.json');
+const app        = express();
+const PORT       = process.env.PORT || 3000;
+const CFG_PATH   = path.join(__dirname, 'config.json');
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 
-/* ── ถ้ามี ENV variables ให้ override config ── */
-function applyEnvOverrides(cfg) {
-  if (process.env.GISTDA_KEY)     cfg.api.gistda_key         = process.env.GISTDA_KEY;
-  if (process.env.SHEET_ID)       cfg.api.sheet_id            = process.env.SHEET_ID;
-  if (process.env.ADMIN_USERNAME) cfg.admin.username          = process.env.ADMIN_USERNAME;
+/* ── Config cache (invalidated on every write) ── */
+let _cfgCache = null;
+
+/* ── API response cache (TTL-based) ── */
+const _cache = new Map();
+function getCached(key) {
+  const e = _cache.get(key);
+  if (!e || Date.now() > e.exp) { _cache.delete(key); return null; }
+  return e.data;
+}
+function setCached(key, data, ttlMs) {
+  _cache.set(key, { data, exp: Date.now() + ttlMs });
+}
+
+function readConfig() {
+  if (_cfgCache) return _cfgCache;
+  const cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
+  if (process.env.GISTDA_KEY)          cfg.api.gistda_key        = process.env.GISTDA_KEY;
+  if (process.env.SHEET_ID)            cfg.api.sheet_id          = process.env.SHEET_ID;
+  if (process.env.ADMIN_USERNAME)      cfg.admin.username        = process.env.ADMIN_USERNAME;
+  if (process.env.ADMIN_PASSWORD_HASH) cfg.admin.password_hash   = process.env.ADMIN_PASSWORD_HASH;
+  _cfgCache = cfg;
   return cfg;
+}
+function writeConfig(data) {
+  fs.writeFileSync(CFG_PATH, JSON.stringify(data, null, 2), 'utf8');
+  _cfgCache = null;
+}
+
+/* ── GeoJSON memory cache ── */
+let _geojsonCache = null;
+
+/* ── Auth guard ── */
+function isAuth(req, res, next) {
+  if (req.session?.admin) return next();
+  res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
+}
+
+/* ── Fetch CSV with fallback URLs ── */
+async function fetchCSV(urls) {
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, { redirect: 'follow' });
+      if (!r.ok) continue;
+      const t = await r.text();
+      if (!t.toLowerCase().includes('sign in') && t.length > 100) return t;
+    } catch (_) { /* try next */ }
+  }
+  return null;
 }
 
 /* ── Middleware ── */
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));           // serve HTML/CSS/JS files
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.static(__dirname));
+app.use('/uploads', express.static(UPLOAD_DIR));
 app.use(session({
-  secret: 'pm25-odpc7-secret-2025',
+  secret: process.env.SESSION_SECRET || 'pm25-odpc7-secret-2025',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 }     // session 8 ชั่วโมง
+  cookie: { maxAge: 8 * 60 * 60 * 1000 },
 }));
 
-/* ── Helper ── */
-function readConfig() {
-  const cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
-  return applyEnvOverrides(cfg);
-}
-function writeConfig(data) { fs.writeFileSync(CFG_PATH, JSON.stringify(data, null, 2), 'utf8'); }
-function isAuth(req, res, next) {
-  if (req.session && req.session.admin) return next();
-  res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
-}
-
-/* ════════════════════════════════════════════
-   PUBLIC API — dashboard อ่านได้โดยไม่ต้อง login
-════════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   PUBLIC API
+══════════════════════════════════════════ */
 app.get('/api/config', (req, res) => {
-  const cfg = readConfig();
-  // ซ่อน password hash และ admin credentials ก่อนส่งออก
-  const { admin, api, ...pub } = cfg;
-  pub.api = { sheet_id: cfg.api.sheet_id };   // ส่ง sheet_id แต่ไม่ส่ง gistda_key
+  const { admin, api, ...pub } = readConfig();
+  pub.api = { sheet_id: api.sheet_id };
   res.json(pub);
 });
 
-// GISTDA VIIRS proxy — api_key เป็น query parameter, endpoint = /viirs/1day
 app.get('/api/hotspot', async (req, res) => {
-  const cfg  = readConfig();
-  const key  = cfg.api.gistda_key;
-  const pvs  = cfg.provinces.map(p => p.pv_idn);
-  const BASE = 'https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day';
+  const cached = getCached('hotspot');
+  if (cached) return res.json(cached);
 
+  const { api, provinces } = readConfig();
+  const BASE = 'https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day';
   try {
-    const results = await Promise.all(pvs.map(pv =>
-      fetch(`${BASE}?api_key=${key}&pv_idn=${pv}&limit=500&offset=0`)
-        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    ));
+    const results  = await Promise.all(
+      provinces.map(p =>
+        fetch(`${BASE}?api_key=${api.gistda_key}&pv_idn=${p.pv_idn}&limit=500&offset=0`)
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      )
+    );
     const features = results.flatMap(r => r.features || []);
-    res.json({ ok: true, count: features.length, source: 'GISTDA VIIRS',
-               geojson: { type: 'FeatureCollection', features } });
+    const data = { ok: true, count: features.length, source: 'GISTDA VIIRS',
+                   geojson: { type: 'FeatureCollection', features } };
+    setCached('hotspot', data, 60 * 60 * 1000); // 60 นาที
+    res.json(data);
   } catch (e) {
     res.status(502).json({ ok: false, message: 'GISTDA API error: ' + e.message });
   }
 });
 
-/* ════════════════════════════════════════════
+app.get('/api/sheet-pm25', async (req, res) => {
+  const cached = getCached('sheet-pm25');
+  if (cached) return res.json(cached);
+
+  const { api, provinces } = readConfig();
+  const id  = api.sheet_id;
+  const csv = await fetchCSV([
+    `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=PM25_History`,
+    `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pm25_history`,
+    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`,
+    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`,
+  ]);
+  if (!csv) return res.status(403).json({
+    ok: false,
+    message: 'กรุณาเปิดการแชร์ Google Sheet: File → Share → Publish to web → CSV',
+  });
+  try {
+    const data = { ok: true, ...parseSheetData(csv, provinces) };
+    setCached('sheet-pm25', data, 30 * 60 * 1000); // 30 นาที
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ ok: false, message: 'CSV parse error: ' + e.message });
+  }
+});
+
+app.get('/api/air4thai', async (req, res) => {
+  const cached = getCached('air4thai');
+  if (cached) return res.json(cached);
+
+  const { provinces } = readConfig();
+  let stations = [];
+
+  const AIR4THAI = [
+    'https://air4thai.pcd.go.th/services/getNewAQI_JSON.php?region=5',
+    'http://air4thai.pcd.go.th/services/getNewAQI_JSON.php?region=5',
+  ];
+
+  for (const url of AIR4THAI) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (r.ok) { const j = await r.json(); if (j.stations?.length) { stations = j.stations; break; } }
+    } catch (_) { /* try next */ }
+  }
+
+  if (!stations.length) {
+    try {
+      const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(AIR4THAI[1]);
+      const r     = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) { const j = await r.json(); stations = j.stations || []; }
+    } catch (_) { /* ignore */ }
+  }
+
+  const result = provinces.map(pv => {
+    const pvStations = stations.filter(s => {
+      const area = (s.areaTH || s.areaEN || '').toLowerCase();
+      return area.includes(pv.name) || area.includes(pv.name.substring(0, 4));
+    });
+    if (!pvStations.length) return { name: pv.name, pm25: null, stations: [] };
+
+    const list = pvStations.map(s => {
+      const upd = s.LastUpdate || s.AQILast || {};
+      const raw = upd?.PM25?.value;
+      const val = (raw !== undefined && raw !== '-' && raw !== 'N/A' && raw !== '') ? parseFloat(raw) : null;
+      return { id: s.stationID, name: s.nameTH || s.nameEN, pm25: val, time: upd.time || '' };
+    }).filter(s => s.pm25 !== null);
+
+    // ใช้ข้อมูลเวลา 07:00 น. เป็นหลัก — ถ้าไม่มีให้ใช้ข้อมูลล่าสุด
+    const list07 = list.filter(s => s.time.replace(':', '').startsWith('07'));
+    const finalList = list07.length > 0 ? list07 : list;
+    const timeSlot  = list07.length > 0 ? '07:00' : null;
+
+    const avg = finalList.length ? finalList.reduce((a, b) => a + b.pm25, 0) / finalList.length : null;
+    return { name: pv.name, pm25: avg ? +avg.toFixed(1) : null, stations: finalList, timeSlot };
+  });
+
+  const data = { ok: true, data: result, count: stations.length };
+  setCached('air4thai', data, 30 * 60 * 1000); // 30 นาที
+  res.json(data);
+});
+
+app.get('/api/sheet-disease', async (req, res) => {
+  const cached = getCached('sheet-disease');
+  if (cached) return res.json(cached);
+
+  const { api } = readConfig();
+  const id      = api.sheet_id;
+
+  const [csv2025, csv2026] = await Promise.all(
+    ['2025', '2026'].map(yr =>
+      fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${yr}`])
+    )
+  );
+
+  const data = {
+    ok:   true,
+    2025: csv2025 ? parseDiseaseData(csv2025) : [],
+    2026: csv2026 ? parseDiseaseData(csv2026) : [],
+  };
+  setCached('sheet-disease', data, 60 * 60 * 1000); // 60 นาที
+  res.json(data);
+});
+
+/* ══════════════════════════════════════════
+   PROVINCE GeoJSON
+══════════════════════════════════════════ */
+const GEOJSON_URL = 'https://raw.githubusercontent.com/apisit/thailand.json/master/thailand.json';
+const GEOJSON_PATH = path.join(__dirname, 'provinces.geojson');
+const EN_TO_PV = {
+  'Khon Kaen': 'ขอนแก่น', 'Kalasin': 'กาฬสินธุ์',
+  'Maha Sarakham': 'มหาสารคาม', 'Roi Et': 'ร้อยเอ็ด',
+};
+
+app.get('/api/provinces-geojson', async (req, res) => {
+  if (_geojsonCache) return res.json(_geojsonCache);
+  try {
+    const raw = fs.readFileSync(GEOJSON_PATH, 'utf8');
+    _geojsonCache = JSON.parse(raw);
+    return res.json(_geojsonCache);
+  } catch (_) { /* cache miss — fetch from upstream */ }
+
+  try {
+    const r   = await fetch(GEOJSON_URL);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const all = await r.json();
+    const { provinces } = readConfig();
+
+    // รองรับทั้ง apisit (name) และ geoBoundaries (shapeName)
+    const getName = f => f.properties.shapeName || f.properties.name || '';
+    const filtered = {
+      type: 'FeatureCollection',
+      features: all.features
+        .filter(f => EN_TO_PV[getName(f)])
+        .map(f => {
+          const thName = EN_TO_PV[getName(f)];
+          const pv     = provinces.find(p => p.name === thName);
+          f.properties.name_th = thName;
+          f.properties.pv_idn  = pv?.pv_idn ?? 0;
+          return f;
+        }),
+    };
+    fs.writeFileSync(GEOJSON_PATH, JSON.stringify(filtered));
+    _geojsonCache = filtered;
+    res.json(filtered);
+  } catch (e) {
+    res.status(502).json({ ok: false, message: 'GeoJSON fetch error: ' + e.message });
+  }
+});
+
+app.post('/api/admin/upload-header', isAuth, (req, res) => {
+  const { data } = req.body;
+  if (!data) return res.status(400).json({ ok: false, message: 'ไม่มีข้อมูลรูปภาพ' });
+  try {
+    const buf = Buffer.from(data.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    fs.writeFileSync(path.join(__dirname, 'header.png'), buf);
+    res.json({ ok: true, message: 'อัปโหลด Header สำเร็จ' });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+app.post('/api/admin/upload-logo', isAuth, (req, res) => {
+  const { data } = req.body;
+  if (!data) return res.status(400).json({ ok: false, message: 'ไม่มีข้อมูลรูปภาพ' });
+  try {
+    const buf = Buffer.from(data.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    fs.writeFileSync(path.join(__dirname, 'logo.png'), buf);
+    res.json({ ok: true, message: 'อัปโหลดโลโก้สำเร็จ' });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+app.post('/api/admin/reset-geojson', isAuth, (req, res) => {
+  try { fs.unlinkSync(GEOJSON_PATH); } catch (_) { /* already gone */ }
+  _geojsonCache = null;
+  res.json({ ok: true, message: 'GeoJSON cache cleared' });
+});
+
+/* ══════════════════════════════════════════
    ADMIN AUTH
-════════════════════════════════════════════ */
+══════════════════════════════════════════ */
 app.post('/api/admin/login', async (req, res) => {
   const { username, password } = req.body;
   const cfg = readConfig();
-  if (username !== cfg.admin.username) {
+  if (username !== cfg.admin.username)
     return res.status(401).json({ ok: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
-  }
   const match = await bcrypt.compare(password, cfg.admin.password_hash);
-  if (!match) {
+  if (!match)
     return res.status(401).json({ ok: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
-  }
   req.session.admin = { username };
   res.json({ ok: true, message: 'เข้าสู่ระบบสำเร็จ' });
 });
 
-app.post('/api/admin/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ ok: true });
-});
+app.post('/api/admin/logout', (req, res) => { req.session.destroy(); res.json({ ok: true }); });
+app.get('/api/admin/check',   (req, res) => { res.json({ ok: !!req.session?.admin }); });
 
-app.get('/api/admin/check', (req, res) => {
-  res.json({ ok: !!(req.session && req.session.admin) });
-});
-
-/* ════════════════════════════════════════════
-   ADMIN API — ต้อง login
-════════════════════════════════════════════ */
-
-// ดึง config ฉบับเต็ม (รวม API key)
+/* ══════════════════════════════════════════
+   ADMIN CONFIG
+══════════════════════════════════════════ */
 app.get('/api/admin/config', isAuth, (req, res) => {
-  const cfg = readConfig();
-  const { admin, ...safe } = cfg;  // ซ่อน password hash
+  const { admin, ...safe } = readConfig();
   res.json(safe);
 });
 
-// บันทึก config ทุก section
 app.post('/api/admin/config', isAuth, (req, res) => {
   try {
     const cfg  = readConfig();
-    const body = req.body;
-    // อัปเดตแต่ละ section (ไม่แตะ admin credentials)
-    ['site','api','map','provinces','aqi','recommendations','theme','layout','chart','diseases'].forEach(k => {
-      if (body[k] !== undefined) cfg[k] = body[k];
+    const KEYS = ['site','api','map','map_export','provinces','aqi','recommendations','theme','layout','chart','diseases','typography','zone_styles','zone_titles'];
+    KEYS.forEach(k => {
+      if (req.body[k] === undefined) return;
+      const v = req.body[k];
+      // deep-merge plain objects; replace arrays and primitives
+      if (v !== null && typeof v === 'object' && !Array.isArray(v) &&
+          cfg[k] !== null && typeof cfg[k] === 'object' && !Array.isArray(cfg[k])) {
+        cfg[k] = { ...cfg[k], ...v };
+      } else {
+        cfg[k] = v;
+      }
     });
     writeConfig(cfg);
     res.json({ ok: true, message: 'บันทึกการตั้งค่าสำเร็จ' });
@@ -124,7 +333,6 @@ app.post('/api/admin/config', isAuth, (req, res) => {
   }
 });
 
-// เปลี่ยนรหัสผ่าน admin
 app.post('/api/admin/change-password', isAuth, async (req, res) => {
   const { current_password, new_password } = req.body;
   if (!new_password || new_password.length < 6)
@@ -137,176 +345,9 @@ app.post('/api/admin/change-password', isAuth, async (req, res) => {
   res.json({ ok: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
 });
 
-/* ════════════════════════════════════════════
-   PROVINCE GeoJSON  (cached locally)
-════════════════════════════════════════════ */
-const GEOJSON_CACHE = path.join(__dirname, 'provinces.geojson');
-const GEOJSON_URL   = 'https://raw.githubusercontent.com/apisit/thailand.json/master/thailand.json';
-
-// English name → Thai name mapping (ตรงกับ apisit/thailand.json)
-const EN_TO_PV = {
-  'Khon Kaen':    'ขอนแก่น',
-  'Kalasin':      'กาฬสินธุ์',
-  'Maha Sarakham':'มหาสารคาม',
-  'Roi Et':       'ร้อยเอ็ด',
-};
-
-app.get('/api/provinces-geojson', async (req, res) => {
-  if (fs.existsSync(GEOJSON_CACHE)) {
-    return res.json(JSON.parse(fs.readFileSync(GEOJSON_CACHE, 'utf8')));
-  }
-  try {
-    const r = await fetch(GEOJSON_URL);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const all = await r.json();
-    const cfg = readConfig();
-
-    const filtered = {
-      type: 'FeatureCollection',
-      features: all.features
-        .filter(f => EN_TO_PV[f.properties.name])
-        .map(f => {
-          const thName = EN_TO_PV[f.properties.name];
-          const pv     = cfg.provinces.find(p => p.name === thName);
-          f.properties.name_th = thName;
-          f.properties.pv_idn  = pv?.pv_idn ?? 0;
-          return f;
-        })
-    };
-    fs.writeFileSync(GEOJSON_CACHE, JSON.stringify(filtered));
-    res.json(filtered);
-  } catch (e) {
-    res.status(502).json({ ok: false, message: 'GeoJSON fetch error: ' + e.message });
-  }
-});
-
-/* ── reset GeoJSON cache (Admin ใช้เมื่อต้องการดาวน์โหลดใหม่) ── */
-app.post('/api/admin/reset-geojson', isAuth, (req, res) => {
-  if (fs.existsSync(GEOJSON_CACHE)) fs.unlinkSync(GEOJSON_CACHE);
-  res.json({ ok: true, message: 'GeoJSON cache cleared' });
-});
-
-/* ════════════════════════════════════════════
-   GOOGLE SHEET DATA  (PM2.5 + Disease)
-════════════════════════════════════════════ */
-app.get('/api/sheet-pm25', async (req, res) => {
-  const cfg = readConfig();
-  const id  = cfg.api.sheet_id;
-
-  // ลองดึงจาก sheet "2026" ก่อน ถ้าไม่ได้ลอง default
-  // sheet "PM25_History" คือ tab ที่มีข้อมูลรายวัน: Date,ขอนแก่น,ร้อยเอ็ด,กาฬสินธุ์,มหาสารคาม
-  const urls = [
-    `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=PM25_History`,
-    `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pm25_history`,
-    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`,
-    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`,
-  ];
-
-  let csv = '';
-  for (const url of urls) {
-    try {
-      const r = await fetch(url, { redirect: 'follow' });
-      if (r.ok) {
-        const t = await r.text();
-        if (!t.toLowerCase().includes('sign in') && t.length > 100) { csv = t; break; }
-      }
-    } catch (_) { /* try next */ }
-  }
-
-  if (!csv) {
-    return res.status(403).json({
-      ok: false,
-      message: 'กรุณาเปิดการแชร์ Google Sheet เป็นสาธารณะ: File → Share → Publish to web → CSV'
-    });
-  }
-
-  try {
-    const parsed = parseSheetData(csv, cfg.provinces);
-    res.json({ ok: true, ...parsed });
-  } catch (e) {
-    res.status(500).json({ ok: false, message: 'CSV parse error: ' + e.message });
-  }
-});
-
-/* ════════════════════════════════════════════
-   AIR4THAI API  (real-time PM2.5 per station)
-   region=5 = ภาคตะวันออกเฉียงเหนือ
-════════════════════════════════════════════ */
-const AIR4THAI_URLS = [
-  'https://air4thai.pcd.go.th/services/getNewAQI_JSON.php?region=5',
-  'http://air4thai.pcd.go.th/services/getNewAQI_JSON.php?region=5',
-];
-const PROXY_URL = 'https://api.allorigins.win/raw?url=';
-
-app.get('/api/air4thai', async (req, res) => {
-  const cfg = readConfig();
-  let stations = [];
-
-  // ลองดึงตรงก่อน ถ้าไม่ได้ใช้ proxy
-  for (const url of AIR4THAI_URLS) {
-    try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
-      if (r.ok) {
-        const j = await r.json();
-        if (j.stations?.length) { stations = j.stations; break; }
-      }
-    } catch (_) { /* try next */ }
-  }
-
-  if (!stations.length) {
-    try {
-      const proxyUrl = PROXY_URL + encodeURIComponent(AIR4THAI_URLS[1]);
-      const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
-      if (r.ok) { const j = await r.json(); stations = j.stations || []; }
-    } catch (_) { /* ignore */ }
-  }
-
-  // แมปสถานีตามจังหวัด
-  const result = cfg.provinces.map(pv => {
-    // ดึงสถานีที่อยู่ในจังหวัดนี้ (ใช้ areaEN หรือ areaTH จาก Air4Thai)
-    const pvStations = stations.filter(s => {
-      const area = (s.areaTH || s.areaEN || '').toLowerCase();
-      return area.includes(pv.name) || area.includes(pv.name.substring(0, 4));
-    });
-
-    if (!pvStations.length) return { name: pv.name, pm25: null, stations: [] };
-
-    const stationList = pvStations.map(s => {
-      const upd = s.LastUpdate || s.AQILast || {};
-      const raw = upd?.PM25?.value;
-      const val = (raw !== undefined && raw !== '-' && raw !== 'N/A' && raw !== '') ? parseFloat(raw) : null;
-      return { id: s.stationID, name: s.nameTH || s.nameEN, pm25: val, time: upd.time || '' };
-    }).filter(s => s.pm25 !== null);
-
-    const avgPM25 = stationList.length
-      ? stationList.reduce((a, b) => a + b.pm25, 0) / stationList.length
-      : null;
-
-    return { name: pv.name, pm25: avgPM25 ? +avgPM25.toFixed(1) : null, stations: stationList };
-  });
-
-  res.json({ ok: true, data: result, count: stations.length });
-});
-
-app.get('/api/sheet-disease', async (req, res) => {
-  const cfg = readConfig();
-  const id  = cfg.api.sheet_id;
-  const results = {};
-
-  for (const yr of ['2025', '2026']) {
-    try {
-      const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${yr}`;
-      const r   = await fetch(url, { redirect: 'follow' });
-      if (r.ok) {
-        const t = await r.text();
-        if (!t.toLowerCase().includes('sign in')) results[yr] = parseDiseaseData(t);
-      }
-    } catch (_) { results[yr] = []; }
-  }
-  res.json({ ok: true, ...results });
-});
-
-/* ── CSV helpers ── */
+/* ══════════════════════════════════════════
+   CSV HELPERS
+══════════════════════════════════════════ */
 function csvLine(line) {
   const out = []; let cur = '', q = false;
   for (const c of line) {
@@ -318,36 +359,32 @@ function csvLine(line) {
   return out;
 }
 
-function isoDate(s) {
-  // "19/2/2026 0:00:00" or "2026-04-29" → "2026-04-29"
-  s = s.replace(/"/g, '').trim().split(',')[0].split(' ')[0];
-  if (s.includes('/')) {
-    const [d, m, y] = s.split('/');
-    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+function findHeaderRow(lines, keyword) {
+  for (let i = 0; i < lines.length; i++) {
+    const cols = csvLine(lines[i]);
+    if (cols[0].toLowerCase().replace(/"/g, '').includes(keyword))
+      return { idx: i, headers: cols.map(c => c.replace(/"/g, '').trim()) };
   }
-  return s;
+  return null;
+}
+
+function isoDate(s) {
+  s = s.replace(/"/g, '').trim().split(',')[0].split(' ')[0];
+  if (!s.includes('/')) return s;
+  const [d, m, y] = s.split('/');
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 function parseSheetData(csv, provinces) {
-  const lines = csv.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines  = csv.split('\n').map(l => l.trim()).filter(Boolean);
+  const header = findHeaderRow(lines, 'date');
+  if (!header) return { latest: {}, last7: [], allData: {} };
 
-  // หา header row ของตาราง PM2.5 (แถวที่มี "date" ในคอลัมน์แรก)
-  let headerIdx = -1, headers = [];
-  for (let i = 0; i < lines.length; i++) {
-    const cols = csvLine(lines[i]);
-    if (cols[0].toLowerCase().replace(/"/g,'').includes('date')) {
-      headerIdx = i;
-      headers = cols.map(c => c.replace(/"/g,'').trim());
-      break;
-    }
-  }
-  if (headerIdx < 0) return { latest: {}, last7: [], allData: {} };
-
-  // อ่านข้อมูลแต่ละแถว
+  const { idx: headerIdx, headers } = header;
   const byDate = {};
+
   for (let i = headerIdx + 1; i < lines.length; i++) {
-    const cols = csvLine(lines[i]);
-    if (!cols[0] || cols[0].replace(/"/g,'').trim() === '') break;
+    const cols    = csvLine(lines[i]);
     const dateKey = isoDate(cols[0]);
     if (!dateKey.match(/\d{4}-\d{2}-\d{2}/)) break;
     const row = {};
@@ -355,13 +392,12 @@ function parseSheetData(csv, provinces) {
       const v = parseFloat(cols[j + 1]);
       if (!isNaN(v)) row[h] = v;
     });
-    byDate[dateKey] = row;  // ถ้าวันเดียวกันมีหลายแถว → ใช้แถวหลังสุด
+    byDate[dateKey] = row;
   }
 
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-
-  // ค่าล่าสุดต่อจังหวัด
   const latest = {}, latestDate = {};
+
   for (const pv of provinces) {
     const col = headers.find(h => h === pv.name);
     if (!col) continue;
@@ -371,9 +407,7 @@ function parseSheetData(csv, provinces) {
     }
   }
 
-  // 7 วันล่าสุด (unique dates)
-  const uniq = [...new Set(sortedDates)].slice(0, 7).reverse();
-  const last7 = uniq.map(d => {
+  const last7 = sortedDates.slice(0, 7).reverse().map(d => {
     const row = { date: d };
     provinces.forEach(pv => {
       const col = headers.find(h => h === pv.name);
@@ -386,32 +420,24 @@ function parseSheetData(csv, provinces) {
 }
 
 function parseDiseaseData(csv) {
-  const lines = csv.split('\n').map(l => l.trim()).filter(Boolean);
-  const FIELDS = ['ทางเดินหายใจ', 'หัวใจ/หลอดเลือด', 'ตาอักเสบ', 'ผิวหนัง'];
-  let headerIdx = -1, headers = [];
+  const lines  = csv.split('\n').map(l => l.trim()).filter(Boolean);
+  const header = findHeaderRow(lines, 'wk');
+  if (!header) return [];
 
-  for (let i = 0; i < lines.length; i++) {
-    const cols = csvLine(lines[i]);
-    if (cols[0].toLowerCase().replace(/"/g,'').includes('wk')) {
-      headerIdx = i;
-      headers = cols.map(c => c.replace(/"/g,'').trim());
-      break;
-    }
-  }
-  if (headerIdx < 0) return [];
-
+  const { idx: headerIdx, headers } = header;
   const rows = [];
+
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const cols = csvLine(lines[i]);
-    const wk = parseInt(cols[0]);
+    const wk   = parseInt(cols[0]);
     if (!wk) continue;
-    const row = { wk };
+    const row  = { wk };
     headers.slice(1).forEach((h, j) => {
       if (!h) return;
-      const raw = String(cols[j + 1] || '').replace(/"/g,'').trim();
-      const num = Number(raw.replace(/,/g,''));   // Number() คืน NaN สำหรับ "24/4/2026"
+      const raw = String(cols[j + 1] || '').replace(/"/g, '').trim();
+      const num = Number(raw.replace(/,/g, ''));
       if (!isNaN(num) && raw !== '') row[h] = num;
-      else if (raw !== '')           row[h] = raw; // เก็บเป็น string เช่น "24/4/2026"
+      else if (raw !== '')           row[h] = raw;
     });
     rows.push(row);
   }
@@ -420,8 +446,7 @@ function parseDiseaseData(csv) {
 
 /* ── Start ── */
 app.listen(PORT, () => {
-  console.log(`\n✅  PM2.5 Dashboard Server เริ่มทำงานแล้ว`);
+  console.log(`\n✅  PM2.5 Dashboard พร้อมใช้งาน`);
   console.log(`   Dashboard : http://localhost:${PORT}/index.html`);
-  console.log(`   Admin     : http://localhost:${PORT}/admin.html`);
-  console.log(`   รหัสเริ่มต้น username: admin | password: password\n`);
+  console.log(`   Admin     : http://localhost:${PORT}/admin.html\n`);
 });
