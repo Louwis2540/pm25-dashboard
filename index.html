@@ -38,12 +38,12 @@
   --col-bc: 36% 64%;   /* B(แผนที่จังหวัด) : C(กราฟแนวโน้ม) */
   --col-ef: 38% 62%;   /* E(Hotspot map)   : F(กราฟโรค)     */
 
-  /* ── สีระดับ AQI ── */
-  --c-vgood:  #009ede;  /* ดีมาก        0 – 15 µg/m³  */
-  --c-good:   #52b447;  /* ดี          16 – 25 µg/m³  */
-  --c-medium: #f5ce00;  /* ปานกลาง    26 – 37.5 µg/m³ */
-  --c-start:  #f07d00;  /* เริ่มมีผล  37.6 – 75 µg/m³ */
-  --c-bad:    #e8192c;  /* อันตราย       > 75 µg/m³   */
+  /* ── สีระดับ AQI (ตรงกับ config.json) ── */
+  --c-vgood:  #009ede;  /* ดีมาก            0 – 15 µg/m³  */
+  --c-good:   #0e8a00;  /* ดี             16 – 25 µg/m³  */
+  --c-medium: #ffd500;  /* ปานกลาง       26 – 37.5 µg/m³ */
+  --c-start:  #ff8400;  /* เริ่มมีผล   37.6 – 75 µg/m³ */
+  --c-bad:    #d10000;  /* มีผลต่อสุขภาพ    > 75 µg/m³   */
 
   /* ── สีธีม ── */
   --c-header:       #1a4f7a;
@@ -874,6 +874,12 @@ async function initDashboard() {
 function applyTheme() {
   const r = document.documentElement;
   const { theme, layout } = DCFG;
+  // ซิงค์สี AQI จาก config.json → CSS variables (ให้ Zone G ตรงกับ map/ตาราง)
+  if (DCFG.aqi?.length >= 5) {
+    const keys = ['--c-vgood','--c-good','--c-medium','--c-start','--c-bad'];
+    DCFG.aqi.slice(0,5).forEach((a, i) => r.style.setProperty(keys[i], a.bg));
+  }
+
   if (theme) {
     r.style.setProperty('--c-header',      theme.color_header);
     r.style.setProperty('--c-footer',      theme.color_footer);
@@ -1009,37 +1015,22 @@ function updateClock() {
 async function initZoneB() {
   const el = document.getElementById('map-province');
   try {
-    const [geojsonRes, airRes, sheetRes] = await Promise.all([
+    const [geojsonRes, sheetRes] = await Promise.all([
       fetch('/api/provinces-geojson'),
-      fetch('/api/air4thai'),
       fetch('/api/sheet-pm25'),
     ]);
     if (!geojsonRes.ok) throw new Error('โหลด GeoJSON ไม่สำเร็จ');
 
     const geojson = await geojsonRes.json();
-    const air     = airRes.ok   ? await airRes.json()   : { ok: false, data: [] };
-    const sheet   = sheetRes.ok ? await sheetRes.json() : { ok: false, latest: {} };
+    const sheet   = sheetRes.ok ? await sheetRes.json() : { ok: false };
 
-    // Google Sheet 07:00 (primary — ตรงกับตาราง Zone D)
-    const sheetLatest = sheet.latest || {};
-
-    // Air4Thai 07:00 (fallback — ใช้เมื่อ Sheet ไม่มีข้อมูล)
-    const air07 = {};
-    (air.data || []).forEach(p => { if (p.pm25 !== null) air07[p.name] = p.pm25; });
+    // ใช้ last7 วันสุดท้าย — ตรงกับตาราง Zone D 100%
+    const todayRow = (sheet.last7 || []).slice(-1)[0] || {};
 
     const pvById = {};
     (DCFG.provinces || []).forEach(pv => {
-      // ใช้ Google Sheet ก่อน
-      const sheetKey = Object.keys(sheetLatest).find(k =>
-        k.trim() === pv.name.trim() || k.includes(pv.name) || pv.name.includes(k.trim())
-      );
-      // ถ้าไม่มีใน Sheet ใช้ Air4Thai 07:00
-      const airKey = Object.keys(air07).find(k =>
-        k.trim() === pv.name.trim() || k.includes(pv.name) || pv.name.includes(k.trim())
-      );
-      const val = sheetKey !== undefined ? sheetLatest[sheetKey]
-                : airKey   !== undefined ? air07[airKey]
-                : null;
+      const val = (typeof todayRow[pv.name] === 'number' && todayRow[pv.name] > 0)
+                  ? todayRow[pv.name] : null;
       pvById[pv.pv_idn] = { name: pv.name, val, aqi: val !== null ? getAQI(val) : null };
     });
 
