@@ -246,13 +246,12 @@ app.get('/api/air4thai', async (req, res) => {
       return { id: s.stationID, name: s.nameTH || s.nameEN, pm25: val, time: upd.time || '' };
     }).filter(s => s.pm25 !== null);
 
-    // ใช้ข้อมูลเวลา 07:00 น. เป็นหลัก — ถ้าไม่มีให้ใช้ข้อมูลล่าสุด
+    // ใช้เฉพาะข้อมูลเวลา 07:00 น. เท่านั้น — ไม่ fallback real-time
     const list07 = list.filter(s => s.time.replace(':', '').startsWith('07'));
-    const finalList = list07.length > 0 ? list07 : list;
-    const timeSlot  = list07.length > 0 ? '07:00' : null;
+    if (!list07.length) return { name: pv.name, pm25: null, stations: [], timeSlot: null };
 
-    const avg = finalList.length ? finalList.reduce((a, b) => a + b.pm25, 0) / finalList.length : null;
-    return { name: pv.name, pm25: avg ? +avg.toFixed(1) : null, stations: finalList, timeSlot };
+    const avg = list07.reduce((a, b) => a + b.pm25, 0) / list07.length;
+    return { name: pv.name, pm25: +avg.toFixed(1), stations: list07, timeSlot: '07:00' };
   });
 
   const data = { ok: true, data: result, count: stations.length };

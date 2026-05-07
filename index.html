@@ -261,6 +261,12 @@ body {
 }
 /* today column highlight */
 .col-today { border: 2px solid #f07d00 !important; }
+#heatmap-table th.col-today {
+  background: #e8590c !important;
+  color: #fff !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,.4);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.25), 2px 0 0 #f07d00, -2px 0 0 #f07d00;
+}
 
 /* ══════════════════════════════════════════════
    ZONE EF — GISTDA Hotspot + Mixed Chart
@@ -1003,23 +1009,37 @@ function updateClock() {
 async function initZoneB() {
   const el = document.getElementById('map-province');
   try {
-    const [geojsonRes, airRes] = await Promise.all([
+    const [geojsonRes, airRes, sheetRes] = await Promise.all([
       fetch('/api/provinces-geojson'),
       fetch('/api/air4thai'),
+      fetch('/api/sheet-pm25'),
     ]);
     if (!geojsonRes.ok) throw new Error('โหลด GeoJSON ไม่สำเร็จ');
 
     const geojson = await geojsonRes.json();
-    const air = airRes.ok ? await airRes.json() : { ok: false, data: [] };
+    const air     = airRes.ok   ? await airRes.json()   : { ok: false, data: [] };
+    const sheet   = sheetRes.ok ? await sheetRes.json() : { ok: false, latest: {} };
 
-    const rawLatest = {};
-    (air.data || []).forEach(p => { if (p.pm25 !== null) rawLatest[p.name] = p.pm25; });
+    // Google Sheet 07:00 (primary — ตรงกับตาราง Zone D)
+    const sheetLatest = sheet.latest || {};
+
+    // Air4Thai 07:00 (fallback — ใช้เมื่อ Sheet ไม่มีข้อมูล)
+    const air07 = {};
+    (air.data || []).forEach(p => { if (p.pm25 !== null) air07[p.name] = p.pm25; });
+
     const pvById = {};
     (DCFG.provinces || []).forEach(pv => {
-      const matchKey = Object.keys(rawLatest).find(k =>
+      // ใช้ Google Sheet ก่อน
+      const sheetKey = Object.keys(sheetLatest).find(k =>
         k.trim() === pv.name.trim() || k.includes(pv.name) || pv.name.includes(k.trim())
       );
-      const val = matchKey !== undefined ? rawLatest[matchKey] : null;
+      // ถ้าไม่มีใน Sheet ใช้ Air4Thai 07:00
+      const airKey = Object.keys(air07).find(k =>
+        k.trim() === pv.name.trim() || k.includes(pv.name) || pv.name.includes(k.trim())
+      );
+      const val = sheetKey !== undefined ? sheetLatest[sheetKey]
+                : airKey   !== undefined ? air07[airKey]
+                : null;
       pvById[pv.pv_idn] = { name: pv.name, val, aqi: val !== null ? getAQI(val) : null };
     });
 
@@ -1775,8 +1795,7 @@ function renderZoneD(data) {
   const todayEl = document.getElementById('th6');
   if (todayEl && last7[6]) {
     const [y, m, d] = last7[6].date.split('-');
-    todayEl.innerHTML = `${parseInt(d)}/${parseInt(m)}<br><small>วันนี้</small>`;
-    todayEl.style.background = '#f07d00';
+    todayEl.innerHTML = `${parseInt(d)}/${parseInt(m)}<br>วันนี้`;
   }
 
   // สร้างแถว
@@ -1921,6 +1940,39 @@ async function exportPNG() {
         ctx.stroke();
         ctx.restore();
       });
+    }
+
+    // วาด legend รายจังหวัดลง canvas โดยตรง
+    if (_hotspots.length > 0) {
+      const pvCount = {};
+      _hotspots.forEach(f => {
+        const pv = f.properties.changwat || '?';
+        pvCount[pv] = (pvCount[pv] || 0) + 1;
+      });
+      const pvEntries = Object.entries(pvCount).sort((a, b) => b[1] - a[1]);
+      const lx = 8, ly = 8, lw = 130, lh = 30 + pvEntries.length * 13 + 12;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeStyle = '#bbb';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.rect(lx, ly, lw, lh);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#111';
+      ctx.font = `bold 9px sans-serif`;
+      ctx.fillText(`Hotspot 24 ชม. (${_hotspots.length} จุด)`, lx + 6, ly + 13);
+      ctx.font = `8px sans-serif`;
+      ctx.fillStyle = '#555';
+      ctx.fillText('แหล่งข้อมูล: GISTDA VIIRS', lx + 6, ly + 24);
+      pvEntries.forEach(([pv, n], i) => {
+        const ty = ly + 35 + i * 13;
+        ctx.fillStyle = '#222';
+        ctx.font = `8.5px sans-serif`;
+        ctx.fillText(pv, lx + 6, ty);
+        ctx.font = `bold 8.5px sans-serif`;
+        ctx.fillText(String(n), lx + lw - 16, ty);
+      });
+      ctx.restore();
     }
 
     const snapImg = document.createElement('img');
