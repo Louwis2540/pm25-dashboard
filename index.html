@@ -633,6 +633,7 @@ body {
   <button id="fab-btn" title="เมนู" onclick="toggleFabMenu()">⋮</button>
   <div id="fab-popup">
     <button onclick="exportPNG()">📥 ดาวน์โหลด Dashboard (PNG)</button>
+    <button onclick="exportHotspotCSV(_hotspots)">📋 ดาวน์โหลด Hotspot (CSV)</button>
     <button onclick="lockMapPositions()">📌 ล็อกตำแหน่งแผนที่นี้</button>
   </div>
 </div>
@@ -834,9 +835,10 @@ body {
    GLOBAL STATE
 ════════════════════════════════════════════════════ */
 let DCFG   = {};   // Dashboard config (from server)
-let mapE   = null; // Leaflet — Zone E
-let chartC = null; // Chart.js — Zone C
-let _boundsE = null; // Province bounds for fitBounds
+let mapE      = null; // Leaflet — Zone E
+let chartC    = null; // Chart.js — Zone C
+let _boundsE  = null; // Province bounds for fitBounds
+let _hotspots = [];   // Hotspot features (filtered) — ใช้โดย FAB CSV export
 
 /* ════════════════════════════════════════════════════
    BOOT
@@ -1146,6 +1148,57 @@ async function initZoneB() {
   }
 }
 
+/* ── Export Hotspot → CSV ── */
+function exportHotspotCSV(features) {
+  const BOM = '﻿'; // UTF-8 BOM ให้ Excel เปิดภาษาไทยถูก
+  const header = 'วันที่,เวลา(ไทย),จังหวัด,อำเภอ,ตำบล,การใช้ที่ดิน,ความเชื่อมั่น,FRP,Latitude,Longitude';
+  const rows = features.map(f => {
+    const p = f.properties || {};
+    const [lng, lat] = f.geometry.coordinates;
+    const date    = p.acq_date  ? p.acq_date.slice(0, 10) : '';
+    const time    = p.th_time   ? p.th_time.slice(0,2) + ':' + p.th_time.slice(2) : '';
+    const confTH  = p.confidence === 'high' ? 'สูง' : p.confidence === 'nominal' ? 'ปานกลาง' : 'ต่ำ';
+    const lu      = (p.lu_hp_name || p.lu_name || '').replace(/,/g, ' ');
+    const prov    = (p.changwat  || '').replace(/,/g, ' ');
+    const ap      = (p.ap_en     || '').replace(/,/g, ' ');
+    const tb      = (p.tb_en     || '').replace(/,/g, ' ');
+    return [date, time, prov, ap, tb, lu, confTH, p.frp ?? '', lat, lng].join(',');
+  });
+  const csv  = BOM + [header, ...rows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const today = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `hotspot_สคร7_${today}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ── Point-in-polygon (ray-casting) — ใช้กับ GeoJSON province boundaries ── */
+function _raycast(x, y, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+      inside = !inside;
+  }
+  return inside;
+}
+function _pointInRings(x, y, rings) {
+  if (!_raycast(x, y, rings[0])) return false;
+  for (let i = 1; i < rings.length; i++) if (_raycast(x, y, rings[i])) return false;
+  return true;
+}
+function pointInProvince(lng, lat, featureCollection) {
+  return (featureCollection.features || []).some(f => {
+    const g = f.geometry;
+    if (!g) return false;
+    if (g.type === 'Polygon')      return _pointInRings(lng, lat, g.coordinates);
+    if (g.type === 'MultiPolygon') return g.coordinates.some(p => _pointInRings(lng, lat, p));
+    return false;
+  });
+}
+
 /* ════════════════════════════════════════════════════
    ZONE E — GISTDA / NASA FIRMS Hotspot Map
 ════════════════════════════════════════════════════ */
@@ -1182,8 +1235,11 @@ async function initZoneE() {
       crossOrigin: true,
     }).addTo(mapE);
 
-    // Hotspot markers
-    const hotspots = firms.geojson?.features || [];
+    // Hotspot markers — filter เฉพาะ 4 จังหวัดในเขต สคร.7
+    const pvNames = new Set(geojson.features.map(f => f.properties.name_th));
+    _hotspots = (firms.geojson?.features || [])
+      .filter(f => pvNames.has(f.properties.changwat));
+    const hotspots = _hotspots;
     hotspots.forEach(f => {
       const [lng, lat] = f.geometry.coordinates;
       const { confidence, frp, acq_date, acq_time } = f.properties;
@@ -1249,14 +1305,26 @@ async function initZoneE() {
       }
     }
 
+    // นับจุด Hotspot รายจังหวัด
+    const pvCount = {};
+    hotspots.forEach(f => {
+      const pv = f.properties.changwat || '?';
+      pvCount[pv] = (pvCount[pv] || 0) + 1;
+    });
+    const pvRows = Object.entries(pvCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([pv, n]) => `<tr><td>${pv}</td><td style="text-align:right;padding-left:8px;font-weight:bold;">${n}</td></tr>`)
+      .join('');
+
     // Legend + count badge
     const legend = L.control({ position: 'topleft' });
     legend.onAdd = () => {
       const d = L.DomUtil.create('div');
-      d.style.cssText = 'background:rgba(255,255,255,.88);padding:5px 8px;border-radius:4px;font-family:Sarabun,sans-serif;font-size:8.5px;line-height:1.8;border:1px solid #ccc;';
+      d.style.cssText = 'background:rgba(255,255,255,.88);padding:5px 8px;border-radius:4px;font-family:Sarabun,sans-serif;font-size:8.5px;line-height:1.8;border:1px solid #ccc;max-width:160px;';
       d.innerHTML = `
-        <b>🔥 Hotspot 24 ชม. (${hotspots.length} จุด)</b><br>
-        <span style="font-size:7.5px;color:#888;">แหล่งข้อมูล: GISTDA VIIRS</span>
+        <b>🔥 Hotspot 24 ชม. (${hotspots.length} จุด)</b>
+        <table style="width:100%;border-collapse:collapse;margin-top:2px;">${pvRows}</table>
+        <div style="margin-top:2px;font-size:7px;color:#888;">แหล่งข้อมูล: GISTDA VIIRS</div>
       `;
       return d;
     };

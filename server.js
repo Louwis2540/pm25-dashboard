@@ -4,12 +4,62 @@ const bcrypt   = require('bcryptjs');
 const cors     = require('cors');
 const fs       = require('fs');
 const path     = require('path');
+const Database = require('better-sqlite3');
 
 const app        = express();
 const PORT       = process.env.PORT || 3000;
 const CFG_PATH   = path.join(__dirname, 'config.json');
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+
+/* ── SQLite — Hotspot History ── */
+const db = new Database(path.join(__dirname, 'hotspot_history.db'));
+db.exec(`
+  CREATE TABLE IF NOT EXISTS hotspot_log (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_at  TEXT NOT NULL,
+    snapshot_date TEXT NOT NULL,
+    lat          REAL,
+    lng          REAL,
+    confidence   TEXT,
+    frp          REAL,
+    acq_date     TEXT,
+    acq_time     TEXT,
+    th_time      TEXT,
+    province     TEXT,
+    ap_en        TEXT,
+    tb_en        TEXT,
+    lu_name      TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_snap_date ON hotspot_log(snapshot_date);
+`);
+const _insertHotspot = db.prepare(`
+  INSERT INTO hotspot_log
+    (snapshot_at, snapshot_date, lat, lng, confidence, frp, acq_date, acq_time, th_time, province, ap_en, tb_en, lu_name)
+  VALUES
+    (@snapshot_at, @snapshot_date, @lat, @lng, @confidence, @frp, @acq_date, @acq_time, @th_time, @province, @ap_en, @tb_en, @lu_name)
+`);
+const _saveSnapshot = db.transaction((features, snapshotAt) => {
+  const snapshotDate = snapshotAt.slice(0, 10);
+  for (const f of features) {
+    const p = f.properties || {};
+    const [lng, lat] = f.geometry.coordinates;
+    _insertHotspot.run({
+      snapshot_at:   snapshotAt,
+      snapshot_date: snapshotDate,
+      lat, lng,
+      confidence: p.confidence || null,
+      frp:        p.frp        ?? null,
+      acq_date:   p.acq_date   || null,
+      acq_time:   p.acq_time   || null,
+      th_time:    p.th_time    || null,
+      province:   p.changwat   || p.pv_en  || null,
+      ap_en:      p.ap_en      || null,
+      tb_en:      p.tb_en      || null,
+      lu_name:    p.lu_hp_name || p.lu_name || null,
+    });
+  }
+});
 
 /* ── Config cache (invalidated on every write) ── */
 let _cfgCache = null;
@@ -101,9 +151,32 @@ app.get('/api/hotspot', async (req, res) => {
     const data = { ok: true, count: features.length, source: 'GISTDA VIIRS',
                    geojson: { type: 'FeatureCollection', features } };
     setCached('hotspot', data, 60 * 60 * 1000); // 60 นาที
+
+    // บันทึกลง SQLite
+    try { _saveSnapshot(features, new Date().toISOString()); } catch (_) {}
+
     res.json(data);
   } catch (e) {
     res.status(502).json({ ok: false, message: 'GISTDA API error: ' + e.message });
+  }
+});
+
+// ดูสถิติ hotspot รายวันจาก DB
+app.get('/api/hotspot-history', (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT snapshot_date, COUNT(*) AS total,
+        SUM(CASE WHEN confidence='high'    THEN 1 ELSE 0 END) AS high,
+        SUM(CASE WHEN confidence='nominal' THEN 1 ELSE 0 END) AS nominal,
+        SUM(CASE WHEN confidence='low'     THEN 1 ELSE 0 END) AS low
+      FROM hotspot_log
+      GROUP BY snapshot_date
+      ORDER BY snapshot_date DESC
+      LIMIT 90
+    `).all();
+    res.json({ ok: true, rows });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
   }
 });
 
