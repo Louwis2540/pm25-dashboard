@@ -65,7 +65,9 @@ const _saveSnapshot = db.transaction((features, snapshotAt) => {
 let _cfgCache = null;
 
 /* ── API response cache (TTL-based) ── */
-const _cache = new Map();
+const _cache     = new Map();
+const _updatedAt = new Map(); // บันทึกเวลาที่ข้อมูลอัพเดทจริงๆ
+
 function getCached(key) {
   const e = _cache.get(key);
   if (!e || Date.now() > e.exp) { _cache.delete(key); return null; }
@@ -73,6 +75,7 @@ function getCached(key) {
 }
 function setCached(key, data, ttlMs) {
   _cache.set(key, { data, exp: Date.now() + ttlMs });
+  _updatedAt.set(key, Date.now());
 }
 
 function readConfig() {
@@ -128,6 +131,16 @@ app.use(session({
 /* ══════════════════════════════════════════
    PUBLIC API
 ══════════════════════════════════════════ */
+
+// บอกเวลาอัพเดทล่าสุดของแต่ละ data source
+app.get('/api/data-status', (req, res) => {
+  res.json({
+    sheet_pm25:  _updatedAt.get('sheet-pm25')  || null,
+    hotspot:     _updatedAt.get('hotspot')      || null,
+    now:         Date.now(),
+  });
+});
+
 app.get('/api/config', (req, res) => {
   const { admin, api, ...pub } = readConfig();
   pub.api = { sheet_id: api.sheet_id };
@@ -198,7 +211,7 @@ app.get('/api/sheet-pm25', async (req, res) => {
   });
   try {
     const data = { ok: true, ...parseSheetData(csv, provinces) };
-    setCached('sheet-pm25', data, 30 * 60 * 1000); // 30 นาที
+    setCached('sheet-pm25', data, 5 * 60 * 1000); // 5 นาที
     res.json(data);
   } catch (e) {
     res.status(500).json({ ok: false, message: 'CSV parse error: ' + e.message });
@@ -449,16 +462,21 @@ function isoDate(s) {
 
 function parseSheetData(csv, provinces) {
   const lines  = csv.split('\n').map(l => l.trim()).filter(Boolean);
-  const header = findHeaderRow(lines, 'date');
+  const header = findHeaderRow(lines, 'date') || findHeaderRow(lines, 'time');
   if (!header) return { latest: {}, last7: [], allData: {} };
 
   const { idx: headerIdx, headers } = header;
+
   const byDate = {};
 
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const cols    = csvLine(lines[i]);
     const dateKey = isoDate(cols[0]);
     if (!dateKey.match(/\d{4}-\d{2}-\d{2}/)) break;
+
+    // ถ้าวันนี้มีข้อมูลแล้ว ให้ข้ามแถวที่เหลือ (เอาแถวแรกของแต่ละวัน)
+    if (byDate[dateKey]) continue;
+
     const row = {};
     headers.slice(1).forEach((h, j) => {
       const v = parseFloat(cols[j + 1]);
@@ -516,9 +534,34 @@ function parseDiseaseData(csv) {
   return rows;
 }
 
+/* ── Auto-refresh: ดึงข้อมูลจาก Sheet ทุก 5 นาทีในฝั่ง Server ── */
+async function warmSheetCache() {
+  try {
+    const { api, provinces } = readConfig();
+    const id  = api.sheet_id;
+    const csv = await fetchCSV([
+      `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=PM25_History`,
+      `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pm25_history`,
+      `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`,
+      `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`,
+    ]);
+    if (csv) {
+      const data = { ok: true, ...parseSheetData(csv, provinces) };
+      setCached('sheet-pm25', data, 5 * 60 * 1000);
+      console.log(`[${new Date().toLocaleTimeString('th-TH')}] ✅ Sheet PM2.5 อัพเดทแล้ว`);
+    }
+  } catch (e) {
+    console.warn('Auto-refresh sheet error:', e.message);
+  }
+}
+
 /* ── Start ── */
 app.listen(PORT, () => {
   console.log(`\n✅  PM2.5 Dashboard พร้อมใช้งาน`);
   console.log(`   Dashboard : http://localhost:${PORT}/index.html`);
   console.log(`   Admin     : http://localhost:${PORT}/admin.html\n`);
+
+  // ดึงข้อมูลครั้งแรกทันที แล้ว loop ทุก 5 นาที
+  warmSheetCache();
+  setInterval(warmSheetCache, 5 * 60 * 1000);
 });

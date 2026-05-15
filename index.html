@@ -657,6 +657,10 @@ body {
     <div class="date-wrap">
       <span class="date-big" id="hdr-date">--/--/----</span><br>
       <span id="hdr-time">ข้อมูล ณ เวลา 07:00 น.</span>
+      <span id="live-badge" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;opacity:0.85;margin-left:6px;vertical-align:middle;">
+        <span id="live-dot" style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 4px #4ade80;"></span>
+        <span id="live-txt">LIVE</span>
+      </span>
     </div>
   </div>
 
@@ -852,6 +856,7 @@ let _hotspots = [];   // Hotspot features (filtered) — ใช้โดย FAB 
 async function initDashboard() {
   try {
     DCFG = await fetch('/api/config').then(r => r.json());
+    _lastConfigStr = JSON.stringify(DCFG);
     applyTheme();
     applyRecommendations();
     updateClock();
@@ -2043,6 +2048,82 @@ async function exportPNG() {
 
 /* ── Boot ── */
 document.addEventListener('DOMContentLoaded', initDashboard);
+
+/* ════════════════════════════════════════════════════
+   AUTO-REFRESH — ดึงข้อมูลใหม่อัตโนมัติทุก 5 นาที
+════════════════════════════════════════════════════ */
+let _lastConfigStr = '';
+let _lastSheetTs   = 0;   // timestamp ของ sheet-pm25 ที่ดึงมาล่าสุด
+let _refreshing    = false;
+
+function setLive(state) {
+  const dot = document.getElementById('live-dot');
+  const txt = document.getElementById('live-txt');
+  if (!dot || !txt) return;
+  if (state === 'updating') {
+    dot.style.background = '#facc15'; dot.style.boxShadow = '0 0 4px #facc15';
+    txt.textContent = 'กำลังอัพเดท…';
+  } else if (state === 'live') {
+    dot.style.background = '#4ade80'; dot.style.boxShadow = '0 0 4px #4ade80';
+    txt.textContent = 'LIVE';
+  } else {
+    dot.style.background = '#f87171'; dot.style.boxShadow = '0 0 4px #f87171';
+    txt.textContent = 'ออฟไลน์';
+  }
+}
+
+async function autoRefresh() {
+  if (_refreshing) return;
+  _refreshing = true;
+  setLive('updating');
+  try {
+    // ตรวจ config เปลี่ยนไหม (หลังแก้ Admin)
+    const freshCfg    = await fetch('/api/config').then(r => r.json());
+    const freshCfgStr = JSON.stringify(freshCfg);
+    const cfgChanged  = freshCfgStr !== _lastConfigStr;
+    if (cfgChanged) {
+      _lastConfigStr = freshCfgStr;
+      DCFG = freshCfg;
+      applyTheme();
+      applyRecommendations();
+      updateClock();
+    }
+
+    // ตรวจว่า sheet data อัพเดทใหม่ไหม
+    const status = await fetch('/api/data-status').then(r => r.json());
+    const newTs  = status.sheet_pm25 || 0;
+    const dataChanged = newTs > _lastSheetTs;
+    if (dataChanged) _lastSheetTs = newTs;
+
+    if (cfgChanged || dataChanged) {
+      await Promise.all([initZoneB(), initZoneCD(), initZoneF()]);
+    }
+
+    setLive('live');
+  } catch (_) {
+    setLive('offline');
+  } finally {
+    _refreshing = false;
+  }
+}
+
+// โหลด config ครั้งแรกและ sync timestamp
+async function _initLiveStatus() {
+  try {
+    const status = await fetch('/api/data-status').then(r => r.json());
+    _lastSheetTs = status.sheet_pm25 || 0;
+  } catch (_) {}
+}
+
+document.addEventListener('DOMContentLoaded', _initLiveStatus);
+
+// Poll ทุก 5 นาที
+setInterval(autoRefresh, 5 * 60 * 1000);
+
+// ตรวจทันทีเมื่อ tab กลับมา focus
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') autoRefresh();
+});
 </script>
 </body>
 </html>
