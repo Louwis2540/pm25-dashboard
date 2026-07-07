@@ -283,8 +283,15 @@ app.get('/api/moph-debug', async (req, res) => {
       body:    JSON.stringify({ tableName:'s_pm25_1_in_week', year:'2569', province:'40', type:'json' }),
       signal:  AbortSignal.timeout(25000),
     });
-    out.status = r.status;
-    out.ok     = r.ok;
+    out.status  = r.status;
+    out.ok      = r.ok;
+    out.headers = {
+      'cf-ray':       r.headers.get('cf-ray'),
+      'cf-mitigated': r.headers.get('cf-mitigated'),
+      'server':       r.headers.get('server'),
+      'cf-cache':     r.headers.get('cf-cache-status'),
+      'retry-after':  r.headers.get('retry-after'),
+    };
     const text = await r.text();
     out.length = text.length;
     out.head   = text.slice(0, 300);
