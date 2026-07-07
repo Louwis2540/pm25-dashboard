@@ -272,6 +272,31 @@ app.get('/api/air4thai', async (req, res) => {
   res.json(data);
 });
 
+// [ชั่วคราว] วินิจฉัยการเข้าถึง MOPH จากเซิร์ฟเวอร์ Render
+app.get('/api/moph-debug', async (req, res) => {
+  const t0 = Date.now();
+  const out = { url: MOPH_DISEASE_API };
+  try {
+    const r = await fetch(MOPH_DISEASE_API, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ tableName:'s_pm25_1_in_week', year:'2569', province:'40', type:'json' }),
+      signal:  AbortSignal.timeout(25000),
+    });
+    out.status = r.status;
+    out.ok     = r.ok;
+    const text = await r.text();
+    out.length = text.length;
+    out.head   = text.slice(0, 300);
+    try { const j = JSON.parse(text); out.isArray = Array.isArray(j); out.rows = Array.isArray(j) ? j.length : null; }
+    catch (e) { out.parseError = e.message; }
+  } catch (e) {
+    out.error = e.name + ': ' + e.message;
+  }
+  out.ms = Date.now() - t0;
+  res.json(out);
+});
+
 // โซน F — โรคเฝ้าระวัง (Hybrid):
 //   • ปี 2568 (key '2025', แท่ง) ← Google Sheet เดิม (ข้อมูลย้อนหลังที่นิ่งแล้ว)
 //   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API แบบสด
