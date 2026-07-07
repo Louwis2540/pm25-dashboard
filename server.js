@@ -279,7 +279,7 @@ app.get('/api/moph-debug', async (req, res) => {
   try {
     const r = await fetch(MOPH_DISEASE_API, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: MOPH_HEADERS,
       body:    JSON.stringify({ tableName:'s_pm25_1_in_week', year:'2569', province:'40', type:'json' }),
       signal:  AbortSignal.timeout(25000),
     });
@@ -555,6 +555,16 @@ function parseSheetData(csv, provinces) {
 ══════════════════════════════════════════ */
 const MOPH_DISEASE_API = 'https://opendata.moph.go.th/api/report_data';
 
+// เลียนแบบ browser จริง ให้ผ่าน Cloudflare ของ MOPH (บล็อก UA ที่เป็น bot)
+const MOPH_HEADERS = {
+  'Content-Type':    'application/json',
+  'Accept':          'application/json, text/plain, */*',
+  'Accept-Language': 'th-TH,th;q=0.9,en;q=0.8',
+  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Origin':          'https://opendata.moph.go.th',
+  'Referer':         'https://opendata.moph.go.th/',
+};
+
 // diag_main (bitmask) → หมวดโรคใน dashboard (ตรงกับ config.diseases[].key)
 const MOPH_DIAG_GROUP = {
   2:    'ทางเดินหายใจ', // Chronic obstructive pulmonary disease (J44)
@@ -582,7 +592,7 @@ async function fetchMophDisease(beYear) {
     try {
       const r = await fetch(MOPH_DISEASE_API, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: MOPH_HEADERS,
         body:    JSON.stringify({
           tableName: 's_pm25_1_in_week',
           year:      String(beYear),
