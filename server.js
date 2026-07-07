@@ -272,6 +272,9 @@ app.get('/api/air4thai', async (req, res) => {
   res.json(data);
 });
 
+// โซน F — โรคเฝ้าระวัง (Hybrid):
+//   • ปี 2568 (key '2025', แท่ง) ← Google Sheet เดิม (ข้อมูลย้อนหลังที่นิ่งแล้ว)
+//   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API แบบสด
 app.get('/api/sheet-disease', async (req, res) => {
   const cached = getCached('sheet-disease');
   if (cached) return res.json(cached);
@@ -279,19 +282,22 @@ app.get('/api/sheet-disease', async (req, res) => {
   const { api } = readConfig();
   const id      = api.sheet_id;
 
-  const [csv2025, csv2026] = await Promise.all(
-    ['2025', '2026'].map(yr =>
-      fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${yr}`])
-    )
-  );
+  try {
+    const [csv2025, moph2569] = await Promise.all([
+      fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2025`]),
+      fetchMophDisease('2569'),
+    ]);
 
-  const data = {
-    ok:   true,
-    2025: csv2025 ? parseDiseaseData(csv2025) : [],
-    2026: csv2026 ? parseDiseaseData(csv2026) : [],
-  };
-  setCached('sheet-disease', data, 60 * 60 * 1000); // 60 นาที
-  res.json(data);
+    const data = {
+      ok:   true,
+      2025: csv2025 ? parseDiseaseData(csv2025) : [],
+      2026: moph2569,
+    };
+    setCached('sheet-disease', data, 60 * 60 * 1000); // 60 นาที
+    res.json(data);
+  } catch (e) {
+    res.status(502).json({ ok: false, message: 'ดึงข้อมูลโรคไม่สำเร็จ: ' + e.message });
+  }
 });
 
 /* ══════════════════════════════════════════
@@ -507,6 +513,82 @@ function parseSheetData(csv, provinces) {
   });
 
   return { latest, latestDate, last7, allData: byDate, sortedDates };
+}
+
+/* ══════════════════════════════════════════
+   MOPH OPEN DATA — โรคเฝ้าระวังผลกระทบ PM2.5
+   ตาราง s_pm25_1_in_week : ผู้ป่วยรายสัปดาห์ ตามรหัสโรค (ICD-10)
+══════════════════════════════════════════ */
+const MOPH_DISEASE_API = 'https://opendata.moph.go.th/api/report_data';
+
+// diag_main (bitmask) → หมวดโรคใน dashboard (ตรงกับ config.diseases[].key)
+const MOPH_DIAG_GROUP = {
+  2:    'ทางเดินหายใจ', // Chronic obstructive pulmonary disease (J44)
+  4:    'ทางเดินหายใจ', // Acute asthma
+  2048: 'ทางเดินหายใจ', // Acute asthma (J44.2)
+  8:    'หัวใจ',        // Acute ischemic heart diseases (I21)
+  16:   'หัวใจ',        // STEMI/NSTEMI (I22)
+  4096: 'หัวใจ',        // Acute ischemic heart diseases (I24)
+  32:   'ตาอักเสบ',     // Conjunctivitis (H10)
+  64:   'ผิวหนัง',      // Eczema (L30.9)
+  128:  'ผิวหนัง',      // Urticaria (L50)
+};
+const MOPH_CATS = ['ทางเดินหายใจ', 'หัวใจ', 'ตาอักเสบ', 'ผิวหนัง'];
+
+// ดึง+รวมยอดผู้ป่วยรายสัปดาห์ทุกจังหวัดในเขต สำหรับปี พ.ศ. ที่กำหนด
+// คืนค่ารูปแบบเดียวกับ parseDiseaseData: [{ wk, <หมวดโรค>, อัพเดท }]
+async function fetchMophDisease(beYear) {
+  const { provinces } = readConfig();
+  const acc  = {};   // acc[wk][cat] = ยอดรวม (w_NN_m)
+  let maxDateCom = '';
+
+  await Promise.all(provinces.map(async pv => {
+    let rows;
+    try {
+      const r = await fetch(MOPH_DISEASE_API, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          tableName: 's_pm25_1_in_week',
+          year:      String(beYear),
+          province:  String(pv.pv_idn),
+          type:      'json',
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!r.ok) return;
+      rows = await r.json();
+    } catch (_) { return; }            // จังหวัดใดพลาด ข้ามไป ไม่ทำให้ทั้งเขตล่ม
+    if (!Array.isArray(rows)) return;
+
+    for (const row of rows) {
+      const cat = MOPH_DIAG_GROUP[row.diag_main];
+      if (!cat) continue;
+      if (row.date_com && String(row.date_com) > maxDateCom) maxDateCom = String(row.date_com);
+      for (let w = 1; w <= 53; w++) {
+        const v = row['w_' + String(w).padStart(2, '0') + '_m']; // _m = จำนวนที่เข้ารับบริการ
+        if (typeof v === 'number' && v > 0) {
+          if (!acc[w]) acc[w] = {};
+          acc[w][cat] = (acc[w][cat] || 0) + v;
+        }
+      }
+    }
+  }));
+
+  // date_com = YYYYMMDDHHMM → DD/MM/YYYY (ค.ศ.) ให้ frontend +543 เอง
+  const upd = /^\d{12}/.test(maxDateCom)
+    ? `${+maxDateCom.slice(6, 8)}/${+maxDateCom.slice(4, 6)}/${maxDateCom.slice(0, 4)}`
+    : '';
+
+  const out = [];
+  for (let w = 1; w <= 53; w++) {
+    if (!acc[w]) continue;             // ข้ามสัปดาห์ที่ยังไม่มีข้อมูล
+    const rec = { wk: w };
+    for (const c of MOPH_CATS) rec[c] = acc[w][c] || 0;
+    if (upd) rec['อัพเดท'] = upd;
+    out.push(rec);
+  }
+  return out;
 }
 
 function parseDiseaseData(csv) {
