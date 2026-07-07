@@ -272,41 +272,11 @@ app.get('/api/air4thai', async (req, res) => {
   res.json(data);
 });
 
-// [ชั่วคราว] วินิจฉัยการเข้าถึง MOPH จากเซิร์ฟเวอร์ Render
-app.get('/api/moph-debug', async (req, res) => {
-  const t0 = Date.now();
-  const out = { url: MOPH_DISEASE_API };
-  try {
-    const r = await fetch(MOPH_DISEASE_API, {
-      method:  'POST',
-      headers: MOPH_HEADERS,
-      body:    JSON.stringify({ tableName:'s_pm25_1_in_week', year:'2569', province:'40', type:'json' }),
-      signal:  AbortSignal.timeout(25000),
-    });
-    out.status  = r.status;
-    out.ok      = r.ok;
-    out.headers = {
-      'cf-ray':       r.headers.get('cf-ray'),
-      'cf-mitigated': r.headers.get('cf-mitigated'),
-      'server':       r.headers.get('server'),
-      'cf-cache':     r.headers.get('cf-cache-status'),
-      'retry-after':  r.headers.get('retry-after'),
-    };
-    const text = await r.text();
-    out.length = text.length;
-    out.head   = text.slice(0, 300);
-    try { const j = JSON.parse(text); out.isArray = Array.isArray(j); out.rows = Array.isArray(j) ? j.length : null; }
-    catch (e) { out.parseError = e.message; }
-  } catch (e) {
-    out.error = e.name + ': ' + e.message;
-  }
-  out.ms = Date.now() - t0;
-  res.json(out);
-});
-
 // โซน F — โรคเฝ้าระวัง (Hybrid):
 //   • ปี 2568 (key '2025', แท่ง) ← Google Sheet เดิม (ข้อมูลย้อนหลังที่นิ่งแล้ว)
-//   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API แบบสด
+//   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API ถ้าเรียกได้ (ต้องรันจาก IP ไทย)
+//        ไม่งั้น fallback ไปชีต 2026 ที่ตัวเก็บข้อมูลฝั่งไทย (Apps Script) เติมไว้
+//        หมายเหตุ: MOPH บล็อก IP ดาต้าเซ็นเตอร์ (Cloudflare 403) → บน Render จะใช้ชีตเสมอ
 app.get('/api/sheet-disease', async (req, res) => {
   const cached = getCached('sheet-disease');
   if (cached) return res.json(cached);
@@ -326,7 +296,7 @@ app.get('/api/sheet-disease', async (req, res) => {
     if (!year2026.length) {
       const csv2026 = await fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]);
       year2026 = csv2026 ? parseDiseaseData(csv2026) : [];
-      ttl      = 2 * 60 * 1000;        // MOPH ว่าง → 2 นาที แล้วลองใหม่
+      ttl      = 15 * 60 * 1000;       // MOPH ยิงไม่ผ่าน (บน Render) → ใช้ชีต, cache 15 นาที
     }
 
     const data = {
