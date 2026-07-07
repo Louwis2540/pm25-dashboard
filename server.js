@@ -288,12 +288,21 @@ app.get('/api/sheet-disease', async (req, res) => {
       fetchMophDisease('2569'),
     ]);
 
+    // ถ้า MOPH ว่าง (พลาดชั่วขณะ) → fallback ไปชีต 2026 เดิม แล้ว cache สั้นๆ เพื่อ retry
+    let year2026 = moph2569;
+    let ttl      = 60 * 60 * 1000;     // ได้ข้อมูลจริง → 60 นาที
+    if (!year2026.length) {
+      const csv2026 = await fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]);
+      year2026 = csv2026 ? parseDiseaseData(csv2026) : [];
+      ttl      = 2 * 60 * 1000;        // MOPH ว่าง → 2 นาที แล้วลองใหม่
+    }
+
     const data = {
       ok:   true,
       2025: csv2025 ? parseDiseaseData(csv2025) : [],
-      2026: moph2569,
+      2026: year2026,
     };
-    setCached('sheet-disease', data, 60 * 60 * 1000); // 60 นาที
+    setCached('sheet-disease', data, ttl);
     res.json(data);
   } catch (e) {
     res.status(502).json({ ok: false, message: 'ดึงข้อมูลโรคไม่สำเร็จ: ' + e.message });
@@ -542,7 +551,8 @@ async function fetchMophDisease(beYear) {
   const acc  = {};   // acc[wk][cat] = ยอดรวม (w_NN_m)
   let maxDateCom = '';
 
-  await Promise.all(provinces.map(async pv => {
+  // ดึงทีละจังหวัด (sequential) เลี่ยงการยิงพร้อมกันจนโดน rate-limit ฝั่ง MOPH
+  for (const pv of provinces) {
     let rows;
     try {
       const r = await fetch(MOPH_DISEASE_API, {
@@ -556,10 +566,10 @@ async function fetchMophDisease(beYear) {
         }),
         signal: AbortSignal.timeout(20000),
       });
-      if (!r.ok) return;
+      if (!r.ok) continue;             // MOPH ตอบ 200/201; อื่นๆ ข้าม
       rows = await r.json();
-    } catch (_) { return; }            // จังหวัดใดพลาด ข้ามไป ไม่ทำให้ทั้งเขตล่ม
-    if (!Array.isArray(rows)) return;
+    } catch (_) { continue; }          // จังหวัดใดพลาด ข้ามไป ไม่ทำให้ทั้งเขตล่ม
+    if (!Array.isArray(rows)) continue;
 
     for (const row of rows) {
       const cat = MOPH_DIAG_GROUP[row.diag_main];
@@ -573,7 +583,7 @@ async function fetchMophDisease(beYear) {
         }
       }
     }
-  }));
+  }
 
   // date_com = YYYYMMDDHHMM → DD/MM/YYYY (ค.ศ.) ให้ frontend +543 เอง
   const upd = /^\d{12}/.test(maxDateCom)
