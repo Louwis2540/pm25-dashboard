@@ -391,6 +391,22 @@ body {
   line-height: 1.5;
 }
 
+/* ป้ายเตือนเมื่อข้อมูลกลุ่มโรคค้าง — ต้องเด่นพอให้เห็นในภาพ export ที่ส่งเข้า LINE */
+#disease-banner.is-stale {
+  background: linear-gradient(135deg, #e67e2218, #c0392b18);
+  border-color: #e67e2266;
+}
+.stale-badge {
+  display: inline-block;
+  background: #e67e22;
+  color: #fff;
+  border-radius: 3px;
+  padding: 0 5px;
+  margin-left: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* ── Disease 4 mini charts grid ── */
 #disease-grid {
   display: grid;
@@ -1425,12 +1441,20 @@ async function initZoneF() {
          .reduce((sum, w) => sum + (getVal(d2026, w, d.key) || 0), 0)
     );
 
-    // Banner
-    const bannerEl = document.getElementById('disease-banner-text');
+    // Banner + ป้ายบอกอายุข้อมูล
+    // meta มาจาก /api/sheet-disease (คำนวณจาก date_com ของ MOPH ไม่ใช่เวลาที่ sync)
+    // จึงเตือนได้แม้ตัวเก็บข้อมูลฝั่ง Apps Script จะหยุดทำงานไปเงียบๆ
+    const meta      = data.meta || {};
+    const bannerEl  = document.getElementById('disease-banner-text');
+    const bannerBox = document.getElementById('disease-banner');
+    if (bannerBox) bannerBox.classList.toggle('is-stale', !!meta.stale);
     if (bannerEl) {
       const dateInfo = updateDateStr ? ` (วันที่: ${updateDateStr})` : '';
+      const badge    = meta.stale
+        ? ` <span class="stale-badge" title="ข้อมูลกลุ่มโรคยังไม่อัปเดตจาก HDC กระทรวงสาธารณสุข ${meta.ageDays} วัน (ล่าสุด ${updateDateStr})">⚠️ ยังไม่อัปเดต ${meta.ageDays} วัน</span>`
+        : '';
       bannerEl.innerHTML =
-        `👥 ยอดผู้ป่วยสะสม ปี 2569 ตั้งแต่สัปดาห์ที่ 1 – ${lastWK26}${dateInfo}<br>` +
+        `👥 ยอดผู้ป่วยสะสม ปี 2569 ตั้งแต่สัปดาห์ที่ 1 – ${lastWK26}${dateInfo}${badge}<br>` +
         `📈 ยอดสะสม ณ สัปดาห์ที่ <b>${lastWK26}</b>`;
     }
 

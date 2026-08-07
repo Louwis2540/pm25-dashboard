@@ -292,17 +292,31 @@ app.get('/api/sheet-disease', async (req, res) => {
 
     // ถ้า MOPH ว่าง (พลาดชั่วขณะ) → fallback ไปชีต 2026 เดิม แล้ว cache สั้นๆ เพื่อ retry
     let year2026 = moph2569;
+    let source   = 'moph';
     let ttl      = 60 * 60 * 1000;     // ได้ข้อมูลจริง → 60 นาที
     if (!year2026.length) {
       const csv2026 = await fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]);
       year2026 = csv2026 ? parseDiseaseData(csv2026) : [];
+      source   = 'sheet';
       ttl      = 15 * 60 * 1000;       // MOPH ยิงไม่ผ่าน (บน Render) → ใช้ชีต, cache 15 นาที
     }
+
+    // อายุข้อมูล — คำนวณจาก date_com ของ MOPH เอง ไม่ใช่เวลาที่ sync
+    // จึงจับได้ทั้งกรณี "ตัวเก็บข้อมูลล่ม" และ "ต้นทางหยุดอัปเดต"
+    const staleDays = Number(api.disease_stale_days) || 10;
+    const age       = diseaseDataAge(year2026);
 
     const data = {
       ok:   true,
       2025: csv2025 ? parseDiseaseData(csv2025) : [],
       2026: year2026,
+      meta: {
+        source,                                    // 'moph' = ดึงสดได้ | 'sheet' = อ่าน cache จากชีต
+        dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
+        ageDays:  age.ageDays,                     // null = ไม่มีวันที่ให้คำนวณ
+        staleDays,
+        stale:    age.ageDays !== null && age.ageDays > staleDays,
+      },
     };
     setCached('sheet-disease', data, ttl);
     res.json(data);
@@ -611,6 +625,29 @@ async function fetchMophDisease(beYear) {
     out.push(rec);
   }
   return out;
+}
+
+// อ่านค่าคอลัมน์ "อัพเดท" (= date_com ของ MOPH) แล้วคำนวณว่าข้อมูลเก่ากี่วัน
+// รับได้ทั้ง ค.ศ. (2026 — รูปแบบที่ตัวเก็บข้อมูลเขียนลงชีต) และ พ.ศ. (2569 — เผื่อมีคนแก้ชีตเอง)
+function diseaseDataAge(rows) {
+  for (const row of rows || []) {
+    const key = Object.keys(row).find(k =>
+      k.includes('อัพเดท') || k.includes('อัปเดท') || k.toLowerCase().includes('update')
+    );
+    const raw = key ? String(row[key] || '').trim() : '';
+    const m   = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) continue;
+
+    let y = +m[3];
+    if (y > 2400) y -= 543;
+    const dt = new Date(Date.UTC(y, +m[2] - 1, +m[1]));
+    if (isNaN(dt.getTime())) continue;
+
+    const today = new Date();
+    const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    return { dataDate: raw, ageDays: Math.floor((utcToday - dt.getTime()) / 86400000) };
+  }
+  return { dataDate: '', ageDays: null };
 }
 
 function parseDiseaseData(csv) {
