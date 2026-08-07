@@ -10,4 +10,7 @@ uploads/*
 
 # ไฟล์ที่ไม่จำเป็น
 *.log
-"Seal_of_the_Department_of_Disease_Control.svg - Copy.png"
+* - Copy.*
+
+# ฐานข้อมูล local — ห้าม commit (ทำให้ repo บวมและชนกัน)
+*.db
