@@ -68,6 +68,9 @@ let _cfgCache = null;
 const _cache     = new Map();
 const _updatedAt = new Map(); // บันทึกเวลาที่ข้อมูลอัพเดทจริงๆ
 
+// สำเนาข้อมูลล่าสุดที่ดึงสำเร็จ — ไม่มีวันหมดอายุ ใช้ตอบทันทีระหว่างรีเฟรชเบื้องหลัง
+const _lastGood = new Map();
+
 function getCached(key) {
   const e = _cache.get(key);
   if (!e || Date.now() > e.exp) { _cache.delete(key); return null; }
@@ -76,7 +79,22 @@ function getCached(key) {
 function setCached(key, data, ttlMs) {
   _cache.set(key, { data, exp: Date.now() + ttlMs });
   _updatedAt.set(key, Date.now());
+  _lastGood.set(key, data);
 }
+
+/* ── Single-flight: ถ้ามีคนกำลังดึง key เดียวกันอยู่ ให้รอผลก้อนเดียวกัน ──
+   กันกรณี cache หมดอายุแล้วมีคนเปิดแดชบอร์ดพร้อมกัน 10 คน → ยิง MOPH 40 ครั้งรวด */
+const _inflight = new Map();
+
+function singleFlight(key, fn) {
+  const running = _inflight.get(key);
+  if (running) return running;
+  const p = Promise.resolve().then(fn).finally(() => _inflight.delete(key));
+  _inflight.set(key, p);
+  return p;
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function readConfig() {
   if (_cfgCache) return _cfgCache;
@@ -274,56 +292,72 @@ app.get('/api/air4thai', async (req, res) => {
 
 // โซน F — โรคเฝ้าระวัง (Hybrid):
 //   • ปี 2568 (key '2025', แท่ง) ← Google Sheet เดิม (ข้อมูลย้อนหลังที่นิ่งแล้ว)
-//   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API ถ้าเรียกได้ (ต้องรันจาก IP ไทย)
-//        ไม่งั้น fallback ไปชีต 2026 ที่ตัวเก็บข้อมูลฝั่งไทย (Apps Script) เติมไว้
-//        หมายเหตุ: MOPH บล็อก IP ดาต้าเซ็นเตอร์ (Cloudflare 403) → บน Render จะใช้ชีตเสมอ
+//   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API (opendata.moph.go.th เปิดให้เรียกแล้ว
+//        ตั้งแต่ 18/08/2026 — ยืนยันด้วยการยิงจริงครบทั้ง 4 จังหวัด)
+//        ถ้าเรียกไม่ผ่าน → fallback ไปชีต 2026 ที่ตัวเก็บข้อมูลฝั่งไทย (Apps Script) เติมไว้
+//        เช็กว่าใช้ทางไหนอยู่ได้จาก meta.source ใน response ('moph' | 'sheet')
 app.get('/api/sheet-disease', async (req, res) => {
   const cached = getCached('sheet-disease');
   if (cached) return res.json(cached);
 
-  const { api } = readConfig();
-  const id      = api.sheet_id;
+  // cache หมดอายุแต่ยังมีข้อมูลเก่าอยู่ → ตอบของเก่าทันทีแล้วรีเฟรชเบื้องหลัง
+  // ผู้ใช้ไม่ต้องรอ ~4 วินาที และ MOPH โดนยิงแค่ครั้งเดียวต่อรอบ (ผ่าน singleFlight)
+  // ถ้าของเก่าเก่าเกินเกณฑ์ แบนเนอร์ "⚠️ ยังไม่อัปเดต N วัน" จะเตือนเองอยู่แล้ว
+  const stale = _lastGood.get('sheet-disease');
+  if (stale) {
+    singleFlight('sheet-disease', buildDiseaseData)
+      .catch(e => console.warn('รีเฟรชข้อมูลโรคเบื้องหลังไม่สำเร็จ:', e.message));
+    return res.json(stale);
+  }
 
   try {
-    const [csv2025, moph2569] = await Promise.all([
-      fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2025`]),
-      fetchMophDisease('2569'),
-    ]);
-
-    // ถ้า MOPH ว่าง (พลาดชั่วขณะ) → fallback ไปชีต 2026 เดิม แล้ว cache สั้นๆ เพื่อ retry
-    let year2026 = moph2569;
-    let source   = 'moph';
-    let ttl      = 60 * 60 * 1000;     // ได้ข้อมูลจริง → 60 นาที
-    if (!year2026.length) {
-      const csv2026 = await fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]);
-      year2026 = csv2026 ? parseDiseaseData(csv2026) : [];
-      source   = 'sheet';
-      ttl      = 15 * 60 * 1000;       // MOPH ยิงไม่ผ่าน (บน Render) → ใช้ชีต, cache 15 นาที
-    }
-
-    // อายุข้อมูล — คำนวณจาก date_com ของ MOPH เอง ไม่ใช่เวลาที่ sync
-    // จึงจับได้ทั้งกรณี "ตัวเก็บข้อมูลล่ม" และ "ต้นทางหยุดอัปเดต"
-    const staleDays = Number(api.disease_stale_days) || 10;
-    const age       = diseaseDataAge(year2026);
-
-    const data = {
-      ok:   true,
-      2025: csv2025 ? parseDiseaseData(csv2025) : [],
-      2026: year2026,
-      meta: {
-        source,                                    // 'moph' = ดึงสดได้ | 'sheet' = อ่าน cache จากชีต
-        dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
-        ageDays:  age.ageDays,                     // null = ไม่มีวันที่ให้คำนวณ
-        staleDays,
-        stale:    age.ageDays !== null && age.ageDays > staleDays,
-      },
-    };
-    setCached('sheet-disease', data, ttl);
-    res.json(data);
+    res.json(await singleFlight('sheet-disease', buildDiseaseData));
   } catch (e) {
     res.status(502).json({ ok: false, message: 'ดึงข้อมูลโรคไม่สำเร็จ: ' + e.message });
   }
 });
+
+// ประกอบข้อมูลโซน F หนึ่งรอบ (2568 จากชีต + 2569 จาก MOPH) แล้วเก็บลง cache
+async function buildDiseaseData() {
+  const { api } = readConfig();
+  const id      = api.sheet_id;
+
+  const [csv2025, moph2569] = await Promise.all([
+    fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2025`]),
+    fetchMophDisease('2569'),
+  ]);
+
+  // ถ้า MOPH ว่าง (พลาดชั่วขณะ) → fallback ไปชีต 2026 เดิม แล้ว cache สั้นๆ เพื่อ retry
+  let year2026 = moph2569;
+  let source   = 'moph';
+  let ttl      = 6 * 60 * 60 * 1000;   // ได้ข้อมูลจริง → 6 ชม. (HDC อัปเดตวันละครั้ง)
+  if (!year2026.length) {
+    const csv2026 = await fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]);
+    year2026 = csv2026 ? parseDiseaseData(csv2026) : [];
+    source   = 'sheet';
+    ttl      = 15 * 60 * 1000;         // MOPH ยิงไม่ผ่าน → ใช้ชีต, cache สั้นๆ เพื่อรีบลองใหม่
+  }
+
+  // อายุข้อมูล — คำนวณจาก date_com ของ MOPH เอง ไม่ใช่เวลาที่ sync
+  // จึงจับได้ทั้งกรณี "ตัวเก็บข้อมูลล่ม" และ "ต้นทางหยุดอัปเดต"
+  const staleDays = Number(api.disease_stale_days) || 10;
+  const age       = diseaseDataAge(year2026);
+
+  const data = {
+    ok:   true,
+    2025: csv2025 ? parseDiseaseData(csv2025) : [],
+    2026: year2026,
+    meta: {
+      source,                                    // 'moph' = ดึงสดได้ | 'sheet' = อ่าน cache จากชีต
+      dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
+      ageDays:  age.ageDays,                     // null = ไม่มีวันที่ให้คำนวณ
+      staleDays,
+      stale:    age.ageDays !== null && age.ageDays > staleDays,
+    },
+  };
+  setCached('sheet-disease', data, ttl);
+  return data;
+}
 
 /* ══════════════════════════════════════════
    PROVINCE GeoJSON
@@ -570,6 +604,62 @@ const MOPH_DIAG_GROUP = {
 };
 const MOPH_CATS = ['ทางเดินหายใจ', 'หัวใจ', 'ตาอักเสบ', 'ผิวหนัง'];
 
+// MOPH แบ่งหน้า: ไม่ส่ง limit จะได้แค่ 1000 แถวแรก (ขอนแก่นมี ~1,085 แถว/ปี → ตกหล่น)
+const MOPH_PAGE_SIZE = 5000;
+const MOPH_MAX_PAGES = 20;             // กันลูปไม่รู้จบถ้า total ที่ MOPH ส่งมาเพี้ยน
+const MOPH_MAX_RETRY = 3;              // จำนวนครั้งที่ลองใหม่เมื่อโดน 429 / 5xx
+const MOPH_GAP_MS    = 300;            // เว้นจังหวะระหว่างคำขอ ไม่ยิงรัวใส่ MOPH
+
+// ยิง 1 คำขอ พร้อมลองใหม่เมื่อโดน rate-limit (429) หรือปลายทางไม่พร้อม (5xx)
+async function mophPost(payload) {
+  let last;
+  for (let attempt = 0; attempt < MOPH_MAX_RETRY; attempt++) {
+    last = await fetch(MOPH_DISEASE_API, {
+      method:  'POST',
+      headers: MOPH_HEADERS,
+      body:    JSON.stringify(payload),
+      signal:  AbortSignal.timeout(30000),
+    });
+    if (last.ok || (last.status !== 429 && last.status < 500)) return last;
+
+    // เคารพ Retry-After ถ้า MOPH บอกมา ไม่งั้นถอยเป็นขั้น 2s → 4s → 8s (สูงสุด 30s)
+    const hinted = Number(last.headers.get('retry-after'));
+    const wait   = Math.min(hinted > 0 ? hinted * 1000 : 2000 * 2 ** attempt, 30000);
+    console.warn(`MOPH ตอบ ${last.status} — รอ ${wait / 1000}s แล้วลองใหม่`);
+    await sleep(wait);
+  }
+  return last;
+}
+
+// ดึงข้อมูลดิบของจังหวัดเดียวให้ครบทุกหน้า
+// รูปแบบตอบกลับ: { data: [...], total, limit, offset } — รองรับ array เปล่าๆ เผื่อ API เปลี่ยนกลับ
+async function fetchMophRows(beYear, pvIdn) {
+  const rows = [];
+
+  for (let page = 0; page < MOPH_MAX_PAGES; page++) {
+    if (page > 0) await sleep(MOPH_GAP_MS);
+
+    const r = await mophPost({
+      tableName: 's_pm25_1_in_week',
+      year:      String(beYear),
+      province:  String(pvIdn),
+      type:      'json',
+      limit:     MOPH_PAGE_SIZE,
+      offset:    page * MOPH_PAGE_SIZE,
+    });
+    if (!r.ok) break;                  // MOPH ตอบ 201 เมื่อสำเร็จ; อื่นๆ เอาเท่าที่ได้มา
+
+    const body  = await r.json();
+    const chunk = Array.isArray(body) ? body : (body?.data || []);
+    rows.push(...chunk);
+
+    const total = Array.isArray(body) ? chunk.length : Number(body?.total) || 0;
+    if (chunk.length < MOPH_PAGE_SIZE || rows.length >= total) break;
+  }
+
+  return rows;
+}
+
 // ดึง+รวมยอดผู้ป่วยรายสัปดาห์ทุกจังหวัดในเขต สำหรับปี พ.ศ. ที่กำหนด
 // คืนค่ารูปแบบเดียวกับ parseDiseaseData: [{ wk, <หมวดโรค>, อัพเดท }]
 async function fetchMophDisease(beYear) {
@@ -578,24 +668,13 @@ async function fetchMophDisease(beYear) {
   let maxDateCom = '';
 
   // ดึงทีละจังหวัด (sequential) เลี่ยงการยิงพร้อมกันจนโดน rate-limit ฝั่ง MOPH
-  for (const pv of provinces) {
+  for (const [i, pv] of provinces.entries()) {
+    if (i > 0) await sleep(MOPH_GAP_MS);
+
     let rows;
     try {
-      const r = await fetch(MOPH_DISEASE_API, {
-        method:  'POST',
-        headers: MOPH_HEADERS,
-        body:    JSON.stringify({
-          tableName: 's_pm25_1_in_week',
-          year:      String(beYear),
-          province:  String(pv.pv_idn),
-          type:      'json',
-        }),
-        signal: AbortSignal.timeout(20000),
-      });
-      if (!r.ok) continue;             // MOPH ตอบ 200/201; อื่นๆ ข้าม
-      rows = await r.json();
+      rows = await fetchMophRows(beYear, pv.pv_idn);
     } catch (_) { continue; }          // จังหวัดใดพลาด ข้ามไป ไม่ทำให้ทั้งเขตล่ม
-    if (!Array.isArray(rows)) continue;
 
     for (const row of rows) {
       const cat = MOPH_DIAG_GROUP[row.diag_main];
@@ -705,4 +784,18 @@ app.listen(PORT, () => {
   // ดึงข้อมูลครั้งแรกทันที แล้ว loop ทุก 5 นาที
   warmSheetCache();
   setInterval(warmSheetCache, 5 * 60 * 1000);
+
+  // โซน F — อุ่น cache ไว้ก่อนผู้ใช้เข้ามา แล้วรีเฟรชทุก 3 ชม. (cache อยู่ได้ 6 ชม.)
+  // เท่ากับยิง MOPH วันละ ~8 รอบ (32 คำขอ) ไม่ว่าจะมีคนเปิดแดชบอร์ดกี่คน
+  warmDiseaseCache();
+  setInterval(warmDiseaseCache, 3 * 60 * 60 * 1000);
 });
+
+async function warmDiseaseCache() {
+  try {
+    const d = await singleFlight('sheet-disease', buildDiseaseData);
+    console.log(`[${new Date().toLocaleTimeString('th-TH')}] ✅ ข้อมูลโรคอัพเดทแล้ว (${d.meta.source}, ${d.meta.dataDate || 'ไม่ทราบวันที่'})`);
+  } catch (e) {
+    console.warn('อุ่น cache ข้อมูลโรคไม่สำเร็จ:', e.message);
+  }
+}
