@@ -716,49 +716,58 @@ function getThaiMonth(m) { return ["มกราคม", "กุมภาพั�
 function formatNum(n) { return n ? n.toLocaleString() : "0"; }
 
 /**
- * ดึงข้อมูล GISTDA — เรียกจาก doGet() ใน doget.gs (main() ไม่ได้ใช้)
+ * ดึงข้อมูลพื้นที่เผาไหม้ GISTDA — เรียกจาก doGet() ใน doget.gs (main() ไม่ได้ใช้)
  *
  * ⚠️ ชื่อฟังก์ชันชวนเข้าใจผิด: endpoint ที่ยิงคือ burnt-area-latest =
  *    "พื้นที่เผาไหม้" ไม่ใช่จุดความร้อน จุดความร้อนที่แดชบอร์ดใช้มาจาก
  *    server.js → /api/hotspot ซึ่งยิง features/viirs/1day คนละชุดข้อมูลกัน
+ *
+ * ⚠️ สถานะ 18/08/2026: endpoint นี้ตอบ 503 ทั้ง 4 จังหวัด (ล่ม/ถูกถอดฝั่ง GISTDA)
+ *    ทดสอบด้วย api_key ที่ใช้งานได้จริง — ไม่ใช่ปัญหาที่ key
+ *
+ * ประวัติบั๊ก: เดิมส่ง key เป็น 'Authorization: Bearer' → GISTDA ตอบ 401
+ *    INVALID_TOKEN เสมอ ฟังก์ชันนี้จึงใช้ไม่ได้มาตั้งแต่เขียน แต่ไม่มีใครรู้
+ *    เพราะไม่มีอะไรเรียก doGet  gateway ต้องการ query param ?api_key= แทน
+ *    (เหมือนที่ server.js:177 ใช้อยู่แล้ว)
  */
 function getGistdaHotspotsRegion7() {
   const BASE_URL = 'https://api-gateway.gistda.or.th/api/2.0/resources/gi-service/v1.2/disasters/burnt-area-latest';
   const provinceCodes = ['40', '44', '45', '46'];
+  const apiKey = secret_('GISTDA_KEY');
   let allHotspots = [];
+
+  // GISTDA สะท้อน URL เต็ม (พร้อม api_key) กลับมาใน response.links[].href
+  // ถ้า log ตรงๆ key จะไปโผล่ใน Execution log — ต้องกลบก่อนทุกครั้ง
+  const redact = t => String(t).split(apiKey).join('<API_KEY>');
 
   for (let i = 0; i < provinceCodes.length; i++) {
     let pv_code = provinceCodes[i];
-    let fetchUrl = `${BASE_URL}?pv_idn=${pv_code}`;
-    let options = {
-      'method': 'get',
-      'headers': { 'Authorization': 'Bearer ' + secret_('GISTDA_KEY') },
-      'muteHttpExceptions': true
-    };
+    let fetchUrl = `${BASE_URL}?pv_idn=${pv_code}&api_key=${encodeURIComponent(apiKey)}`;
+    let options = { 'method': 'get', 'muteHttpExceptions': true };
 
     try {
-      console.log(`📡 กำลังดึงข้อมูลจุดความร้อนจังหวัดรหัส: ${pv_code}...`);
+      console.log(`📡 กำลังดึงข้อมูลพื้นที่เผาไหม้จังหวัดรหัส: ${pv_code}...`);
       let response = UrlFetchApp.fetch(fetchUrl, options);
 
       if (response.getResponseCode() === 200) {
         let jsonData = JSON.parse(response.getContentText());
         if (jsonData && jsonData.features && jsonData.features.length > 0) {
           allHotspots = allHotspots.concat(jsonData.features);
-          console.log(`✅ ได้ข้อมูล ${jsonData.features.length} จุด`);
+          console.log(`✅ ได้ข้อมูล ${jsonData.features.length} รายการ`);
         } else if (Array.isArray(jsonData) && jsonData.length > 0) {
            allHotspots = allHotspots.concat(jsonData);
-           console.log(`✅ ได้ข้อมูล ${jsonData.length} จุด`);
+           console.log(`✅ ได้ข้อมูล ${jsonData.length} รายการ`);
         } else {
-           console.log(`⚪ ไม่มีจุดความร้อนในพื้นที่นี้`);
+           console.log(`⚪ ไม่มีข้อมูลในพื้นที่นี้`);
         }
       } else {
-        console.log(`❌ Error API: ${response.getContentText()}`);
+        console.log(`❌ Error API (HTTP ${response.getResponseCode()}): ${redact(response.getContentText()).slice(0, 200)}`);
       }
     } catch (error) {
-      console.log(`❌ Request ล้มเหลว: ${error.message}`);
+      console.log(`❌ Request ล้มเหลว: ${redact(error.message)}`);
     }
   }
 
-  console.log(`🔥 รวมจุดความร้อนทั้งหมดในเขต 7: ${allHotspots.length} จุด`);
+  console.log(`🔥 รวมพื้นที่เผาไหม้ทั้งหมดในเขต 7: ${allHotspots.length} รายการ`);
   return allHotspots;
 }
