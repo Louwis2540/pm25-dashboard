@@ -30,10 +30,32 @@ const TARGET_STATIONS = [
 
 const PHEOC_THRESHOLD = 75.0;   // µg/m³ — เกินติดกัน 2 วัน = เข้าเกณฑ์เปิด PHEOC
 
-/** อ่านค่าลับจาก Script Properties — โยน error ถ้ายังไม่ตั้ง จะได้รู้ทันที ไม่ใช่เงียบ */
+/**
+ * อ่านค่าลับจาก Script Properties — โยน error ถ้ายังไม่ตั้ง จะได้รู้ทันที ไม่ใช่เงียบ
+ *
+ * ⚠️ รับ "ชื่อ" ของ property เท่านั้น เช่น secret_('LINE_ACCESS_TOKEN')
+ *    ห้ามเอาค่า token มาใส่ในวงเล็บ — ค่าจริงอยู่ที่
+ *    Project Settings → Script Properties เท่านั้น ไม่อยู่ในโค้ด
+ */
 function secret_(key) {
+  // ดักความผิดพลาดที่เกิดจริงมาแล้ว: เอา "ค่า token" มาใส่แทน "ชื่อ property"
+  // ตรงนี้ตั้งใจไม่ echo ค่า key ออก log ด้วย ไม่งั้น token จะไปโผล่ใน
+  // Execution log ซึ่งเป็นอีกทางที่ทำให้ความลับหลุด
+  if (String(key).length > 40 || /[\/+=]/.test(String(key))) {
+    throw new Error(
+      'secret_() ต้องรับ "ชื่อ" ของ Script Property ไม่ใช่ค่า token\n' +
+      '  ที่ถูกคือ  secret_(\'LINE_ACCESS_TOKEN\')\n' +
+      '  แล้วเอาค่า token ไปใส่ที่ Project Settings → Script Properties'
+    );
+  }
   const v = PropertiesService.getScriptProperties().getProperty(key);
-  if (!v) throw new Error('ยังไม่ได้ตั้ง Script Property "' + key + '" — ดูวิธีที่หัวไฟล์');
+  if (!v) {
+    throw new Error(
+      'ยังไม่ได้ตั้ง Script Property "' + key + '"\n' +
+      '  ไปที่ Project Settings (⚙️) → เลื่อนลงล่างสุด → Script Properties\n' +
+      '  → Add script property → Property = ' + key + ' , Value = <ค่าจริง>'
+    );
+  }
   return v;
 }
 
