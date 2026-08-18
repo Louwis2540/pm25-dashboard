@@ -365,7 +365,12 @@ function writeStatus_(started, ok, dataDate, note, failStreak) {
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sh = ss.getSheetByName(STATUS_TAB) || ss.insertSheet(STATUS_TAB);
     sh.clearContents();
-    sh.getRange(1, 1, rows.length, 2).setValues(rows);
+    // บังคับเป็น plain text ก่อนเขียน — ไม่งั้น Sheets แปลง '18/8/2026 9:50' เป็นวันที่จริง
+    // แล้ว gviz จะเดาทั้งคอลัมน์เป็น datetime ทำให้เซลล์ข้อความ (OK / fail_streak / note)
+    // หลุดเป็นค่าว่างตอนอ่านออกมาจากข้างนอก และ '17/8/2569' ถูกอ่านเป็น ค.ศ. 2569
+    var rng = sh.getRange(1, 1, rows.length, 2);
+    rng.setNumberFormat('@');
+    rng.setValues(rows);
   } catch (e) {
     Logger.log('⚠️ เขียนแท็บ ' + STATUS_TAB + ' ไม่สำเร็จ: ' + e.message);
   }
