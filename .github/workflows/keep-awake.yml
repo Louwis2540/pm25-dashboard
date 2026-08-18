@@ -1,0 +1,36 @@
+name: ปลุก Render ไม่ให้หลับ
+
+# Render free tier หลับเมื่อไม่มีทราฟฟิก 15 นาที และตื่นครั้งนึงกินเวลา 30-60 วินาที
+# (คนแรกที่เปิดแดชบอร์ดต้องนั่งรอ) workflow นี้ ping ไว้เฉพาะเวลาราชการ
+# นอกเวลานั้นปล่อยหลับ เพื่อไม่ให้ชั่วโมงรันเกินโควตา free tier (~750 ชม./เดือน)
+#
+# ping ถี่ขึ้นไม่ทำให้เปลืองโควตา Render เพราะคิดตามเวลาที่ instance ตื่น ไม่ใช่จำนวนคำขอ
+# จึงตั้ง 5 นาที (ถี่สุดที่ GitHub ยอม) เผื่อไว้ — cron ของ GitHub เป็น best-effort
+# ดีเลย์ได้ 10-20 นาทีตอนระบบโหลดหนัก ถ้าตั้ง 10 นาทีแล้วโดนดีเลย์ 2 รอบ Render จะหลับพอดี
+
+on:
+  schedule:
+    # เวลา UTC — 00:00-11:59 UTC ตรงกับ 07:00-18:59 น. เวลาไทย (UTC+7) จันทร์-ศุกร์
+    - cron: '*/5 0-11 * * 1-5'
+  workflow_dispatch:        # กดรันเองได้จากแท็บ Actions
+
+# ถ้ารอบก่อนยังค้างอยู่ (Render ตื่นช้า) ให้ยกเลิกแล้วใช้รอบใหม่แทน ไม่ให้ทับกัน
+concurrency:
+  group: keep-awake
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: ping แดชบอร์ด
+        run: |
+          # /api/data-status เป็น endpoint ที่เบาที่สุด — คืนแค่ timestamp ไม่ยิง API ข้างนอก
+          # แค่ปลุก instance ก็พอ เพราะ warmDiseaseCache() ทำงานเองตอน server สตาร์ท
+          curl --silent --show-error --fail \
+               --retry 3 --retry-delay 20 --retry-all-errors \
+               --max-time 120 \
+               --output /dev/null \
+               --write-out 'HTTP %{http_code} · ใช้เวลา %{time_total}s\n' \
+               https://pm25-dashboard-ex8l.onrender.com/api/data-status
