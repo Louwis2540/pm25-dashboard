@@ -354,7 +354,7 @@ function testReportDryRun() {
 
   const msg = buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, timeStr, roundText);
   Logger.log('── ข้อความที่จะส่ง (ตัวอย่าง) ──\n' + msg.text);
-  Logger.log('ℹ️ dry run — ไม่ได้ broadcast และไม่ได้เขียนชีต (PHEOC ตั้งเป็นว่างไว้)');
+  Logger.log('ℹ️ dry run — ไม่ได้ broadcast และไม่ได้เขียนชีต (PHEOC เช็คจริงจาก API)');
 }
 
 // ==========================================================
