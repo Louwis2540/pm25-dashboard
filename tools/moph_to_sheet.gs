@@ -1,10 +1,15 @@
 /**
- * MOPH → Google Sheet collector (ฝั่งไทย)
+ * MOPH → Google Sheet collector (ตัวสำรอง)
  * ------------------------------------------------------------------
- * ทำไมต้องมีไฟล์นี้:
- *   MOPH opendata (Cloudflare) บล็อก IP ดาต้าเซ็นเตอร์ต่างประเทศ (Render/US = 403)
- *   จึงต้องให้ "ตัวกลางในไทย" ดึงข้อมูลมาพักไว้ในชีต แล้วให้เว็บอ่านจากชีตแทน
- *   Apps Script รันบนเซิร์ฟเวอร์ Google — ถ้า egress ของ Google ไม่โดนบล็อก ก็ทำงานได้อัตโนมัติ
+ * บทบาทปัจจุบัน — เปลี่ยนแล้ว 18/08/2026:
+ *   เดิม MOPH opendata (Cloudflare) บล็อก IP ดาต้าเซ็นเตอร์ต่างประเทศ (Render = 403)
+ *   จึงต้องมี "ตัวกลางในไทย" ดึงมาพักในชีต แล้วให้เว็บอ่านจากชีตแทน
+ *
+ *   ตอนนี้ MOPH เปิดให้เรียกตรงแล้ว และ Render ยิงผ่าน (ยืนยันจาก meta.source = 'moph')
+ *   → ไฟล์นี้กลายเป็น "ตัวสำรอง" ไม่ใช่ทางหลักอีกต่อไป
+ *     server.js อ่านชีตแท็บ 2026 เฉพาะตอนยิง MOPH ไม่ผ่านเท่านั้น
+ *   ยังควรตั้ง trigger รันต่อไว้ เพราะถ้า MOPH บล็อกอีกรอบ ชีตคือสิ่งเดียว
+ *   ที่ทำให้หน้าเว็บไม่ว่างเปล่า
  *
  * ผลลัพธ์: เขียนแท็บ "2026" ในรูปแบบที่ server.js (parseDiseaseData) + หน้าเว็บอ่านได้
  *   หัวตาราง:  wk | ทางเดินหายใจ | หัวใจ | ตาอักเสบ | ผิวหนัง | อัพเดท
@@ -17,9 +22,13 @@
  *      ⚠️ เวอร์ชันนี้เพิ่มการส่งอีเมลแจ้งเตือน → ต้อง "อนุญาตสิทธิ์ใหม่" อีกครั้ง
  *         (สิทธิ์ส่งเมล script.send_mail) ถึงจะแจ้งเตือนได้
  *   4) ดู Execution log:
- *        - ถ้าขึ้น "✅ เขียนแท็บ 2026 …" = Google egress ผ่าน MOPH → ตั้ง Trigger รายวันได้เลย
- *        - ถ้าขึ้น HTTP 403 ทุกจังหวัด = Google ก็โดนบล็อกเหมือนกัน → ต้องรันจากเครื่อง/โฮสต์ในไทยแทน
- *        - ถ้าขึ้น HTTP 404 ทุกจังหวัด = MOPH ถอด endpoint /api/report_data ออกแล้ว (เหตุการณ์ ส.ค. 2569)
+ *        - ถ้าขึ้น "✅ เขียนแท็บ 2026 …" = ผ่าน → ตั้ง Trigger รายวันได้เลย
+ *        - "• province 40 → 1085 แถว" = จำนวนแถวที่ดึงได้จริงรายจังหวัด ใช้เช็กว่าครบไหม
+ *        - ถ้าขึ้น HTTP 403 ทุกจังหวัด = Cloudflare บล็อก IP ที่ยิงออกไป
+ *        - ถ้าขึ้น HTTP 404 ทุกจังหวัด = MOPH ถอด/ย้าย endpoint /api/report_data
+ *        - ถ้าขึ้น "รูปแบบข้อมูลไม่รู้จัก" = MOPH เปลี่ยนรูปแบบ response อีกแล้ว
+ *          (เคยเกิด ส.ค. 2569: เปลี่ยนจาก array เป็น { data, total, limit, offset }
+ *           ทำให้สคริปต์พังเงียบ 13 รอบติด — ดู fetchProvinceRows_ ที่รองรับทั้งสองแบบ)
  *   5) ตั้งอัตโนมัติ: Triggers (⏰) → Add Trigger → syncMophDisease → Time-driven → Day timer (เช่น 06:00–07:00)
  *   6) ทดสอบว่าอีเมลแจ้งเตือนถึงจริง: เลือกฟังก์ชัน testAlert แล้วกด Run
  *
@@ -38,6 +47,10 @@ var TAB_NAME   = '2026';        // แท็บที่ server.js อ่าน�
 var BE_YEAR    = '2569';        // ปีงบ พ.ศ. ที่ดึงจาก MOPH
 var PROVINCES  = [40, 44, 45, 46];  // เขตสุขภาพ 7: ขอนแก่น มหาสารคาม ร้อยเอ็ด กาฬสินธุ์
 var MOPH_URL   = 'https://opendata.moph.go.th/api/report_data';
+
+// MOPH แบ่งหน้า: ถ้าไม่ส่ง limit จะได้แค่ 1000 แถวแรก (ขอนแก่นมี ~1,085 แถว/ปี → ตกหล่น)
+var MOPH_PAGE_SIZE = 5000;
+var MOPH_MAX_PAGES = 20;   // กันลูปไม่รู้จบถ้า total ที่ MOPH ส่งมาเพี้ยน
 
 // ── ตั้งค่าการแจ้งเตือน ──────────────────────────────────────────────
 var ALERT_EMAILS = [];   // เช่น ['someone@moph.go.th','admin@example.com']
@@ -63,42 +76,15 @@ function syncMophDisease() {
   var errors  = [];      // เก็บสาเหตุรายจังหวัด ไว้ใส่ในอีเมลแจ้งเตือน
 
   for (var i = 0; i < PROVINCES.length; i++) {
-    var pv = PROVINCES[i];
-    var resp;
-    try {
-      resp = UrlFetchApp.fetch(MOPH_URL, {
-        method: 'post',
-        contentType: 'application/json',
-        payload: JSON.stringify({
-          tableName: 's_pm25_1_in_week',
-          year: String(BE_YEAR),
-          province: String(pv),
-          type: 'json'
-        }),
-        muteHttpExceptions: true
-      });
-    } catch (e) {
-      errors.push('จังหวัด ' + pv + ' → เรียกไม่สำเร็จ: ' + e.message);
-      Logger.log('❌ province ' + pv + ' → ' + e.message);
+    var pv  = PROVINCES[i];
+    var res = fetchProvinceRows_(pv);
+    if (res.error) {
+      errors.push('จังหวัด ' + pv + ' → ' + res.error);
+      Logger.log('❌ province ' + pv + ' → ' + res.error);
       continue;
     }
-
-    var code = resp.getResponseCode();
-    if (code !== 200 && code !== 201) {
-      var snippet = resp.getContentText().slice(0, 120).replace(/\s+/g, ' ');
-      errors.push('จังหวัด ' + pv + ' → HTTP ' + code + ' | ' + snippet);
-      Logger.log('❌ province ' + pv + ' → HTTP ' + code + ' (โดนบล็อก?) ' + snippet);
-      continue;
-    }
-    var rows;
-    try { rows = JSON.parse(resp.getContentText()); } catch (e) {
-      errors.push('จังหวัด ' + pv + ' → อ่าน JSON ไม่ได้');
-      Logger.log('❌ province ' + pv + ' parse error'); continue;
-    }
-    if (!Array.isArray(rows)) {
-      errors.push('จังหวัด ' + pv + ' → รูปแบบข้อมูลไม่ใช่ array');
-      Logger.log('❌ province ' + pv + ' ไม่ใช่ array'); continue;
-    }
+    var rows = res.rows;
+    Logger.log('• province ' + pv + ' → ' + rows.length + ' แถว');
     okCount++;
 
     for (var r = 0; r < rows.length; r++) {
@@ -191,6 +177,64 @@ function syncMophDisease() {
       'เวลาที่รัน : ' + fmtTime_(started) + '\n\n' +
       'จังหวัดที่พลาด:\n' + errors.join('\n') + '\n');
   }
+}
+
+/**
+ * ดึงข้อมูลดิบของจังหวัดเดียวให้ครบทุกหน้า
+ *
+ * MOPH ตอบเป็น { data: [...], total, limit, offset } ไม่ใช่ array ตรงๆ
+ * โค้ดเดิมเช็ค Array.isArray() แล้วตีว่า "รูปแบบข้อมูลไม่ใช่ array" → พังทุกจังหวัด
+ * (fail_streak 13 ครั้งติด) ตรงนี้จึงรองรับทั้งสองรูปแบบ เผื่อ API เปลี่ยนกลับอีก
+ *
+ * คืน { rows: [...] } ถ้าสำเร็จ หรือ { error: 'เหตุผล' } ถ้าพลาด
+ */
+function fetchProvinceRows_(pv) {
+  var rows = [];
+
+  for (var page = 0; page < MOPH_MAX_PAGES; page++) {
+    var resp;
+    try {
+      resp = UrlFetchApp.fetch(MOPH_URL, {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({
+          tableName: 's_pm25_1_in_week',
+          year: String(BE_YEAR),
+          province: String(pv),
+          type: 'json',
+          limit: MOPH_PAGE_SIZE,
+          offset: page * MOPH_PAGE_SIZE
+        }),
+        muteHttpExceptions: true
+      });
+    } catch (e) {
+      return { error: 'เรียกไม่สำเร็จ: ' + e.message };
+    }
+
+    var code = resp.getResponseCode();
+    if (code !== 200 && code !== 201) {
+      var snippet = resp.getContentText().slice(0, 120).replace(/\s+/g, ' ');
+      return { error: 'HTTP ' + code + ' | ' + snippet };
+    }
+
+    var body;
+    try { body = JSON.parse(resp.getContentText()); } catch (e) {
+      return { error: 'อ่าน JSON ไม่ได้' };
+    }
+
+    // รูปแบบปัจจุบัน { data: [...] } | รูปแบบเดิม [ ... ]
+    var chunk = Array.isArray(body) ? body : (body ? body.data : null);
+    if (!Array.isArray(chunk)) {
+      return { error: 'รูปแบบข้อมูลไม่รู้จัก (ไม่มีทั้ง array และ .data)' };
+    }
+
+    rows = rows.concat(chunk);
+
+    var total = Array.isArray(body) ? chunk.length : (Number(body.total) || 0);
+    if (chunk.length < MOPH_PAGE_SIZE || rows.length >= total) break;
+  }
+
+  return { rows: rows };
 }
 
 /* ══════════════════════════════════════════
