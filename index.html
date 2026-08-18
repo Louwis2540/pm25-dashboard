@@ -692,7 +692,7 @@ body {
     <!-- Zone C : Daily Trend Line Chart -->
     <div id="zone-c">
       <div class="zone-title" style="position:relative;">
-        <span class="zt-text">แนวโน้ม PM<sub>2.5</sub> รายวัน ราย 4 จังหวัด (ต.ค. 2568 – ปัจจุบัน)</span>
+        <span class="zt-text">แนวโน้ม PM<sub>2.5</sub> รายวัน ราย 4 จังหวัด <span id="trend-range">(กำลังโหลด)</span></span>
         <button id="btn-reset-zoom" onclick="resetChartZoom()"
           style="display:none;position:absolute;right:4px;top:50%;transform:translateY(-50%);
                  background:#1a4f7a;color:#fff;border:none;border-radius:3px;
@@ -1623,12 +1623,28 @@ function renderZoneC(data) {
   const sortedD  = data.sortedDates || Object.keys(allData).sort();
 
   // จำนวนวันและเส้นเกณฑ์จาก config (แก้ได้ใน Admin Panel)
-  const MAX_DAYS   = DCFG.chart?.days_trend   || 60;
+  // days_trend = 0 → แสดงทุกวันตั้งแต่วันแรกที่เก็บข้อมูล (ผู้ใช้ซูม/เลื่อนดูเองได้)
+  const MAX_DAYS   = Number(DCFG.chart?.days_trend ?? 0);
   const THRESHOLDS = DCFG.chart?.thresholds   || [
     { value: 37.5, label: 'เกณฑ์พิจารณา', color: '#f07d00' },
     { value: 75.0, label: 'มาตรฐาน',      color: '#e8192c' },
   ];
-  const dates    = sortedD.slice(0, MAX_DAYS).reverse(); // เรียงเก่า→ใหม่
+  // slice() คืน array ใหม่เสมอ — สำคัญ เพราะ reverse() แก้ต้นฉบับ
+  // ถ้า reverse() โดน data.sortedDates ตรงๆ Zone D ที่ใช้ค่าเดียวกันจะเพี้ยนตาม
+  const dates    = sortedD.slice(0, MAX_DAYS > 0 ? MAX_DAYS : undefined).reverse(); // เก่า→ใหม่
+
+  // เขียนช่วงเวลาจริงลงหัวข้อ — ของเดิมฮาร์ดโค้ด "ต.ค. 2568" ไว้ ซึ่งไม่ตรงกับข้อมูล
+  const rangeEl = document.getElementById('trend-range');
+  if (rangeEl) {
+    if (dates.length) {
+      const TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
+                      'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      const [y, m] = dates[0].split('-').map(Number);
+      rangeEl.textContent = `(${TH_MON[m - 1]} ${y + 543} – ปัจจุบัน · ${dates.length} วัน)`;
+    } else {
+      rangeEl.textContent = '(ยังไม่มีข้อมูล)';
+    }
+  }
 
   // สร้าง dataset ราย Province
   const datasets = pvs.map(pv => {
@@ -1757,7 +1773,15 @@ function renderZoneC(data) {
           },
         },
         zoom: {
-          pan:  { enabled: true, mode: 'x', threshold: 5 },
+          pan:  {
+            enabled: true, mode: 'x', threshold: 5,
+            // เดิมมีแต่ onZoomComplete → ถ้าผู้ใช้แค่ลากเลื่อนโดยไม่ซูม
+            // ปุ่ม Reset จะไม่โผล่ กลับไปช่วงเต็มไม่ได้นอกจาก refresh
+            onPanComplete: () => {
+              const btn = document.getElementById('btn-reset-zoom');
+              if (btn) btn.style.display = 'inline-flex';
+            },
+          },
           zoom: {
             wheel: { enabled: true, speed: 0.08 },
             pinch: { enabled: true },

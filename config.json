@@ -218,7 +218,7 @@
     }
   ],
   "chart": {
-    "days_trend": 90,
+    "days_trend": 0,
     "thresholds": [
       {
         "value": 37.5,

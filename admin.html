@@ -908,8 +908,9 @@
           <div class="card-title">📅 จำนวนวันที่แสดงในกราฟแนวโน้ม</div>
           <div class="form-row" style="max-width:200px;">
             <label>จำนวนวัน (Zone C)</label>
-            <input type="number" id="chart-days" min="7" max="365" />
-            <div class="form-hint">แนะนำ 30–90 วัน</div>
+            <input type="number" id="chart-days" min="0" max="3650" />
+            <div class="form-hint"><b>0 = แสดงทั้งหมดตั้งแต่วันแรก</b> (ผู้ใช้ซูม/เลื่อนดูเองได้)<br>
+            ใส่ตัวเลขถ้าต้องการจำกัดเฉพาะ N วันล่าสุด</div>
           </div>
         </div>
 
@@ -1609,7 +1610,7 @@ async function saveDiseases() {
 function renderThresholds() {
   const ed = document.getElementById('threshold-editor');
   const ts = CFG.chart?.thresholds || [];
-  document.getElementById('chart-days').value = CFG.chart?.days_trend || 60;
+  document.getElementById('chart-days').value = Number(CFG.chart?.days_trend ?? 0);
 
   ed.innerHTML = ts.map((t, i) => `
     <div class="rec-item" id="thr-row-${i}" style="grid-template-columns:90px 1fr 120px 44px;align-items:end;">
@@ -1638,7 +1639,7 @@ function renderThresholds() {
 }
 
 function addThreshold() {
-  if (!CFG.chart) CFG.chart = { days_trend: 60, thresholds: [] };
+  if (!CFG.chart) CFG.chart = { days_trend: 0, thresholds: [] };
   CFG.chart.thresholds.push({ value: 50, label: 'เกณฑ์ใหม่', color: '#999999' });
   renderThresholds();
 }
@@ -1649,7 +1650,9 @@ function removeThreshold(i) {
 }
 
 async function saveChart() {
-  const days = parseInt(document.getElementById('chart-days').value) || 60;
+  // 0 = แสดงทั้งหมด จึงใช้ ?? แทน || ไม่งั้น 0 จะถูกมองว่า "ว่าง" แล้วเด้งเป็น 60
+  const raw  = parseInt(document.getElementById('chart-days').value);
+  const days = Number.isFinite(raw) && raw >= 0 ? raw : 0;
   const ts   = (CFG.chart?.thresholds || []).map((_, i) => ({
     value: parseFloat(document.getElementById(`thr-val-${i}`).value),
     label: document.getElementById(`thr-lbl-${i}`).value,
