@@ -256,6 +256,74 @@ function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, 
 }
 
 // ==========================================================
+// 🧪 ฟังก์ชันทดสอบ — ไม่ยิง broadcast ใช้ได้อย่างปลอดภัย
+// ==========================================================
+
+/**
+ * เช็คว่า LINE_ACCESS_TOKEN ที่ตั้งไว้ใช้ได้จริงไหม — ไม่ส่งข้อความหาใคร
+ * ยิง GET /v2/bot/info ซึ่งแค่ถามข้อมูล bot ไม่กระทบผู้ติดตาม
+ * ใช้ตรวจหลังหมุน token ใหม่ทุกครั้ง
+ */
+function testLineToken() {
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/info', {
+    method: 'get',
+    headers: { 'Authorization': 'Bearer ' + secret_('LINE_ACCESS_TOKEN') },
+    muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code === 200) {
+    const info = JSON.parse(res.getContentText());
+    Logger.log('✅ token ใช้ได้ — OA: ' + info.displayName + ' (basicId ' + info.basicId + ')');
+  } else {
+    Logger.log('❌ token ใช้ไม่ได้ — HTTP ' + code + ' : ' + res.getContentText());
+    Logger.log('   401 = token ผิด/ถูก revoke แล้ว · 403 = แผนบัญชีไม่รองรับ');
+  }
+}
+
+/**
+ * ประกอบรายงานทั้งหมดแล้ว log ออกมาดู — ไม่ broadcast และไม่เขียนชีต
+ * ใช้ตรวจว่าตัวเลข/ข้อความถูกต้องก่อนปล่อยของจริง
+ *
+ * ⚠️ อย่ากด Run main() เพื่อทดสอบ — main() ยิง broadcast จริง
+ *    ผู้ติดตาม LINE OA ทุกคนจะได้ข้อความทดสอบ
+ */
+function testReportDryRun() {
+  const airData    = getAirDataStrict();
+  const healthData = getHealthFromSeparateSheets();
+
+  // ข้ามการเขียนชีตและการเช็ค PHEOC โดยตั้งใจ — dry run ต้องไม่แตะข้อมูลจริง
+  const pheocStatus = { provinces: [] };
+
+  let validPMs = airData.map(d => d.pm25).filter(v => v !== null && v >= 0);
+  let avgPM = validPMs.length > 0 ? (validPMs.reduce((a, b) => a + b, 0) / validPMs.length) : null;
+
+  Logger.log('── ค่าฝุ่นที่ดึงได้ ──');
+  airData.forEach(p => Logger.log('  ' + p.name + ' : ' + (p.pm25 === null ? '(ไม่มีข้อมูล)' : p.pm25) + '  เวลา ' + p.time));
+  Logger.log('  เฉลี่ย 4 จังหวัด : ' + (avgPM === null ? '(คำนวณไม่ได้)' : avgPM.toFixed(1)));
+
+  Logger.log('── ข้อมูลกลุ่มโรค ──');
+  if (!healthData) {
+    Logger.log('  ❌ อ่านไม่ได้');
+  } else {
+    Logger.log('  สัปดาห์ที่รายงาน : ' + healthData.wk + '  (ต้องตรงกับหน้าเว็บ)');
+    Logger.log('  ยอดสะสม : ' + healthData.curr.map(n => n.toLocaleString()).join(' | '));
+    Logger.log('  วันที่ : ' + healthData.dateStr);
+    Logger.log('  ป้ายเตือนข้อมูลค้าง : ' + (healthData.ageNote ? healthData.ageNote.trim() : '(ไม่มี — ข้อมูลยังสด)'));
+  }
+
+  const today = new Date();
+  const hour  = today.getHours();
+  const roundText = hour < 11 ? 'รอบเช้า' : (hour < 15 ? 'รอบเที่ยง' : 'รอบเย็น');
+  const timeStr   = Utilities.formatDate(today, "GMT+7", "HH.mm น.");
+  const thaiYear  = parseInt(Utilities.formatDate(today, "GMT+7", "yyyy")) + 543;
+  const fullDate  = Utilities.formatDate(today, "GMT+7", "d") + ' ' + getThaiMonth(today.getMonth()) + ' ' + thaiYear;
+
+  const msg = buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, timeStr, roundText);
+  Logger.log('── ข้อความที่จะส่ง (ตัวอย่าง) ──\n' + msg.text);
+  Logger.log('ℹ️ dry run — ไม่ได้ broadcast และไม่ได้เขียนชีต (PHEOC ตั้งเป็นว่างไว้)');
+}
+
+// ==========================================================
 // 🛠️ ตรรกะและข้อมูลเสริม
 // ==========================================================
 function getPMLevelInfoForText(pm) {
