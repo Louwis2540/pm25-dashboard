@@ -544,7 +544,13 @@ function normDate_(v) {
 function getThaiMonth(m) { return ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"][m]; }
 function formatNum(n) { return n ? n.toLocaleString() : "0"; }
 
-/** ดึงจุดความร้อน GISTDA — ยังไม่มีใครเรียกใช้ (main() ไม่ได้ใช้) เก็บไว้เผื่ออนาคต */
+/**
+ * ดึงข้อมูล GISTDA — เรียกจาก doGet() ใน doget.gs (main() ไม่ได้ใช้)
+ *
+ * ⚠️ ชื่อฟังก์ชันชวนเข้าใจผิด: endpoint ที่ยิงคือ burnt-area-latest =
+ *    "พื้นที่เผาไหม้" ไม่ใช่จุดความร้อน จุดความร้อนที่แดชบอร์ดใช้มาจาก
+ *    server.js → /api/hotspot ซึ่งยิง features/viirs/1day คนละชุดข้อมูลกัน
+ */
 function getGistdaHotspotsRegion7() {
   const BASE_URL = 'https://api-gateway.gistda.or.th/api/2.0/resources/gi-service/v1.2/disasters/burnt-area-latest';
   const provinceCodes = ['40', '44', '45', '46'];
