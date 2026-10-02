@@ -322,7 +322,8 @@ app.get('/api/air4thai', async (req, res) => {
 //   • ปี 2568 (key '2025', แท่ง) ← Google Sheet เดิม (ข้อมูลย้อนหลังที่นิ่งแล้ว)
 //   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API (opendata.moph.go.th เปิดให้เรียกแล้ว
 //        ตั้งแต่ 18/08/2026 — ยืนยันด้วยการยิงจริงครบทั้ง 4 จังหวัด)
-//        ถ้าเรียกไม่ผ่าน → fallback ไปชีต 2026 ที่ตัวเก็บข้อมูลฝั่งไทย (Apps Script) เติมไว้
+//        + ชีต 2026 ที่ตัวเก็บข้อมูลฝั่งไทย (Apps Script) เติมไว้ — ดึงทั้งคู่แล้วใช้ตัวที่ "อัพเดท" ใหม่กว่า
+//        (ต.ค. 2569: ตาราง MOPH ค้างที่ 25/8 แต่ชีตยังอัปเดตทุกวัน → ถ้าใช้ MOPH อย่างเดียวจะค้างไปด้วย)
 //        เช็กว่าใช้ทางไหนอยู่ได้จาก meta.source ใน response ('moph' | 'sheet')
 app.get('/api/sheet-disease', async (req, res) => {
   const cached = getCached('sheet-disease');
@@ -350,21 +351,33 @@ async function buildDiseaseData() {
   const { api } = readConfig();
   const id      = api.sheet_id;
 
-  const [csv2025, moph2569] = await Promise.all([
+  const [csv2025, moph2569, csv2026, csvStatus] = await Promise.all([
     fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2025`]),
     fetchMophDisease('2569'),
+    fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]),
+    fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=_sync_status`]),
   ]);
+  const sheet2569 = csv2026 ? parseDiseaseData(csv2026) : [];
 
-  // ถ้า MOPH ว่าง (พลาดชั่วขณะ) → fallback ไปชีต 2026 เดิม แล้ว cache สั้นๆ เพื่อ retry
-  let year2026 = moph2569;
-  let source   = 'moph';
-  let ttl      = 6 * 60 * 60 * 1000;   // ได้ข้อมูลจริง → 6 ชม. (HDC อัปเดตวันละครั้ง)
-  if (!year2026.length) {
-    const csv2026 = await fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]);
-    year2026 = csv2026 ? parseDiseaseData(csv2026) : [];
-    source   = 'sheet';
-    ttl      = 15 * 60 * 1000;         // MOPH ยิงไม่ผ่าน → ใช้ชีต, cache สั้นๆ เพื่อรีบลองใหม่
+  // สัปดาห์ที่ LINE OA รายงาน (trimToStableWeeks_ ใน Apps Script เขียนไว้ที่ _sync_status.report_week)
+  // ใช้จุดตัดเดียวกันทั้ง LINE และหน้าเว็บ — ไม่มี/อ่านไม่ได้ → หน้าเว็บถอยไปใช้ "สัปดาห์รองสุดท้าย" เหมือนเดิม
+  let reportWeek = null;
+  for (const line of (csvStatus || '').split('\n')) {
+    const [k, v] = csvLine(line).map(s => s.replace(/"/g, ''));
+    if (k === 'report_week' && /^\d{1,2}$/.test(v)) reportWeek = Number(v);
   }
+
+  // ใช้แหล่งที่อัพเดทใหม่กว่า (ageDays น้อยกว่า) — เท่ากันหรือเทียบไม่ได้ให้ MOPH ชนะ
+  const mophAge  = diseaseDataAge(moph2569).ageDays;
+  const sheetAge = diseaseDataAge(sheet2569).ageDays;
+  const useSheet = !moph2569.length ||
+    (sheet2569.length && sheetAge !== null && (mophAge === null || sheetAge < mophAge));
+
+  let year2026 = useSheet ? sheet2569 : moph2569;
+  let source   = useSheet ? 'sheet' : 'moph';
+  let ttl      = useSheet ? 60 * 60 * 1000       // ชีตใหม่กว่า → 1 ชม. (Apps Script เติมวันละครั้ง)
+                          : 6 * 60 * 60 * 1000;  // MOPH → 6 ชม. (HDC อัปเดตวันละครั้ง)
+  if (!moph2569.length) ttl = 15 * 60 * 1000;    // MOPH ยิงไม่ผ่าน → cache สั้นๆ เพื่อรีบลองใหม่
 
   // อายุข้อมูล — คำนวณจาก date_com ของ MOPH เอง ไม่ใช่เวลาที่ sync
   // จึงจับได้ทั้งกรณี "ตัวเก็บข้อมูลล่ม" และ "ต้นทางหยุดอัปเดต"
@@ -376,7 +389,9 @@ async function buildDiseaseData() {
     2025: csv2025 ? parseDiseaseData(csv2025) : [],
     2026: year2026,
     meta: {
-      source,                                    // 'moph' = ดึงสดได้ | 'sheet' = อ่าน cache จากชีต
+      source,                                    // 'moph' | 'sheet' = แหล่งที่อัพเดทใหม่กว่า
+      // จุดตัดของ LINE คำนวณจากข้อมูลชีต → ใช้ได้เฉพาะตอนแสดงข้อมูลชีต
+      reportWeek: useSheet ? reportWeek : null,
       dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
       ageDays:  age.ageDays,                     // null = ไม่มีวันที่ให้คำนวณ
       staleDays,

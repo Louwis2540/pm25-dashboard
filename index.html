@@ -1413,13 +1413,18 @@ async function initZoneF() {
     // สัปดาห์ล่าสุดที่ HDC เพิ่งเริ่มรายงานยัง query ไม่ครบ (มักมีแค่ไม่กี่ราย) ถ้าเอามาแสดง
     // กราฟจะดิ่งลงเกือบศูนย์ที่จุดสุดท้าย และยอดสะสมจะต่ำกว่าความจริง
     // → ใช้ "สัปดาห์รองสุดท้าย" เป็นสัปดาห์อ้างอิงแทน
+    // ยกเว้นมี meta.reportWeek = สัปดาห์ที่ LINE OA รายงาน (ตัดสัปดาห์ที่ยังไม่นิ่งแล้ว)
+    // → ใช้ตัวนั้น ให้ตัวเลขบนหน้าเว็บตรงกับข้อความ LINE
     const wksWithData = d2026
       .filter(r => DISEASES.some(d => getVal(d2026, r.wk, d.key) !== null))
       .map(r => r.wk)
       .sort((a, b) => a - b);
-    const lastWK26 = wksWithData.length > 1
-      ? wksWithData[wksWithData.length - 2]
-      : (wksWithData[0] || 0);
+    const rptWk    = Number(data.meta?.reportWeek);
+    const lastWK26 = (rptWk > 0 && wksWithData.includes(rptWk))
+      ? rptWk
+      : wksWithData.length > 1
+        ? wksWithData[wksWithData.length - 2]
+        : (wksWithData[0] || 0);
 
     // หาวันที่อัปเดต — ค้นจาก key ที่มีคำว่า "อัพเดท" หรือ "update"
     let updateDateStr = '';
