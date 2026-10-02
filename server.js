@@ -351,12 +351,21 @@ async function buildDiseaseData() {
   const { api } = readConfig();
   const id      = api.sheet_id;
 
-  const [csv2025, moph2569, csv2026] = await Promise.all([
+  const [csv2025, moph2569, csv2026, csvStatus] = await Promise.all([
     fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2025`]),
     fetchMophDisease('2569'),
     fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]),
+    fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=_sync_status`]),
   ]);
   const sheet2569 = csv2026 ? parseDiseaseData(csv2026) : [];
+
+  // สัปดาห์ที่ LINE OA รายงาน (trimToStableWeeks_ ใน Apps Script เขียนไว้ที่ _sync_status.report_week)
+  // ใช้จุดตัดเดียวกันทั้ง LINE และหน้าเว็บ — ไม่มี/อ่านไม่ได้ → หน้าเว็บถอยไปใช้ "สัปดาห์รองสุดท้าย" เหมือนเดิม
+  let reportWeek = null;
+  for (const line of (csvStatus || '').split('\n')) {
+    const [k, v] = csvLine(line).map(s => s.replace(/"/g, ''));
+    if (k === 'report_week' && /^\d{1,2}$/.test(v)) reportWeek = Number(v);
+  }
 
   // ใช้แหล่งที่อัพเดทใหม่กว่า (ageDays น้อยกว่า) — เท่ากันหรือเทียบไม่ได้ให้ MOPH ชนะ
   const mophAge  = diseaseDataAge(moph2569).ageDays;
@@ -381,6 +390,8 @@ async function buildDiseaseData() {
     2026: year2026,
     meta: {
       source,                                    // 'moph' | 'sheet' = แหล่งที่อัพเดทใหม่กว่า
+      // จุดตัดของ LINE คำนวณจากข้อมูลชีต → ใช้ได้เฉพาะตอนแสดงข้อมูลชีต
+      reportWeek: useSheet ? reportWeek : null,
       dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
       ageDays:  age.ageDays,                     // null = ไม่มีวันที่ให้คำนวณ
       staleDays,
