@@ -6,6 +6,11 @@ const fs       = require('fs');
 const path     = require('path');
 const Database = require('better-sqlite3');
 
+/* ── โหลด .env เอง — start-server.bat เรียก `node server.js` ตรงๆ ไม่ผ่าน npm start
+   ค่าที่ตั้งไว้ใน environment แล้ว (เช่นบน Render) จะไม่ถูกทับ ── */
+const ENV_PATH = path.join(__dirname, '.env');
+if (fs.existsSync(ENV_PATH)) process.loadEnvFile(ENV_PATH);
+
 const app        = express();
 const PORT       = process.env.PORT || 3000;
 const CFG_PATH   = path.join(__dirname, 'config.json');
@@ -101,14 +106,37 @@ function readConfig() {
   const cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
   if (process.env.GISTDA_KEY)          cfg.api.gistda_key        = process.env.GISTDA_KEY;
   if (process.env.SHEET_ID)            cfg.api.sheet_id          = process.env.SHEET_ID;
+  cfg.admin = cfg.admin || {};
   if (process.env.ADMIN_USERNAME)      cfg.admin.username        = process.env.ADMIN_USERNAME;
+  // hash รหัส admin อยู่ใน env เท่านั้น (.env ในเครื่อง / Environment บน Render)
+  // config.json อยู่ใน repo สาธารณะ — ค่าใน config.json ใช้เป็น fallback ของเครื่องเก่าเท่านั้น
   if (process.env.ADMIN_PASSWORD_HASH) cfg.admin.password_hash   = process.env.ADMIN_PASSWORD_HASH;
   _cfgCache = cfg;
   return cfg;
 }
 function writeConfig(data) {
-  fs.writeFileSync(CFG_PATH, JSON.stringify(data, null, 2), 'utf8');
+  // ค่าที่ readConfig() เอามาจาก env ห้ามไหลกลับลง config.json (อยู่ใน repo สาธารณะ)
+  // ใช้ค่าเดิมในไฟล์แทน — เคยเกือบหลุด: กดบันทึกใน admin แล้ว GISTDA key จาก .env ไปโผล่ใน config.json
+  const disk = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
+  const out  = { ...data, api: { ...data.api }, admin: { ...data.admin } };
+  if (process.env.GISTDA_KEY)     out.api.gistda_key  = disk.api?.gistda_key ?? '';
+  if (process.env.SHEET_ID)       out.api.sheet_id    = disk.api?.sheet_id ?? '';
+  if (process.env.ADMIN_USERNAME) out.admin.username  = disk.admin?.username ?? 'admin';
+  delete out.admin.password_hash;
+  fs.writeFileSync(CFG_PATH, JSON.stringify(out, null, 2), 'utf8');
   _cfgCache = null;
+}
+
+/* ── เขียน/แก้ค่าหนึ่งตัวใน .env (ใช้ตอนเปลี่ยนรหัส admin) ──
+   ครอบด้วย ' เพราะ bcrypt hash มี $ */
+function setEnvVar(key, value) {
+  const line = `${key}='${value}'`;
+  let text = fs.existsSync(ENV_PATH) ? fs.readFileSync(ENV_PATH, 'utf8') : '';
+  const re = new RegExp(`^${key}=.*$`, 'm');
+  if (re.test(text)) text = text.replace(re, line);
+  else text += (text && !text.endsWith('\n') ? '\n' : '') + line + '\n';
+  fs.writeFileSync(ENV_PATH, text, 'utf8');
+  process.env[key] = value;
 }
 
 /* ── GeoJSON memory cache ── */
@@ -441,6 +469,8 @@ app.post('/api/admin/reset-geojson', isAuth, (req, res) => {
 app.post('/api/admin/login', async (req, res) => {
   const { username, password } = req.body;
   const cfg = readConfig();
+  if (!cfg.admin.password_hash)
+    return res.status(500).json({ ok: false, message: 'ยังไม่ได้ตั้งรหัส admin — รัน node tools/admin-password.js' });
   if (username !== cfg.admin.username)
     return res.status(401).json({ ok: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
   const match = await bcrypt.compare(password, cfg.admin.password_hash);
@@ -490,8 +520,12 @@ app.post('/api/admin/change-password', isAuth, async (req, res) => {
   const cfg   = readConfig();
   const match = await bcrypt.compare(current_password, cfg.admin.password_hash);
   if (!match) return res.status(401).json({ ok: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
-  cfg.admin.password_hash = await bcrypt.hash(new_password, 10);
-  writeConfig(cfg);
+  // บน Render ดิสก์หายทุกครั้งที่ restart และค่า Environment ถูกโหลดใหม่ทับเสมอ
+  // เขียนไฟล์ไปก็ไม่ติด → บอกตรงๆ ดีกว่าตอบว่าสำเร็จแล้วรหัสเด้งกลับ
+  if (process.env.RENDER)
+    return res.status(400).json({ ok: false, message: 'บน Render เปลี่ยนรหัสจากหน้านี้ไม่ได้ — รัน node tools/admin-password.js ในเครื่อง แล้วนำค่า ADMIN_PASSWORD_HASH ไปวางใน Render → Environment' });
+  setEnvVar('ADMIN_PASSWORD_HASH', await bcrypt.hash(new_password, 10));
+  _cfgCache = null;
   res.json({ ok: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
 });
 
