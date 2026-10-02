@@ -6,7 +6,7 @@
  * ถ้าลืมรหัสจนเข้าไม่ได้ ต้องใช้เครื่องมือนี้แทน (รันจากเครื่องตัวเอง)
  *
  * วิธีใช้
- *   node tools/admin-password.js            ตั้งรหัสใหม่ (เขียน config.json + พิมพ์ค่าสำหรับ Render)
+ *   node tools/admin-password.js            ตั้งรหัสใหม่ (เขียน .env + พิมพ์ค่าสำหรับ Render)
  *   node tools/admin-password.js --check    ลองรหัสที่จำได้ว่าใช่ตัวไหน
  *   node tools/admin-password.js --check --hash "$2a$10$..."   ลองเทียบกับ hash ที่คัดลอกมาจาก Render
  *
@@ -16,8 +16,8 @@
  *
  * รหัสจริงไม่ถูกบันทึกลงไฟล์ใดทั้งสิ้น — เก็บเฉพาะ bcrypt hash เท่านั้น
  *
- * ⚠️ บน Render ค่า env ADMIN_PASSWORD_HASH จะทับค่าใน config.json เสมอ (server.js:105)
- *    การแก้ config.json จึงมีผลกับ "เครื่องตัวเอง" อย่างเดียว
+ * hash เก็บใน .env (อยู่ใน .gitignore) ไม่ใช่ config.json — config.json อยู่ใน repo สาธารณะ
+ * ⚠️ .env มีผลกับ "เครื่องตัวเอง" อย่างเดียว บน Render ใช้ค่า ADMIN_PASSWORD_HASH ใน Environment
  *    ถ้าจะเปลี่ยนรหัสบน production ต้องเอาค่าที่สคริปต์นี้พิมพ์ให้ไปวางใน Render → Environment
  */
 const fs       = require('fs');
@@ -27,6 +27,7 @@ const readline = require('readline');
 const { Writable } = require('stream');
 
 const CFG_PATH = path.join(__dirname, '..', 'config.json');
+const ENV_PATH = path.join(__dirname, '..', '.env');
 const ROUNDS   = 10;
 const MIN_LEN  = 6;    // ให้ตรงกับ server.js /api/admin/change-password
 
@@ -41,14 +42,31 @@ const pwArg = args.filter((a, i) =>
   !a.startsWith('--') && !(i > 0 && args[i - 1] === '--hash')
 )[0] || null;
 
-/* ── อ่าน config ── */
+/* ── อ่าน config + .env (ลำดับเดียวกับ readConfig() ใน server.js) ── */
 function readCfg() {
+  let cfg;
   try {
-    return JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
+    cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
   } catch (e) {
     console.error('\n❌ อ่าน config.json ไม่ได้: ' + e.message);
     process.exit(1);
   }
+  if (fs.existsSync(ENV_PATH)) process.loadEnvFile(ENV_PATH);
+  cfg.admin = cfg.admin || {};
+  if (process.env.ADMIN_USERNAME)      cfg.admin.username      = process.env.ADMIN_USERNAME;
+  if (process.env.ADMIN_PASSWORD_HASH) cfg.admin.password_hash = process.env.ADMIN_PASSWORD_HASH;
+  return cfg;
+}
+
+/* ── เขียน/แก้ค่าหนึ่งตัวใน .env (เหมือน setEnvVar() ใน server.js) ──
+   ครอบด้วย ' เพราะ bcrypt hash มี $ */
+function setEnvVar(key, value) {
+  const line = `${key}='${value}'`;
+  let text = fs.existsSync(ENV_PATH) ? fs.readFileSync(ENV_PATH, 'utf8') : '';
+  const re = new RegExp(`^${key}=.*$`, 'm');
+  if (re.test(text)) text = text.replace(re, line);
+  else text += (text && !text.endsWith('\n') ? '\n' : '') + line + '\n';
+  fs.writeFileSync(ENV_PATH, text, 'utf8');
 }
 
 /* ── ถามรหัสผ่านโดยไม่แสดงบนหน้าจอ ── */
@@ -91,8 +109,8 @@ function askHidden(prompt) {
 function showStatus(cfg) {
   const h = String(cfg.admin?.password_hash || '');
   console.log('\n── สถานะรหัสผ่านตอนนี้ ──────────────────────────────────────');
-  console.log('  ผู้ใช้ (config.json) : ' + (cfg.admin?.username || '(ไม่ได้ตั้ง)'));
-  console.log('  hash (config.json)  : ' + (h ? h.slice(0, 10) + '…' + h.slice(-4) + '  (ยาว ' + h.length + ')' : '(ว่าง)'));
+  console.log('  ผู้ใช้               : ' + (cfg.admin?.username || '(ไม่ได้ตั้ง)'));
+  console.log('  hash (.env)         : ' + (h ? h.slice(0, 10) + '…' + h.slice(-4) + '  (ยาว ' + h.length + ')' : '(ว่าง)'));
   console.log('  ค่านี้มีผลกับ        : เครื่องตัวเอง (localhost) เท่านั้น');
   console.log('  บน Render           : ใช้ค่าจาก env ADMIN_PASSWORD_HASH ทับเสมอ');
   console.log('──────────────────────────────────────────────────────────────');
@@ -108,7 +126,7 @@ async function runCheck() {
     console.error('❌ ไม่มี hash ให้เทียบ — ใส่ --hash "<ค่าจาก Render>" ด้วย');
     process.exit(1);
   }
-  if (hashArg) console.log('กำลังเทียบกับ hash ที่ใส่มาทาง --hash (ไม่ใช่ค่าใน config.json)\n');
+  if (hashArg) console.log('กำลังเทียบกับ hash ที่ใส่มาทาง --hash (ไม่ใช่ค่าใน .env)\n');
 
   // ตรวจรูปแบบก่อนเทียบ — bcrypt hash ต้องเป็น $2a$/$2b$/$2y$ + ยาว 60 ตัวพอดี
   // ถ้าค่าเสีย (เช่นคัดลอกขาด) compareSync จะคืน false เฉยๆ ทำให้เข้าใจผิดว่า
@@ -174,13 +192,10 @@ async function runReset() {
     process.exit(1);
   }
 
-  // เขียน config.json ด้วยรูปแบบเดียวกับ writeConfig() ใน server.js
-  if (!cfg.admin) cfg.admin = {};
-  cfg.admin.password_hash = hash;
-  fs.writeFileSync(CFG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+  setEnvVar('ADMIN_PASSWORD_HASH', hash);
 
   const user = cfg.admin.username || 'admin';
-  console.log('\n✅ ตั้งรหัสใหม่ใน config.json แล้ว — ใช้ล็อกอินที่ localhost ได้ทันที');
+  console.log('\n✅ ตั้งรหัสใหม่ใน .env แล้ว — ใช้ล็อกอินที่ localhost ได้ทันที');
   console.log('   ผู้ใช้: ' + user + '   (ถ้า server รันอยู่ ให้รีสตาร์ทก่อน)');
   console.log('   ตรวจสอบแล้ว: verify ผ่าน · ตัวท้าย hash เป็น A-Z a-z 0-9 (ปลอดภัยตอนคัดลอก)');
 

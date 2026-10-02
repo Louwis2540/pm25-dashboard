@@ -26,12 +26,35 @@ header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
 // ── Config ─────────────────────────────────────────────────────────────────
+// ค่าลับอยู่ใน env / .env เท่านั้น (config.json อยู่ใน repo สาธารณะ) — ลำดับเดียวกับ server.js
+function envValue($key) {
+    static $file = null;
+    $v = getenv($key);
+    if ($v !== false && $v !== '') return $v;
+    if ($file === null) {
+        $file = [];
+        $path = ROOT . '/.env';
+        if (is_readable($path)) {
+            foreach (file($path, FILE_IGNORE_NEW_LINES) as $line) {
+                if (!preg_match('/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/', $line, $m)) continue;
+                $file[$m[1]] = preg_replace('/^([\'"])(.*)\1$/', '$2', trim($m[2]));
+            }
+        }
+    }
+    return $file[$key] ?? null;
+}
+
 function readConfig() {
     static $cfg = null;
-    if ($cfg === null) $cfg = json_decode(file_get_contents(CONFIG_PATH), true);
+    if ($cfg === null) {
+        $cfg = json_decode(file_get_contents(CONFIG_PATH), true);
+        if ($u = envValue('ADMIN_USERNAME'))      $cfg['admin']['username']      = $u;
+        if ($h = envValue('ADMIN_PASSWORD_HASH')) $cfg['admin']['password_hash'] = $h;
+    }
     return $cfg;
 }
 function writeConfig($data) {
+    unset($data['admin']['password_hash']);  // ห้ามเขียน hash กลับลง config.json
     file_put_contents(CONFIG_PATH, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 

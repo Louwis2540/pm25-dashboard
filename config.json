@@ -250,7 +250,6 @@
     "col_ef": "38% 62%"
   },
   "admin": {
-    "username": "admin",
-    "password_hash": "$2a$10$goojsRvIZLXZAC1PZNgxgeYnPSyIGI8XMAYHmtgAsvesGHqDk8fhm"
+    "username": "admin"
   }
 }
