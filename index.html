@@ -309,7 +309,25 @@ table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:13px
 .adv-row .a.cur{border:2px solid var(--lv);background:var(--lv-tint)}
 .foot-note{font-size:12px;color:var(--ink-3);margin-top:8px}
 
-footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);font-size:12.5px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+/* ส่วนท้ายแบบเว็บหน่วยงาน: แถบสีเข้ม + ตรากรม + ชื่อหน่วยงาน + แหล่งข้อมูล + แถบลิขสิทธิ์ */
+.site-ft{margin-top:40px;background:#0b2a3f;color:#d6e2ea;border-top:5px solid #0e8a43;font-size:14px;line-height:1.6}
+.site-ft a{color:#fff;text-decoration:underline;text-decoration-color:rgba(255,255,255,.35);text-underline-offset:3px}
+.site-ft a:hover{text-decoration-color:#fff}
+.ft-in{max-width:1280px;margin:0 auto;padding:32px 32px 26px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr);gap:28px}
+.ft-org{display:flex;gap:16px;align-items:flex-start}
+.ft-org .seal{width:76px;height:76px;flex:none;background:#fff;border-radius:14px;padding:6px;display:grid;place-items:center}
+.ft-org .seal img{width:100%;height:auto;display:block}
+.ft-org b{display:block;font-family:"Anuphan";font-size:19px;font-weight:700;color:#fff;line-height:1.35}
+.ft-org span{display:block;font-size:14.5px;color:#d6e2ea}
+.ft-org small{display:block;margin-top:6px;font-size:13px;color:#a9bccb}
+.ft-col h4{font-family:"Anuphan";font-size:15.5px;font-weight:700;color:#fff;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.14)}
+.ft-col ul{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.ft-col li span{display:block;font-size:12.5px;color:#a9bccb}
+.ft-col p{margin:0 0 6px;font-size:13.5px;color:#d6e2ea}
+.ft-bar{background:#071d2c;color:#a9bccb;font-size:12.5px}
+.ft-bar div{max-width:1280px;margin:0 auto;padding:12px 32px;display:flex;justify-content:space-between;gap:8px 20px;flex-wrap:wrap}
+@media (max-width:900px){ .ft-in{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} .ft-org{grid-column:1/-1} }
+@media (max-width:560px){ .ft-in{grid-template-columns:minmax(0,1fr);padding:26px 16px 20px;gap:22px} .ft-bar div{padding:12px 16px} .ft-org .seal{width:64px;height:64px} }
 
 /* ---------- modal ดาวน์โหลด ---------- */
 .modal{position:fixed;inset:0;background:rgba(15,27,45,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
@@ -611,7 +629,36 @@ footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);fon
     <div class="foot-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
   </section>
 </main>
-<footer><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span>กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น · Dev: วัฒนพงษ์ พลแสน</span></footer>
+<footer class="site-ft" role="contentinfo">
+  <div class="ft-in">
+    <div class="ft-org">
+      <span class="seal"><img src="/ddc-seal.png" width="160" height="154" alt="ตรากรมควบคุมโรค กระทรวงสาธารณสุข"></span>
+      <div>
+        <b>สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</b>
+        <span>กรมควบคุมโรค กระทรวงสาธารณสุข</span>
+        <small>จัดทำโดย กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม</small>
+      </div>
+    </div>
+    <div class="ft-col">
+      <h4>แหล่งข้อมูล</h4>
+      <ul>
+        <li><a href="https://air4thai.pcd.go.th" target="_blank" rel="noopener">Air4Thai</a> กรมควบคุมมลพิษ<span>ค่าฝุ่น PM2.5 รายจังหวัด (สถานีตรวจวัด)</span></li>
+        <li><a href="https://pm25.gistda.or.th" target="_blank" rel="noopener">GISTDA</a> สำนักงานพัฒนาเทคโนโลยีอวกาศและภูมิสารสนเทศ<span>ค่าฝุ่นรายอำเภอ/ตำบล · คาดการณ์ · จุดความร้อน</span></li>
+        <li><a href="https://hdc.moph.go.th" target="_blank" rel="noopener">HDC</a> กระทรวงสาธารณสุข<span>ข้อมูลผู้ป่วยกลุ่มโรคที่เกี่ยวข้องกับฝุ่น</span></li>
+      </ul>
+    </div>
+    <div class="ft-col">
+      <h4>เกี่ยวกับข้อมูล</h4>
+      <p>ค่าฝุ่นรายจังหวัดเป็นค่าเฉลี่ย 24 ชั่วโมง ณ เวลา 07.00 น. ของแต่ละวัน</p>
+      <p>ค่ารายอำเภอ/ตำบลและการคาดการณ์เป็นค่าประมาณจากดาวเทียม อาจต่างจากค่าสถานีตรวจวัด</p>
+      <p>ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยงด้านสุขภาพ</p>
+    </div>
+  </div>
+  <div class="ft-bar"><div>
+    <span>© <span id="ftYear">2569</span> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น · เขตสุขภาพที่ 7 (ขอนแก่น มหาสารคาม ร้อยเอ็ด กาฬสินธุ์)</span>
+    <span>พัฒนาระบบ: วัฒนพงษ์ พลแสน</span>
+  </div></div>
+</footer>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="box">
@@ -699,6 +746,7 @@ const S = {};   // state กลาง
   S.hsToday = (hs?.geojson?.features || []).filter(f => names.has(f.properties.changwat));
   S.hsOk = !!hs?.ok;
 
+  document.getElementById("ftYear").textContent = new Date().getFullYear() + 543;
   applyTheme(); renderHeader(); renderToday(); renderDrill(PROV[0].name); renderTrend(); renderT7(); renderHotspot(S.hsToday, false); renderDisease(); renderAdvice();
   // #ig-preview = แสดงหน้า infographic ทับด้านบน ใช้ตรวจเลย์เอาต์ (headless screenshot)
   const lvO = /lv=(\d)/.exec(location.hash); if (lvO) { S.lv = +lvO[1]; applyTheme(); renderAdvice(); }
