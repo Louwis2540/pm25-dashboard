@@ -1,6 +1,4 @@
 const express  = require('express');
-const session  = require('express-session');
-const bcrypt   = require('bcryptjs');
 const cors     = require('cors');
 const fs       = require('fs');
 const path     = require('path');
@@ -14,8 +12,6 @@ if (fs.existsSync(ENV_PATH)) process.loadEnvFile(ENV_PATH);
 const app        = express();
 const PORT       = process.env.PORT || 3000;
 const CFG_PATH   = path.join(__dirname, 'config.json');
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 
 /* ── SQLite — Hotspot History ── */
 const db = new Database(path.join(__dirname, 'hotspot_history.db'));
@@ -66,7 +62,7 @@ const _saveSnapshot = db.transaction((features, snapshotAt) => {
   }
 });
 
-/* ── Config cache (invalidated on every write) ── */
+/* ── Config cache — config.json อ่านอย่างเดียว (ไม่มีหน้า Admin แล้ว) ── */
 let _cfgCache = null;
 
 /* ── API response cache (TTL-based) ── */
@@ -106,47 +102,11 @@ function readConfig() {
   const cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
   if (process.env.GISTDA_KEY)          cfg.api.gistda_key        = process.env.GISTDA_KEY;
   if (process.env.SHEET_ID)            cfg.api.sheet_id          = process.env.SHEET_ID;
-  cfg.admin = cfg.admin || {};
-  if (process.env.ADMIN_USERNAME)      cfg.admin.username        = process.env.ADMIN_USERNAME;
-  // hash รหัส admin อยู่ใน env เท่านั้น (.env ในเครื่อง / Environment บน Render)
-  // config.json อยู่ใน repo สาธารณะ — ค่าใน config.json ใช้เป็น fallback ของเครื่องเก่าเท่านั้น
-  if (process.env.ADMIN_PASSWORD_HASH) cfg.admin.password_hash   = process.env.ADMIN_PASSWORD_HASH;
   _cfgCache = cfg;
   return cfg;
 }
-function writeConfig(data) {
-  // ค่าที่ readConfig() เอามาจาก env ห้ามไหลกลับลง config.json (อยู่ใน repo สาธารณะ)
-  // ใช้ค่าเดิมในไฟล์แทน — เคยเกือบหลุด: กดบันทึกใน admin แล้ว GISTDA key จาก .env ไปโผล่ใน config.json
-  const disk = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
-  const out  = { ...data, api: { ...data.api }, admin: { ...data.admin } };
-  if (process.env.GISTDA_KEY)     out.api.gistda_key  = disk.api?.gistda_key ?? '';
-  if (process.env.SHEET_ID)       out.api.sheet_id    = disk.api?.sheet_id ?? '';
-  if (process.env.ADMIN_USERNAME) out.admin.username  = disk.admin?.username ?? 'admin';
-  delete out.admin.password_hash;
-  fs.writeFileSync(CFG_PATH, JSON.stringify(out, null, 2), 'utf8');
-  _cfgCache = null;
-}
-
-/* ── เขียน/แก้ค่าหนึ่งตัวใน .env (ใช้ตอนเปลี่ยนรหัส admin) ──
-   ครอบด้วย ' เพราะ bcrypt hash มี $ */
-function setEnvVar(key, value) {
-  const line = `${key}='${value}'`;
-  let text = fs.existsSync(ENV_PATH) ? fs.readFileSync(ENV_PATH, 'utf8') : '';
-  const re = new RegExp(`^${key}=.*$`, 'm');
-  if (re.test(text)) text = text.replace(re, line);
-  else text += (text && !text.endsWith('\n') ? '\n' : '') + line + '\n';
-  fs.writeFileSync(ENV_PATH, text, 'utf8');
-  process.env[key] = value;
-}
-
 /* ── GeoJSON memory cache ── */
 let _geojsonCache = null;
-
-/* ── Auth guard ── */
-function isAuth(req, res, next) {
-  if (req.session?.admin) return next();
-  res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
-}
 
 /* ── Fetch CSV with fallback URLs ── */
 async function fetchCSV(urls) {
@@ -163,16 +123,7 @@ async function fetchCSV(urls) {
 
 /* ── Middleware ── */
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(__dirname));
-app.use('/uploads', express.static(UPLOAD_DIR));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'pm25-odpc7-secret-2025',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 },
-}));
 
 /* ══════════════════════════════════════════
    PUBLIC API
@@ -185,12 +136,6 @@ app.get('/api/data-status', (req, res) => {
     hotspot:     _updatedAt.get('hotspot')      || null,
     now:         Date.now(),
   });
-});
-
-app.get('/api/config', (req, res) => {
-  const { admin, api, ...pub } = readConfig();
-  pub.api = { sheet_id: api.sheet_id };
-  res.json(pub);
 });
 
 app.get('/api/hotspot', async (req, res) => {
@@ -595,102 +540,6 @@ app.get('/api/provinces-geojson', async (req, res) => {
   }
 });
 
-app.post('/api/admin/upload-header', isAuth, (req, res) => {
-  const { data } = req.body;
-  if (!data) return res.status(400).json({ ok: false, message: 'ไม่มีข้อมูลรูปภาพ' });
-  try {
-    const buf = Buffer.from(data.replace(/^data:[^;]+;base64,/, ''), 'base64');
-    fs.writeFileSync(path.join(__dirname, 'header.png'), buf);
-    res.json({ ok: true, message: 'อัปโหลด Header สำเร็จ' });
-  } catch (e) {
-    res.status(500).json({ ok: false, message: e.message });
-  }
-});
-
-app.post('/api/admin/upload-logo', isAuth, (req, res) => {
-  const { data } = req.body;
-  if (!data) return res.status(400).json({ ok: false, message: 'ไม่มีข้อมูลรูปภาพ' });
-  try {
-    const buf = Buffer.from(data.replace(/^data:[^;]+;base64,/, ''), 'base64');
-    fs.writeFileSync(path.join(__dirname, 'logo.png'), buf);
-    res.json({ ok: true, message: 'อัปโหลดโลโก้สำเร็จ' });
-  } catch (e) {
-    res.status(500).json({ ok: false, message: e.message });
-  }
-});
-
-app.post('/api/admin/reset-geojson', isAuth, (req, res) => {
-  try { fs.unlinkSync(GEOJSON_PATH); } catch (_) { /* already gone */ }
-  _geojsonCache = null;
-  res.json({ ok: true, message: 'GeoJSON cache cleared' });
-});
-
-/* ══════════════════════════════════════════
-   ADMIN AUTH
-══════════════════════════════════════════ */
-app.post('/api/admin/login', async (req, res) => {
-  const { username, password } = req.body;
-  const cfg = readConfig();
-  if (!cfg.admin.password_hash)
-    return res.status(500).json({ ok: false, message: 'ยังไม่ได้ตั้งรหัส admin — รัน node tools/admin-password.js' });
-  if (username !== cfg.admin.username)
-    return res.status(401).json({ ok: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
-  const match = await bcrypt.compare(password, cfg.admin.password_hash);
-  if (!match)
-    return res.status(401).json({ ok: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
-  req.session.admin = { username };
-  res.json({ ok: true, message: 'เข้าสู่ระบบสำเร็จ' });
-});
-
-app.post('/api/admin/logout', (req, res) => { req.session.destroy(); res.json({ ok: true }); });
-app.get('/api/admin/check',   (req, res) => { res.json({ ok: !!req.session?.admin }); });
-
-/* ══════════════════════════════════════════
-   ADMIN CONFIG
-══════════════════════════════════════════ */
-app.get('/api/admin/config', isAuth, (req, res) => {
-  const { admin, ...safe } = readConfig();
-  res.json(safe);
-});
-
-app.post('/api/admin/config', isAuth, (req, res) => {
-  try {
-    const cfg  = readConfig();
-    const KEYS = ['site','api','map','map_export','provinces','aqi','recommendations','theme','layout','chart','diseases','typography','zone_styles','zone_titles'];
-    KEYS.forEach(k => {
-      if (req.body[k] === undefined) return;
-      const v = req.body[k];
-      // deep-merge plain objects; replace arrays and primitives
-      if (v !== null && typeof v === 'object' && !Array.isArray(v) &&
-          cfg[k] !== null && typeof cfg[k] === 'object' && !Array.isArray(cfg[k])) {
-        cfg[k] = { ...cfg[k], ...v };
-      } else {
-        cfg[k] = v;
-      }
-    });
-    writeConfig(cfg);
-    res.json({ ok: true, message: 'บันทึกการตั้งค่าสำเร็จ' });
-  } catch (e) {
-    res.status(500).json({ ok: false, message: e.message });
-  }
-});
-
-app.post('/api/admin/change-password', isAuth, async (req, res) => {
-  const { current_password, new_password } = req.body;
-  if (!new_password || new_password.length < 6)
-    return res.status(400).json({ ok: false, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
-  const cfg   = readConfig();
-  const match = await bcrypt.compare(current_password, cfg.admin.password_hash);
-  if (!match) return res.status(401).json({ ok: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
-  // บน Render ดิสก์หายทุกครั้งที่ restart และค่า Environment ถูกโหลดใหม่ทับเสมอ
-  // เขียนไฟล์ไปก็ไม่ติด → บอกตรงๆ ดีกว่าตอบว่าสำเร็จแล้วรหัสเด้งกลับ
-  if (process.env.RENDER)
-    return res.status(400).json({ ok: false, message: 'บน Render เปลี่ยนรหัสจากหน้านี้ไม่ได้ — รัน node tools/admin-password.js ในเครื่อง แล้วนำค่า ADMIN_PASSWORD_HASH ไปวางใน Render → Environment' });
-  setEnvVar('ADMIN_PASSWORD_HASH', await bcrypt.hash(new_password, 10));
-  _cfgCache = null;
-  res.json({ ok: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
-});
-
 /* ══════════════════════════════════════════
    CSV HELPERS
 ══════════════════════════════════════════ */
@@ -974,8 +823,7 @@ async function warmSheetCache() {
 /* ── Start ── */
 app.listen(PORT, () => {
   console.log(`\n✅  PM2.5 Dashboard พร้อมใช้งาน`);
-  console.log(`   Dashboard : http://localhost:${PORT}/index.html`);
-  console.log(`   Admin     : http://localhost:${PORT}/admin.html\n`);
+  console.log(`   Dashboard : http://localhost:${PORT}/\n`);
 
   // ดึงข้อมูลครั้งแรกทันที แล้ว loop ทุก 5 นาที
   warmSheetCache();

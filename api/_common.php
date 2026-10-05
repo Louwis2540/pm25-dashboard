@@ -4,18 +4,9 @@ define('ROOT',        dirname(__DIR__));
 define('CONFIG_PATH', ROOT . '/config.json');
 define('CACHE_DIR',   ROOT . '/cache');
 define('GEOJSON_PATH',ROOT . '/provinces.geojson');
-define('UPLOAD_DIR',  ROOT . '/uploads');
 
-foreach ([CACHE_DIR, UPLOAD_DIR] as $d) {
+foreach ([CACHE_DIR] as $d) {
     if (!is_dir($d)) mkdir($d, 0755, true);
-}
-
-// Session
-if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.gc_maxlifetime', 28800);
-    session_set_cookie_params(28800);
-    session_name('pm25_sess');
-    session_start();
 }
 
 // Headers
@@ -48,14 +39,8 @@ function readConfig() {
     static $cfg = null;
     if ($cfg === null) {
         $cfg = json_decode(file_get_contents(CONFIG_PATH), true);
-        if ($u = envValue('ADMIN_USERNAME'))      $cfg['admin']['username']      = $u;
-        if ($h = envValue('ADMIN_PASSWORD_HASH')) $cfg['admin']['password_hash'] = $h;
     }
     return $cfg;
-}
-function writeConfig($data) {
-    unset($data['admin']['password_hash']);  // ห้ามเขียน hash กลับลง config.json
-    file_put_contents(CONFIG_PATH, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
 // ── File-based TTL cache ───────────────────────────────────────────────────
@@ -69,12 +54,6 @@ function getCached($key) {
 function setCached($key, $data, $ttlSec) {
     $f = CACHE_DIR . '/' . preg_replace('/[^a-z0-9_-]/', '_', $key) . '.json';
     file_put_contents($f, json_encode(['exp' => time() + $ttlSec, 'data' => $data], JSON_UNESCAPED_UNICODE));
-}
-
-// ── Auth ────────────────────────────────────────────────────────────────────
-function isAuth()     { return !empty($_SESSION['admin']); }
-function requireAuth() {
-    if (!isAuth()) { http_response_code(401); die(json_encode(['ok'=>false,'message'=>'กรุณาเข้าสู่ระบบก่อน'])); }
 }
 
 // ── Response ────────────────────────────────────────────────────────────────

@@ -8,11 +8,9 @@
     "dev": "nodemon --env-file-if-exists=.env server.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.9.0",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "express-session": "^1.17.3"
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

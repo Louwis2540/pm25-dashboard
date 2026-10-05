@@ -4,9 +4,8 @@ provinces.geojson
 *.bat
 pm2.5/
 
-# uploads — เก็บ folder แต่ไม่เก็บไฟล์ข้างใน
-uploads/*
-!uploads/.gitkeep
+# uploads — รูปที่เคยอัปโหลดผ่านหน้า Admin เดิม (เลิกใช้แล้ว)
+uploads/
 
 # ไฟล์ที่ไม่จำเป็น
 *.log
