@@ -187,7 +187,9 @@ section .dz.card{background:linear-gradient(165deg,color-mix(in srgb,var(--dsoft
 .pv .go{margin-top:auto;font-size:12px;color:var(--accent);font-weight:600}
 
 /* ---------- เจาะลึก ---------- */
-.drill{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+.drill{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:stretch}
+.card,.glass{min-width:0}
+.t7-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .drill .fc{position:static}
 .today-map{padding:18px 18px 14px;display:flex;flex-direction:column}
 .today-map svg#drillMap{flex:1 1 auto;min-height:0}
@@ -441,20 +443,20 @@ footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);fon
 #ig .ig-f{margin-top:auto;padding:16px 44px;background:var(--subtle);border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:14px;color:var(--ink-2);gap:20px}
 
 @media (max-width:1100px){
-  .ws{grid-template-columns:1fr}
+  .ws{grid-template-columns:minmax(0,1fr)}
   .fc{position:static}
   .wx-hero{grid-template-columns:200px minmax(0,1fr)}
   .wx-hero .art{width:200px;height:146px}
   .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
   .today{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hero{grid-column:1/-1}
-  .drill,.trend,.hot{grid-template-columns:1fr}
+  .drill,.trend,.hot{grid-template-columns:minmax(0,1fr)}
   .adv-now{grid-template-columns:1fr}
   .adv-now .who{border-left:0;border-top:1px solid var(--line)}
   .adv-row{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media (max-width:680px){
-  .wx-hero{grid-template-columns:1fr;text-align:center}
+  .wx-hero{grid-template-columns:minmax(0,1fr);text-align:center}
   .wx-hero .art{margin:0 auto}
   .wx-hero .loc{justify-content:center}
   .wx-hero .big{font-size:72px}
@@ -469,10 +471,17 @@ footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);fon
   .rep-date .t07{font-size:15.5px;padding:6px 14px}
   .hdr-in,.wrap{padding-left:16px;padding-right:16px}
   .hdr .meta{margin-left:0}
-  .today,.dz-grid{grid-template-columns:1fr}
-  .kv{grid-template-columns:1fr 1fr}
-  .adv-row{grid-template-columns:1fr 1fr}
+  .today,.dz-grid{grid-template-columns:minmax(0,1fr)}
+  .kv{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .adv-row{grid-template-columns:repeat(2,minmax(0,1fr))}
   #map{height:360px}
+  /* ตาราง 7 วันบนมือถือ: ช่องแคบลงให้ 8 คอลัมน์พอดีจอ (ถ้ายังไม่พอ เลื่อนในกล่องได้) */
+  .trend .chart-card{padding:14px 10px}
+  .trend .t7{font-size:13px}
+  .trend .t7 th{font-size:11.5px;padding:4px 1px}
+  .trend .t7 td{padding:7px 1px}
+  .trend .t7 td:first-child{font-size:13px;padding-right:4px}
+  .trend .t7-note{font-size:11.5px;gap:6px 10px}
 }
 </style>
 </head>
@@ -562,7 +571,7 @@ footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);fon
         <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div class="label" id="trendSub"></div><div class="legend" id="legend"></div></div>
         <div class="chart-wrap" id="cw"><svg id="chart" viewBox="0 0 760 372" role="img" aria-label="กราฟเส้นค่าเฉลี่ยรายสัปดาห์ 4 จังหวัด"></svg><div class="tip" id="tip"></div></div>
       </div>
-      <div class="card chart-card"><div class="label">ค่าฝุ่น PM2.5 ย้อนหลัง 7 วัน · เฉลี่ย 24 ชม. ณ 07.00 น. · µg/m³</div><table class="t7 num" id="t7"></table><div class="t7-note" id="t7Note"></div></div>
+      <div class="card chart-card"><div class="label">ค่าฝุ่น PM2.5 ย้อนหลัง 7 วัน · เฉลี่ย 24 ชม. ณ 07.00 น. · µg/m³</div><div class="t7-wrap"><table class="t7 num" id="t7"></table></div><div class="t7-note" id="t7Note"></div></div>
     </div>
   </section>
 
@@ -985,10 +994,16 @@ function weekly() {
 }
 function renderTrend() {
   const W = weekly(), svg = document.getElementById("chart");
+  if (!svg) return;   // ไม่มีข้อมูล → svg ถูกแทนด้วยข้อความไปแล้ว (เรียกซ้ำตอน resize)
   if (!W.length) { svg.outerHTML = `<p class="muted">ไม่มีข้อมูล</p>`; return; }
   document.getElementById("trendSub").textContent = `ค่าเฉลี่ยรายสัปดาห์ ${thDate(W[0].s)} – ${thDate(W.at(-1).e)} · µg/m³`;
   document.getElementById("legend").innerHTML = PROV.map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
-  const VW = 760, VH = 372, L = 70, R = 132, T = 30, B = 34, pw = VW - L - R, ph = VH - T - B, n = W.length;
+  // วาดตามความกว้างจริงของกล่อง (1 หน่วย ≈ 1 px) — จอมือถือตัวอักษรจะไม่ถูกย่อจนอ่านไม่ออก
+  const cwW = Math.round(document.getElementById("cw").clientWidth || 760);
+  const VW = Math.max(300, Math.min(760, cwW)), sm = VW < 560;
+  const VH = sm ? 300 : 372, L = sm ? 54 : 70, R = sm ? 42 : 132, T = 30, B = 34, pw = VW - L - R, ph = VH - T - B, n = W.length;
+  const EF = sm ? 11.5 : 13;   // ขนาดป้ายท้ายเส้น
+  svg.setAttribute("viewBox", `0 0 ${VW} ${VH}`);
   const top = Math.max(80, Math.ceil(Math.max(...W.flatMap(w => w.v.filter(x => x != null))) / 20) * 20);
   const X = i => L + i / (n - 1) * pw, Y = v => T + ph - Math.min(v, top) / top * ph;
   const AX = `font-size="13" font-weight="600" fill="#46546a"`;
@@ -1003,16 +1018,16 @@ function renderTrend() {
   for (const [v, lab, c] of TREND_TH)
     g += `<line x1="${L}" x2="${L + pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="6 4" stroke-width="1.6"/>
       <text x="${L + pw - 6}" y="${Y(v) - 7}" text-anchor="end" font-size="13" font-weight="700" fill="${c}" stroke="#fff" stroke-width="4" paint-order="stroke">${lab}</text>`;
-  let lm = -1; W.forEach((w, i) => { const m = new Date(w.s).getMonth(); if (m !== lm) { lm = m; g += `<line x1="${X(i)}" x2="${X(i)}" y1="${T + ph}" y2="${T + ph + 5}" stroke="#9aa6b6"/><text x="${X(i)}" y="${VH - 8}" text-anchor="middle" ${AX}>${TH_M[m]}</text>`; } });
+  let lm = -1, lx = -1e9; W.forEach((w, i) => { const m = new Date(w.s).getMonth(); if (m === lm) return; lm = m; if (X(i) - lx < 34) return; { lx = X(i); g += `<line x1="${X(i)}" x2="${X(i)}" y1="${T + ph}" y2="${T + ph + 5}" stroke="#9aa6b6"/><text x="${X(i)}" y="${VH - 8}" text-anchor="middle" ${AX}>${TH_M[m]}</text>`; } });
   // ป้ายท้ายเส้น: ชื่อจังหวัด + ค่าสัปดาห์ล่าสุด สีเดียวกับเส้น (ดันไม่ให้ซ้อนกัน)
   const last = W.at(-1), ends = PROV.map((p, k) => ({ k, y: Y(last.v[k] ?? 0) })).sort((a, b) => a.y - b.y);
-  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 17) ends[i].y = ends[i - 1].y + 17;
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < EF + 4) ends[i].y = ends[i - 1].y + EF + 4;
   PROV.forEach((p, k) => {
     let d = "", pen = false; W.forEach((w, i) => { if (w.v[k] == null) { pen = false; return; } d += (pen ? "L" : "M") + X(i).toFixed(1) + " " + Y(w.v[k]).toFixed(1); pen = true; });
     g += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
     if (last.v[k] != null) g += `<circle cx="${X(n - 1)}" cy="${Y(last.v[k])}" r="4.5" fill="${p.color}" stroke="#fff" stroke-width="2"/>`;
     const e = ends.find(o => o.k === k);
-    g += `<text x="${X(n - 1) + 10}" y="${e.y + 4.5}" font-size="13" font-weight="700" fill="${p.color}">${p.name} <tspan fill="#0f1b2d">${last.v[k] != null ? f1(last.v[k]) : "–"}</tspan></text>`;
+    g += `<text x="${X(n - 1) + 8}" y="${e.y + 4.5}" font-size="${EF}" font-weight="700" fill="${p.color}">${sm ? "" : p.name + " "}<tspan fill="${sm ? p.color : "#0f1b2d"}">${last.v[k] != null ? f1(last.v[k]) : "–"}</tspan></text>`;
   });
   g += `<line id="xh" y1="${T}" y2="${T + ph}" stroke="#46546a" stroke-width="1" opacity="0"/><g id="dots"></g><rect id="hit" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="transparent"/>`;
   svg.innerHTML = g;
@@ -1028,6 +1043,9 @@ function renderTrend() {
   });
   hit.addEventListener("pointerleave", () => { tip.classList.remove("on"); xh.setAttribute("opacity", 0); dots.innerHTML = ""; });
 }
+let _trendW = 0;
+window.addEventListener("resize", () => { clearTimeout(window._trT); window._trT = setTimeout(() => {
+  const w = Math.round(document.getElementById("cw")?.clientWidth || 0); if (w && Math.abs(w - _trendW) > 24) { _trendW = w; renderTrend(); } }, 200); });
 function t7Html(compact) {
   const days = S.last7;
   // หัวคอลัมน์แบบสั้น 26/9 ไม่ให้ตัดบรรทัด · ช่องไม่มีข้อมูลใช้ "–" + title
@@ -1216,13 +1234,27 @@ function buildInfographic(size = "a4", dense = 0) {
   </div>
   <div class="ig-f"><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
 }
+// html2canvas 1.4 อ่านสีแบบ color(srgb …) ไม่ได้ — เบราว์เซอร์ใหม่คืนค่ารูปแบบนี้จาก color-mix()
+// (เคยทำ export ล้มทุกเครื่อง 05/10/2026) → ก่อนวาด แปลงเป็น rgba() ใส่เป็น inline style ในสำเนา
+const COLOR_PROPS = ["color", "backgroundColor", "backgroundImage", "borderTopColor", "borderRightColor", "borderBottomColor", "borderLeftColor", "boxShadow", "outlineColor", "textDecorationColor"];
+const toRgba = str => str.replace(/color\(srgb ([-\d.e]+) ([-\d.e]+) ([-\d.e]+)(?: \/ ([-\d.e]+))?\)/g, (_, r, g, b, a) =>
+  `rgba(${[r, g, b].map(v => Math.round(Math.min(1, Math.max(0, +v)) * 255)).join(", ")}, ${a == null ? 1 : +a})`);
+function canvasSafeColors(root) {
+  if (!root) return;
+  const win = root.ownerDocument.defaultView;
+  for (const el of [root, ...root.querySelectorAll("*")]) {
+    const cs = win.getComputedStyle(el);
+    for (const p of COLOR_PROPS) { const v = cs[p]; if (v && v.includes("color(")) el.style[p] = toRgba(v); }
+  }
+}
 document.getElementById("btnIg").addEventListener("click", async e => {
   const btn = e.currentTarget, old = btn.innerHTML; btn.disabled = true; btn.textContent = "กำลังสร้างรูป…";
   try {
     const size = document.getElementById("igSize").value;
     await document.fonts.ready; fitInfographic(size);
     if (typeof html2canvas !== "function") throw new Error("ไม่พบ html2canvas — เปิดหน้านี้ผ่าน server (localhost:3000)");
-    const canvas = await html2canvas(document.getElementById("ig"), { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#ffffff" });
+    const canvas = await html2canvas(document.getElementById("ig"), { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#ffffff",
+      onclone: doc => canvasSafeColors(doc.getElementById("ig")) });
     const url = canvas.toDataURL("image/png");
     document.getElementById("mTitle").textContent = "Infographic พร้อมดาวน์โหลด";
     document.getElementById("mImg").src = url;
