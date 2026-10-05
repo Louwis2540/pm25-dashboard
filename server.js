@@ -220,6 +220,153 @@ app.get('/api/hotspot', async (req, res) => {
   }
 });
 
+/* ── PM2.5 รายจังหวัด/อำเภอ/ตำบล + คาดการณ์ 3 วัน จาก GISTDA ──────────
+   แหล่ง: pm25.gistda.or.th/rest (สาธารณะ ไม่ใช้ key) — ค่าประมาณจากดาวเทียม
+   ไม่ใช่ค่าสถานี Air4Thai จึงไม่ตรงกับชีต PM25_History ต้องระบุแหล่งที่หน้าเว็บ
+   pm25 = ค่ารายชั่วโมงล่าสุด · avg24 = เฉลี่ย 24 ชม. · pred = คาดการณ์ 3 วันถัดไป */
+const GISTDA_PM25 = 'https://pm25.gistda.or.th/rest';
+const GISTDA_PM25_TTL = 30 * 60 * 1000;   // GISTDA อัปเดตรายชั่วโมง 30 นาทีพอ
+
+async function gistdaPm25(path, cacheKey) {
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+  const r = await fetch(`${GISTDA_PM25}/${path}`);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (j.status !== 200 || !Array.isArray(j.data)) throw new Error(j.errMsg || 'รูปแบบข้อมูลไม่ถูกต้อง');
+  const r1 = round1;
+  const items = j.data.map(d => ({
+    code:  String(d.tb_idn ?? d.ap_idn ?? d.pv_idn),
+    name:  d.tb_tn ?? d.ap_tn ?? d.pv_tn,
+    pm25:  r1(d.pm25),
+    avg24: r1(d.pm25Avg24hr),
+    pred:  [r1(d.pred1), r1(d.pred2), r1(d.pred3)],
+  }));
+  const data = {
+    ok: true, source: 'GISTDA (ค่าประมาณจากดาวเทียม)',
+    asOf: gistdaTime(j.data[0]?.dt), asOfThai: j.datetimeThai ? `${j.datetimeThai.dateThai} ${j.datetimeThai.timeThai}` : null,
+    items,
+  };
+  setCached(cacheKey, data, GISTDA_PM25_TTL);
+  return data;
+}
+// "2026-10-05T14:00:00.000Z" ของ GISTDA เป็นเวลาไทยที่ติด Z มา — ตัดเป็นข้อความตรงๆ ไม่แปลงเขตเวลา
+const gistdaTime = s => (typeof s === 'string' ? s.slice(0, 16).replace('T', ' ') : null);
+const round1 = v => (typeof v === 'number' && isFinite(v)) ? Math.round(v * 10) / 10 : null;
+
+/* ── ค่ารายวันย้อนหลังจาก GISTDA (CSV) ──────────────────────────────
+   getPM25by1m{Amphoe|Tambon}AsCSV?dt1=D&id=X → ค่าเฉลี่ยรายวันวันที่ D-30..D
+   ของทุกอำเภอ (id=รหัสจังหวัด) หรือทุกตำบล (id=รหัสอำเภอ) · มีข้อมูลตั้งแต่ 2024-01-01
+   CSV ไม่มีรหัสพื้นที่ มีแต่ชื่อ → จับคู่กับ Pred3 ด้วยชื่อ (มาจาก GISTDA เหมือนกัน) */
+const addDays   = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+const thaiToday = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);   // Render รันเป็น UTC
+
+async function gistdaDaily(level, id, dt1, ttl) {
+  const key = `gistda-1m-${level}-${id}-${dt1}`;
+  const cached = getCached(key);
+  if (cached) return cached;
+  const r = await fetch(`${GISTDA_PM25}/getPM25by1m${level}AsCSV?dt1=${dt1}&id=${id}`);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  // Amphoe: จังหวัด,อำเภอ,PM2.5,วันที่ · Tambon: จังหวัด,อำเภอ,ตำบล,PM2.5,วันที่ → อ่านจากท้ายแถว
+  const rows = (await r.text()).replace(/^﻿/, '').trim().split(/\r?\n/).slice(1).map(l => {
+    const c = l.split(',');
+    return { name: (c[c.length - 3] || '').trim(), v: +c[c.length - 2], date: (c[c.length - 1] || '').trim() };
+  }).filter(x => x.name && isFinite(x.v) && /^\d{4}-\d{2}-\d{2}$/.test(x.date));
+  setCached(key, rows, ttl);
+  return rows;
+}
+
+// ฤดูฝุ่น พ.ย.–พ.ค. — อยู่ในฤดู = ตั้งแต่ 1 พ.ย. ถึงวันนี้ · มิ.ย.–ต.ค. = ฤดูที่เพิ่งจบ
+function dustSeason(today) {
+  const y = +today.slice(0, 4), m = +today.slice(5, 7), off = m >= 6 && m <= 10;
+  const sy = m >= 11 ? y : y - 1;
+  return { start: `${sy}-11-01`, end: off ? `${y}-05-31` : today, ongoing: !off,
+           label: `พ.ย. ${sy + 543} – พ.ค. ${sy + 544}` };
+}
+
+// ค่ารายวันสูงสุดของฤดู ต่อพื้นที่ — ดึงทีละช่วง 31 วันจนครบฤดู (~7 คำขอ)
+async function seasonMax(level, id) {
+  const s = dustSeason(thaiToday());
+  const ends = [];
+  for (let d = addDays(s.start, 30); d < s.end; d = addDays(d, 31)) ends.push(d);
+  ends.push(s.end);
+  const ttl = s.ongoing ? 3 * 3600e3 : 24 * 3600e3;   // ฤดูที่จบแล้วค่าไม่เปลี่ยน
+  const sets = await Promise.all(ends.map(d => gistdaDaily(level, id, d, ttl)));
+  const max = new Map();
+  for (const rows of sets) for (const x of rows) {
+    if (x.date < s.start || x.date > s.end) continue;
+    const m = max.get(x.name);
+    if (!m || x.v > m.v) max.set(x.name, { v: round1(x.v), date: x.date });
+  }
+  return { season: { start: s.start, end: s.end, label: s.label, ongoing: s.ongoing }, max };
+}
+
+// ค่าเฉลี่ยรายวัน 3 วันก่อนหน้า (ไม่รวมวันนี้ซึ่งยังไม่ครบวัน)
+async function recent3(level, id) {
+  const today = thaiToday(), days = [3, 2, 1].map(n => addDays(today, -n));
+  const rows = await gistdaDaily(level, id, today, GISTDA_PM25_TTL);
+  const by = new Map();
+  for (const x of rows) if (days.includes(x.date)) {
+    if (!by.has(x.name)) by.set(x.name, {});
+    by.get(x.name)[x.date] = round1(x.v);
+  }
+  return { days, by };
+}
+
+// รวม: ค่าปัจจุบัน + คาดการณ์ (Pred3) + ย้อนหลัง 3 วัน + สูงสุดของฤดู
+// ประวัติดึงไม่ได้ก็ยังตอบค่าปัจจุบัน — ไม่ให้ทั้งแผงล่มเพราะ CSV ตัวเดียว
+async function areaDetail(predPath, predKey, level, id) {
+  const [base, rec, sea] = await Promise.all([
+    gistdaPm25(predPath, predKey),
+    recent3(level, id).catch(e => { console.warn('GISTDA recent3:', e.message); return null; }),
+    seasonMax(level, id).catch(e => { console.warn('GISTDA seasonMax:', e.message); return null; }),
+  ]);
+  return {
+    ...base,
+    days: rec?.days ?? [],
+    season: sea?.season ?? null,
+    items: base.items.map(it => ({
+      ...it,
+      past: rec ? rec.days.map(d => rec.by.get(it.name)?.[d] ?? null) : [],
+      max:  sea?.max.get(it.name) ?? null,
+    })),
+  };
+}
+
+// เฉพาะจังหวัดในเขต (config.provinces) — กันใช้ endpoint นี้เป็น proxy ทั้งประเทศ
+const regionPv = () => new Set(readConfig().provinces.map(p => String(p.pv_idn)));
+
+app.get('/api/pm25/provinces', async (req, res) => {
+  try {
+    const data = await gistdaPm25('getPm25byProvincePred3', 'gistda-pv');
+    const pv = regionPv();
+    res.json({ ...data, items: data.items.filter(i => pv.has(i.code)) });
+  } catch (e) {
+    res.status(502).json({ ok: false, message: 'GISTDA PM2.5 error: ' + e.message });
+  }
+});
+
+app.get('/api/pm25/districts', async (req, res) => {
+  const pv = String(req.query.pv || '');
+  if (!regionPv().has(pv)) return res.status(400).json({ ok: false, message: 'pv ต้องเป็นรหัสจังหวัดในเขต' });
+  try {
+    res.json(await areaDetail(`getPm25byAmphoePred3?pv_idn=${pv}`, 'gistda-ap-' + pv, 'Amphoe', pv));
+  } catch (e) {
+    res.status(502).json({ ok: false, message: 'GISTDA PM2.5 error: ' + e.message });
+  }
+});
+
+app.get('/api/pm25/subdistricts', async (req, res) => {
+  const amp = String(req.query.amp || '');
+  if (!/^\d{4}$/.test(amp) || !regionPv().has(amp.slice(0, 2)))
+    return res.status(400).json({ ok: false, message: 'amp ต้องเป็นรหัสอำเภอ 4 หลักในเขต' });
+  try {
+    res.json(await areaDetail(`getPm25byTambonPred3?ap_idn=${amp}`, 'gistda-tb-' + amp, 'Tambon', amp));
+  } catch (e) {
+    res.status(502).json({ ok: false, message: 'GISTDA PM2.5 error: ' + e.message });
+  }
+});
+
 // ดูสถิติ hotspot รายวันจาก DB
 app.get('/api/hotspot-history', (req, res) => {
   try {
@@ -838,6 +985,18 @@ app.listen(PORT, () => {
   // เท่ากับยิง MOPH วันละ ~8 รอบ (32 คำขอ) ไม่ว่าจะมีคนเปิดแดชบอร์ดกี่คน
   warmDiseaseCache();
   setInterval(warmDiseaseCache, 3 * 60 * 60 * 1000);
+
+  // เจาะลึกรายอำเภอ — สถิติทั้งฤดูต้องดึง CSV ~8 ไฟล์/จังหวัด (ครั้งแรก ~10 วินาที)
+  // อุ่นไว้ทีละจังหวัดตอนเปิด server และทุก 3 ชม. คนกดดูจะได้ไม่ต้องรอ
+  const warmDistricts = async () => {
+    for (const p of readConfig().provinces) {
+      const pv = String(p.pv_idn);
+      try { await areaDetail(`getPm25byAmphoePred3?pv_idn=${pv}`, 'gistda-ap-' + pv, 'Amphoe', pv); }
+      catch (e) { console.warn('warm districts', pv, e.message); }
+    }
+  };
+  setTimeout(warmDistricts, 15 * 1000);
+  setInterval(warmDistricts, 3 * 60 * 60 * 1000);
 });
 
 async function warmDiseaseCache() {
