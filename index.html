@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PM2.5 เขตสุขภาพที่ 7 — Dashboard v2 (ต้นแบบ)</title>
+<title>รายงานสถานการณ์ PM2.5 เขตสุขภาพที่ 7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -602,7 +602,7 @@ footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);fon
     <div class="foot-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
   </section>
 </main>
-<footer><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span>กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น · Dev: วัฒนพงษ์ พลแสน</span></footer>
+<footer><span id="ftSource">แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span id="ftCredit">กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น · Dev: วัฒนพงษ์ พลแสน</span></footer>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="box">
@@ -616,9 +616,9 @@ footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);fon
 
 <script>
 /* ===================================================================
-   ต้นแบบ Dashboard v2 — ดึงข้อมูลสดจาก API เดียวกับหน้าเว็บจริง
-   เปิดผ่าน server (http://localhost:3000/design-preview/dashboard-v2.html)
-   ถ้าเปิดเป็นไฟล์ตรงๆ จะดึงจาก Render แทน
+   Dashboard PM2.5 เขตสุขภาพที่ 7 (ดีไซน์ v2)
+   เปิดผ่าน server (http://localhost:3000) · ถ้าเปิดเป็นไฟล์ตรงๆ จะดึงข้อมูลจาก Render แทน
+   ค่าที่ตั้งในหน้า Admin (/api/config) ทับค่าเริ่มต้นด้านล่าง — ดู applyAdminConfig()
 =================================================================== */
 const API = location.protocol === "file:" ? "https://pm25-dashboard-ex8l.onrender.com" : "";
 const PROV = [
@@ -649,12 +649,52 @@ const DZ = [
   { key: "ตาอักเสบ",     label: "เยื่อบุตาอักเสบ", icd: "H10", icon: "d-eye",   c: "#0c8599", soft: "#e3f5f8" },
   { key: "ผิวหนัง",      label: "ผิวหนังอักเสบ", icd: "L30.9, L50", icon: "d-skin",  c: "#e8590c", soft: "#fdeee5" },
 ];
+
+/* ---------- ค่าจากหน้า Admin (config.json → /api/config) ----------
+   เชื่อมเฉพาะค่าหลัก: เกณฑ์/สีระดับฝุ่น, ไอคอน+ข้อความสรุปคำแนะนำ, เวลาข้อมูล, แหล่งข้อมูล/เครดิต,
+   กลุ่มโรค, จังหวัด (เส้นเกณฑ์กราฟไม่ใช้ — ดู TREND_TH) · คำแนะนำละเอียด (ประชาชน/กลุ่มเสี่ยง) ใช้ชุดเดียวกับ LINE OA ด้านบน
+   ส่วนสี/ฟอนต์/ชื่อโซนแบบเดิม (zone_styles, typography, zone_titles) ไม่ใช้ — v2 มีดีไซน์ของตัวเอง
+   ค่าไหนผิดรูปแบบหรือไม่มี → ใช้ค่าเริ่มต้นในไฟล์นี้ หน้าเว็บไม่พัง */
+const isHex = c => /^#[0-9a-f]{6}$/i.test(String(c || ""));
+const mixHex = (a, b, t) => "#" + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, "0")).join("");
+function applyAdminConfig(cfg) {
+  if (!cfg) return;
+  const aqi = Array.isArray(cfg.aqi) ? cfg.aqi : [];
+  if (aqi.length >= 5 && aqi.slice(0, 5).every(a => isHex(a.bg) && isFinite(+a.max))) {
+    aqi.slice(0, 5).forEach((a, i) => {
+      const l = LV[i];
+      l.max = i === 4 ? 1e9 : +a.max; l.c = a.bg; if (a.label) l.name = a.label;
+      l.soft = mixHex(a.bg, "#ffffff", .86); l.tint = mixHex(a.bg, "#ffffff", .94); l.ink = mixHex(a.bg, "#000000", .45);
+    });
+    LV.forEach((l, i) => { l.range = i === 0 ? `0 – ${l.max}` : i === 4 ? `มากกว่า ${LV[3].max}` : `${LV[i - 1].max} – ${l.max}`; });
+  }
+  (cfg.recommendations || []).slice(0, 5).forEach((r, i) => {
+    if (r?.icon) LV[i].face = r.icon;
+    if (r?.body) LV[i].summary = r.body;
+    const m = /:\s*(.+?)\s*µg/.exec(r?.range || ""); if (m) LV[i].range = m[1];
+  });
+  if (cfg.site?.data_time) REPORT_TIME = `${cfg.site.data_time} น.`;
+  if (cfg.site?.footer_source) document.getElementById("ftSource").textContent = "แหล่งข้อมูล: " + cfg.site.footer_source.split("|").map(x => x.trim()).filter(Boolean).join(" · ");
+  if (cfg.site?.developer_credit) document.getElementById("ftCredit").textContent = cfg.site.developer_credit.split("|").map(x => x.trim()).filter(Boolean).join(" · ");
+  if (Array.isArray(cfg.diseases) && cfg.diseases.length) {
+    const old = DZ.slice(); DZ.length = 0;
+    cfg.diseases.forEach(d => { const base = old.find(o => o.key === d.key) || { icd: "", icon: "d-lung", c: "#1c6ed6" };
+      const c = isHex(d.color) ? d.color : base.c;
+      DZ.push({ ...base, key: d.key, label: d.label || base.label || d.key, c, soft: mixHex(c, "#ffffff", .88) }); });
+  }
+  // chart.thresholds ใน Admin ไม่ใช้แล้ว — เส้นเกณฑ์กำหนดที่ TREND_TH ในไฟล์นี้ (Louis 05/10/2026)
+  const pv = Array.isArray(cfg.provinces) ? cfg.provinces.filter(p => p.name && p.pv_idn) : [];
+  if (pv.length) { PROV.length = 0; pv.forEach(p => PROV.push({ name: p.name, code: +p.pv_idn, color: isHex(p.color) ? p.color : "#2a78d6" })); }
+}
 const TH_M = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const TH_DS = ["อา.","จ.","อ.","พ.","พฤ.","ศ.","ส."];
 const TH_D = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
 const TH_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 // ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. ณ 07:00 (ดู plan07Row_ ใน tools/line_report.gs)
-const REPORT_TIME = "07.00 น.";
+let REPORT_TIME = "07.00 น.";
+// เส้นเกณฑ์ในกราฟแนวโน้ม [ค่า, ป้าย, สี] — แก้ที่นี่ที่เดียว (ไม่อ่านจาก Admin)
+// 37.5 = ค่ามาตรฐาน PM2.5 เฉลี่ย 24 ชม. ของไทย · 75.1 ขึ้นไป = ระดับมีผลต่อสุขภาพ
+const TREND_TH = [[37.5, "37.5 · ค่าเกณฑ์มาตรฐาน", "#b84a00"], [75.1, "75.1 · มีผลต่อสุขภาพ", "#b00000"]];
 const r1 = x => Math.round(x * 10 + 1e-9) / 10;          // ปัดแบบปกติ (21.35 → 21.4)
 const f1 = x => r1(x).toFixed(1);
 const fmt = n => Math.round(n).toLocaleString("en-US");
@@ -669,7 +709,8 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt
 const S = {};   // state กลาง
 
 (async function init() {
-  const [pm, dz, hs, geo, gpv] = await Promise.all([getJSON("/api/sheet-pm25"), getJSON("/api/sheet-disease"), getJSON("/api/hotspot"), getJSON("/api/provinces-geojson"), getJSON("/api/pm25/provinces")]);
+  const [cfg, pm, dz, hs, geo, gpv] = await Promise.all([getJSON("/api/config"), getJSON("/api/sheet-pm25"), getJSON("/api/sheet-disease"), getJSON("/api/hotspot"), getJSON("/api/provinces-geojson"), getJSON("/api/pm25/provinces")]);
+  try { applyAdminConfig(cfg); } catch (e) { console.warn("ค่าจาก Admin ใช้ไม่ได้ — ใช้ค่าเริ่มต้น", e); }
   S.pm = pm; S.dz = dz; S.geo = geo;
   S.gpv = gpv?.ok ? gpv : null;   // GISTDA: ค่าประมาณดาวเทียม + คาดการณ์ 3 วัน (รายจังหวัด)
   // ---- วันนี้ / เมื่อวาน จาก last7 (แถวล่าสุดที่มีค่า) ----
@@ -710,7 +751,7 @@ function renderHeader() {
   document.getElementById("todaySub").textContent = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · µg/m³ · เทียบกับวันก่อนหน้า` + (S.prevRow ? ` (${thDate(S.prevRow.date)})` : "");
 }
 
-// ---------- ภาพท้องฟ้า 3D ตามระดับฝุ่น (วาดเอง ไม่ใช้ภาพจากต้นแบบ) ----------
+// ---------- ภาพท้องฟ้า 3D ตามระดับฝุ่น (วาดเป็น SVG) ----------
 let ART_N = 0;
 function weatherArt(lv, w = 260, h = 190) {
   const u = "a" + (++ART_N);
@@ -829,8 +870,8 @@ function renderDrill(pvName, level = "province", amp = null) {
       const n = f.properties.name_th, v = S.todayRow?.[n], l = v != null ? LV[lvOf(v)] : null;
       const [cx, cy] = pj.centroid(f), [dx, dy] = LABEL_NUDGE[n] || [0, 0];
       return `<path class="pv-shape ${n === pvName ? "sel" : ""}" data-pv="${n}" d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" tabindex="0" role="button" aria-label="${n} ${v != null ? f1(v) : ""}"></path>
-        <g pointer-events="none" text-anchor="middle" font-family="IBM Plex Sans Thai"><text x="${cx + dx}" y="${cy + dy - 4}" fill="#fff" font-size="12" font-weight="600">${n}</text>
-        <text x="${cx + dx}" y="${cy + dy + 16}" fill="#fff" font-size="19" font-weight="700">${v != null ? f1(v) : "–"}</text></g>`;
+        <g pointer-events="none" text-anchor="middle" font-family="IBM Plex Sans Thai"><text x="${cx + dx}" y="${cy + dy - 4}" fill="${l ? textOn(l.c) : "#fff"}" font-size="12" font-weight="600">${n}</text>
+        <text x="${cx + dx}" y="${cy + dy + 16}" fill="${l ? textOn(l.c) : "#fff"}" font-size="19" font-weight="700">${v != null ? f1(v) : "–"}</text></g>`;
     }).join("");
     // แผนที่อยู่ส่วน "วันนี้" แผงรายละเอียดอยู่ส่วนเจาะลึกด้านล่าง → คลิกแล้วเลื่อนลงไปให้เห็นผล
     const pick = n => { renderDrill(n); document.getElementById("drillPanel").scrollIntoView({ behavior: "smooth", block: "center" }); };
@@ -984,7 +1025,7 @@ function renderTrend() {
   if (!W.length) { svg.outerHTML = `<p class="muted">ไม่มีข้อมูล</p>`; return; }
   document.getElementById("trendSub").textContent = `ค่าเฉลี่ยรายสัปดาห์ ${thDate(W[0].s)} – ${thDate(W.at(-1).e)} · µg/m³`;
   document.getElementById("legend").innerHTML = PROV.map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
-  const VW = 760, VH = 372, L = 48, R = 132, T = 30, B = 34, pw = VW - L - R, ph = VH - T - B, n = W.length;
+  const VW = 760, VH = 372, L = 70, R = 132, T = 30, B = 34, pw = VW - L - R, ph = VH - T - B, n = W.length;
   const top = Math.max(80, Math.ceil(Math.max(...W.flatMap(w => w.v.filter(x => x != null))) / 20) * 20);
   const X = i => L + i / (n - 1) * pw, Y = v => T + ph - Math.min(v, top) / top * ph;
   const AX = `font-size="13" font-weight="600" fill="#46546a"`;
@@ -992,9 +1033,11 @@ function renderTrend() {
   // แถบสีพื้นหลังตามระดับคุณภาพอากาศ — อ่านได้ทันทีว่าเส้นอยู่ช่วงไหน
   LV.forEach((l, i) => { const lo = i ? LV[i - 1].max : 0, hi = Math.min(l.max, top); if (lo >= top) return;
     g += `<rect x="${L}" y="${Y(hi)}" width="${pw}" height="${Y(lo) - Y(hi)}" fill="${l.c}" opacity=".09"/>`; });
-  for (let t = 0; t <= top; t += 20) g += `<line x1="${L}" x2="${L + pw}" y1="${Y(t)}" y2="${Y(t)}" stroke="#dfe4ec"/><text x="${L - 10}" y="${Y(t) + 4.5}" text-anchor="end" ${AX}>${t}</text>`;
-  g += `<text x="${L - 10}" y="${T - 14}" text-anchor="start" font-size="12" font-weight="700" fill="#46546a" dx="-28">µg/m³</text>`;
-  for (const [v, lab, c] of [[37.5, "37.5 · เกินค่ามาตรฐาน", "#b84a00"], [75, "75 · มีผลต่อสุขภาพ", "#b00000"]])
+  for (let t = 0; t <= top; t += 20) g += `<line x1="${L}" x2="${L + pw}" y1="${Y(t)}" y2="${Y(t)}" stroke="#dfe4ec"/><line x1="${L - 5}" x2="${L}" y1="${Y(t)}" y2="${Y(t)}" stroke="#46546a" stroke-width="1.5"/><text x="${L - 9}" y="${Y(t) + 4.5}" text-anchor="end" ${AX}>${t}</text>`;
+  // แกน y + แกน x เป็นเส้นทึบ · ชื่อแกน y เขียนแนวตั้ง
+  g += `<line x1="${L}" x2="${L}" y1="${T}" y2="${T + ph}" stroke="#46546a" stroke-width="1.5"/><line x1="${L}" x2="${L + pw}" y1="${T + ph}" y2="${T + ph}" stroke="#46546a" stroke-width="1.5"/>`;
+  g += `<text transform="translate(16 ${T + ph / 2}) rotate(-90)" text-anchor="middle" font-size="13" font-weight="700" fill="#0f1b2d">ค่าฝุ่น PM2.5 (µg/m³)</text>`;
+  for (const [v, lab, c] of TREND_TH)
     g += `<line x1="${L}" x2="${L + pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="6 4" stroke-width="1.6"/>
       <text x="${L + pw - 6}" y="${Y(v) - 7}" text-anchor="end" font-size="13" font-weight="700" fill="${c}" stroke="#fff" stroke-width="4" paint-order="stroke">${lab}</text>`;
   let lm = -1; W.forEach((w, i) => { const m = new Date(w.s).getMonth(); if (m !== lm) { lm = m; g += `<line x1="${X(i)}" x2="${X(i)}" y1="${T + ph}" y2="${T + ph + 5}" stroke="#9aa6b6"/><text x="${X(i)}" y="${VH - 8}" text-anchor="middle" ${AX}>${TH_M[m]}</text>`; } });
@@ -1146,7 +1189,7 @@ function renderAdvice() {
     <div class="lvbox"><span class="face">${L.face}</span><span>วันนี้คุณภาพอากาศ</span><b>${L.name}</b><span class="num">PM2.5 ${L.range} µg/m³</span></div>
     <div class="who"><h3><span><svg class="ico"><use href="#i-people"/></svg></span>ประชาชนทั่วไป</h3><div class="dos">${L.pub.map(x => `<div class="do"><span><svg class="ico"><use href="#${actIcon(x)}"/></svg></span>${x}</div>`).join("")}</div></div>
     <div class="who"><h3><span><svg class="ico"><use href="#i-heartp"/></svg></span>กลุ่มเสี่ยง*</h3><div class="dos">${L.risk.map(x => `<div class="do"><span><svg class="ico"><use href="#${actIcon(x)}"/></svg></span>${x}</div>`).join("")}</div></div>`;
-  document.getElementById("advRow").innerHTML = LV.map((l, i) => `<div class="a ${i === S.lv ? "cur" : ""}"><b><i style="background:${l.c}"></i>${l.name}${i === S.lv ? " · วันนี้" : ""}</b><span class="muted num">${l.range} µg/m³</span><span>${l.pub[0]}</span></div>`).join("");
+  document.getElementById("advRow").innerHTML = LV.map((l, i) => `<div class="a ${i === S.lv ? "cur" : ""}"><b><i style="background:${l.c}"></i>${l.name}${i === S.lv ? " · วันนี้" : ""}</b><span class="muted num">${l.range} µg/m³</span><span>${l.summary || l.pub[0]}</span></div>`).join("");
 }
 
 // ================= INFOGRAPHIC =================
@@ -1186,7 +1229,7 @@ function buildInfographic(size = "a4", dense = 0) {
   if (S.geo?.features?.length) {
     const pj = projector(S.geo, 470, 330, 6);
     mapSvg = S.geo.features.map(f => { const n = f.properties.name_th, v = S.todayRow?.[n], l = v != null ? LV[lvOf(v)] : null, [cx, cy] = pj.centroid(f), [dx, dy] = LABEL_NUDGE[n] || [0, 0];
-      return `<path d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" stroke="#fff" stroke-width="2"/><text x="${cx + dx * 1.15}" y="${cy + dy * 1.15}" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" font-family="IBM Plex Sans Thai">${n}</text>`; }).join("")
+      return `<path d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" stroke="#fff" stroke-width="2"/><text x="${cx + dx * 1.15}" y="${cy + dy * 1.15}" text-anchor="middle" fill="${l ? textOn(l.c) : "#fff"}" font-size="16" font-weight="700" font-family="IBM Plex Sans Thai">${n}</text>`; }).join("")
       + S.hsToday.map(f => { const [x, y] = pj.P(f.geometry.coordinates); return `<circle cx="${x}" cy="${y}" r="5" fill="${(CONF[f.properties.confidence] || [0, "#e8192c"])[1]}" stroke="#fff" stroke-width="1.5"/>`; }).join("");
   }
   ig.innerHTML = head + `
