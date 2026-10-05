@@ -1,2189 +1,1275 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>รายงานสถานการณ์ PM2.5 เขตสุขภาพที่ 7</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Sarabun:wght@300;400;600;700&family=Noto+Sans+Thai:wght@300;400;600;700&family=Kanit:wght@300;400;600;700&family=Prompt:wght@300;400;600;700&family=Mitr:wght@300;400;600&family=Bai+Jamjuree:wght@300;400;600;700&family=K2D:wght@300;400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/html2canvas.min.js"></script>
-  <!-- Chart.js zoom plugin -->
-  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM2.5 เขตสุขภาพที่ 7 — Dashboard v2 (ต้นแบบ)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- html2canvas โหลดแบบ synchronous ตามบทเรียนเดิม (ห้าม async) -->
+<script src="/html2canvas.min.js"></script>
+<style>
+:root{
+  --bg:#f3f6f9; --surface:#ffffff; --subtle:#f7f9fb; --line:#e3e8ef; --line-strong:#cfd7e2;
+  --ink-1:#0f1b2d; --ink-2:#2f3b4e; --ink-3:#4f5b6e;
+  --brand:#0e2a47; --accent:#1c6ed6;
+  --aqi-1:#009ede; --aqi-2:#0e8a00; --aqi-3:#ffd500; --aqi-4:#ff8400; --aqi-5:#d10000;
+  /* หัวกระดาษตามระดับเฉลี่ยของเขต — ค่าเริ่มต้น = ดี (เขียนทับด้วย JS) */
+  --lv:#0e8a00; --lv-soft:#e8f5e4; --lv-tint:#f3faf1; --lv-ink:#0b5e00;
+  /* ซีรีส์จังหวัด (โหมดสว่าง) — ผ่าน validate_palette; สีฟ้า/เหลืองต่ำกว่า 3:1 → มีป้ายท้ายเส้น + ตารางเสมอ */
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --up:#c92a2a; --down:#2b8a3e;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink-1);font-family:"IBM Plex Sans Thai",sans-serif;font-size:14px;line-height:1.6}
+h1,h2,h3,.disp{font-family:"Anuphan",sans-serif;line-height:1.35}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer}
+.ico{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
-  <style>
-/* ╔══════════════════════════════════════════════════════════════╗
-   ║          🔧  CUSTOMIZATION PANEL — แก้ได้ที่นี่             ║
-   ╠══════════════════════════════════════════════════════════════╣
-   ║  ความสูงแต่ละ Zone (รวม = 1123px = A4)                      ║
-   ║  สูตร: --h-a + --h-bc + --h-d + --h-ef + --h-g             ║
-   ║        + --h-footer + (5 × --gap) + (2 × --pad) = 1123px   ║
-   ╚══════════════════════════════════════════════════════════════╝ */
-:root {
-  /* ── Zone heights (ปรับได้ — ผลรวมต้องได้ 1123px) ── */
-  --h-a:       70px;   /* Zone A : Header                  */
-  --h-bc:     290px;   /* Zone BC: แผนที่ + กราฟแนวโน้ม    */
-  --h-d:      165px;   /* Zone D : ตาราง 7 วัน             */
-  --h-ef:     270px;   /* Zone EF: Hotspot + กราฟโรค       */
-  --h-g:      200px;   /* Zone G : คำแนะนำประชาชน          */
-  --h-footer:  38px;   /* Footer                           */
+/* ---------- header: ภาพหัวเดิม + แถบสีตามระดับเฉลี่ยของเขต (แบบอ่อน) ---------- */
+body{background:linear-gradient(180deg,var(--lv-soft) 0,var(--lv-tint) 380px,var(--bg) 900px)}
+.hdr{background:linear-gradient(180deg,var(--lv-soft),var(--lv-tint));border-bottom:4px solid var(--lv)}
+.hdr-banner{max-width:1280px;margin:0 auto;padding:14px 32px 0}
+.hdr-banner img{display:block;width:100%;height:auto;aspect-ratio:2000/250;border-radius:12px;border:1px solid color-mix(in srgb,var(--lv) 25%,#fff)}
+.hdr-in{max-width:1280px;margin:0 auto;padding:12px 32px 14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hdr-in .meta{margin-left:0;width:100%}
+.hdr-in .meta .btns{margin-left:auto;display:flex;gap:8px;align-items:center}
+select.size{font:inherit;border:1px solid var(--line-strong);border-radius:10px;padding:8px 10px;background:#fff;color:var(--ink-1)}
 
-  /* ── Layout ── */
-  --gap:        5px;   /* ช่องว่างระหว่าง Zone              */
-  --pad:       10px;   /* padding รอบ A4                    */
+/* ---------- Weather-Station: hero + การ์ดเล็ก + แผงพยากรณ์ ---------- */
+.ws{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:stretch}
+.ws-left{display:flex;flex-direction:column;gap:16px;min-width:0}
+.glass{background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.9);border-radius:20px;box-shadow:0 8px 28px rgba(15,27,45,.07);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.wx-hero{display:grid;grid-template-columns:200px minmax(0,1fr);gap:12px 24px;align-items:center;padding:20px 26px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#fff 0%,var(--lv-tint) 55%,var(--lv-soft) 100%)}
+.wx-hero .art{width:200px;height:150px;margin:-10px 0 -10px -10px}
+.wx-hero .loc{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-weight:500;font-size:13.5px}
+.wx-hero .big{font-family:"Anuphan";font-weight:600;font-size:96px;line-height:.95;letter-spacing:-.02em;margin:4px 0}
+.wx-hero .big small{font-size:20px;color:var(--ink-3);font-weight:500;letter-spacing:0;margin-left:6px}
+.wx-hero .cond{font-family:"Anuphan";font-weight:700;font-size:26px;color:var(--lv-ink)}
+.wx-hero .facts{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fact{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.fact .fi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+.fact b{display:block;font-size:15px;line-height:1.25}
+.fact span{font-size:12px;color:var(--ink-3);line-height:1.3}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tile{padding:14px 14px 12px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(15,27,45,.10)}
+.tile[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:-2px}
+.tile .th{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:.02em}
+.tile .th span{display:flex;align-items:center;gap:6px}
+.ring{position:relative;width:128px;height:128px;margin:6px auto 0}
+.ring svg{width:100%;height:100%}
+.ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .c b{font-family:"Anuphan";font-size:36px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.ring .c span{font-size:12.5px;font-weight:700;color:var(--ink-1)!important;margin-top:2px}
+/* ป้าย "PM2.5" — กันคนอ่านตัวเลขเป็นอุณหภูมิ */
+.ring .c em{font-style:normal;font-size:11.5px;font-weight:700;color:#fff;background:var(--tk,var(--lv-ink));border-radius:6px;padding:0 7px;line-height:18px;margin-bottom:3px}
+/* ตัวเลขหลัก: หัวข้อ "ค่าฝุ่น PM2.5" → ตัวเลขใหญ่ + หน่วยซ้อน 2 บรรทัด → ระดับ */
+.kpi-h{display:flex;flex-direction:column;gap:2px;border-left:6px solid var(--lv);padding-left:12px}
+.kpi-title{font-family:"Anuphan";font-size:30px;font-weight:700;line-height:1.1;color:var(--lv-ink);letter-spacing:-.01em}
+.kpi-sub{font-size:14px;font-weight:600;color:var(--ink-2)}
+.kpi-v{display:flex;align-items:flex-end;gap:12px;margin:10px 0 8px}
+.kpi-num{font-family:"Anuphan";font-weight:700;font-size:116px;line-height:.85;letter-spacing:-.035em;color:var(--ink-1)}
+.kpi-unit{display:flex;flex-direction:column;gap:2px;padding-bottom:8px;flex:none}
+.kpi-unit b{font-size:26px;font-weight:700;color:var(--ink-1);line-height:1}
+.kpi-unit small{font-size:12px;font-weight:600;color:var(--ink-2);line-height:1.3}
+.kpi-lv{display:inline-flex;align-items:center;gap:8px;background:var(--lv-soft);color:var(--lv-ink);border:2px solid var(--lv);border-radius:999px;padding:4px 16px 4px 10px;font-family:"Anuphan";font-size:21px;font-weight:700;margin-bottom:6px}
+.kpi-lv span{font-size:22px}
+.pm-tag{display:inline-block;white-space:nowrap;background:var(--lv-ink);color:#fff;border-radius:8px;padding:2px 10px;font-family:"Anuphan";font-size:16px;font-weight:700;margin-right:4px}
+.tile .ft{font-size:12px;text-align:center;margin-top:4px}
+.fc{padding:18px 18px 12px;position:sticky;top:12px}
+.fc h3{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.fc .sub{font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.fc-row{display:grid;grid-template-columns:56px 34px minmax(0,1fr) 38px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.fc-row:first-of-type{border-top:0}
+.fc-row .d{font-weight:600;font-size:13px;line-height:1.2}
+.fc-row .d small{display:block;font-weight:400;color:var(--ink-3);font-size:11px}
+.fc-row svg.mini{width:34px;height:26px}
+.rng{position:relative;height:6px;border-radius:3px;background:#edf1f5}
+.rng b{position:absolute;top:0;bottom:0;border-radius:3px}
+.rng em{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;background:#fff;border:2.5px solid var(--ink-1);transform:translateX(-6px)}
+.fc-row .avg{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.fc-row.now{background:var(--lv-tint);border-radius:12px;margin:0 -8px;padding:8px;border-top-color:transparent}
+.area-sum{display:flex;flex-wrap:wrap;gap:6px}
+.area-wrap{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:4px 6px;background:#fff}
+.area-t{width:100%}
+.area-t thead{position:sticky;top:0;background:#fff;z-index:1}
+.area-t td:first-child{font-weight:600}
+.area-t tr.clk{cursor:pointer}
+.area-t tr.clk:hover td:first-child,.area-t tr.clk:focus td:first-child{color:var(--accent)}
+.area-t .go{color:var(--accent);font-weight:700}
+.area-t th small{font-weight:600;font-size:10.5px;color:var(--ink-3)}
+.area-t td.mx b{display:block;line-height:1.1}
+.area-t td.mx small{display:block;font-size:10.5px;font-weight:600;opacity:.85}
+.area-t td.hs-n{white-space:nowrap;font-weight:700;color:#a23d00}
+.area-map{border:1px solid var(--line);border-radius:12px;background:#fff;padding:8px 8px 10px}
+.area-map svg{display:block;width:100%;max-height:340px}
+.amp-shape{stroke:#fff;stroke-width:1;cursor:pointer;transition:opacity .15s}
+.amp-shape:hover,.amp-shape:focus{opacity:.8;stroke:var(--ink-1);stroke-width:2;outline:none}
+.fc-face{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:19px}
+.fc-t{width:100%;margin-top:12px;border-collapse:separate}
+.fc-t th{font-size:12px}
+.fc-src{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:8px 10px;border-radius:10px;background:var(--subtle);font-size:11.5px;font-weight:600;color:var(--ink-2);line-height:1.45}
+.fc-src .ico{width:18px;height:18px;margin-top:1px;color:var(--ink-2)}
+.fc-scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);padding:4px 46px 0 98px}
+.logo{width:56px;height:56px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:12px;color:var(--brand);flex:none}
+.hdr h1{font-size:22px;font-weight:700}
+.hdr .sub{color:var(--ink-2);font-size:13px}
+.hdr .meta{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.date{font-weight:600}
+.date small{display:block;font-weight:400;color:var(--ink-2);font-size:12px;line-height:1.3}
+/* ป้ายวันที่รายงาน — ต้องเห็นชัดว่าเป็นข้อมูลของวันไหน เวลาอะไร */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rep-date{display:flex;align-items:center;gap:14px;background:#fff;border:2px solid var(--lv);border-radius:14px;padding:8px 10px 8px 8px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.rep-date .cal{width:58px;border-radius:10px;overflow:hidden;text-align:center;border:1.5px solid var(--lv-ink);flex:none;background:#fff}
+.rep-date .cal i{display:block;font-style:normal;background:var(--lv-ink);color:#fff;font-size:13px;font-weight:700;line-height:20px}
+.rep-date .cal em{display:block;font-style:normal;font-family:"Anuphan";font-size:30px;font-weight:700;line-height:36px;color:var(--lv-ink)}
+.rep-date .txt small{display:block;font-size:13.5px;font-weight:600;color:var(--ink-2);line-height:1.3}
+.rep-date .txt b{display:block;font-family:"Anuphan";font-size:25px;font-weight:700;color:var(--lv-ink);line-height:1.25}
+.rep-date .t07{display:inline-flex;align-items:center;gap:6px;background:var(--lv-ink);color:#fff;border-radius:999px;padding:8px 16px;font-weight:700;font-size:17px;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 16px;border:1px solid var(--line-strong);background:#fff;color:var(--ink-1);font-weight:600}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-  /* ── สัดส่วน column ── */
-  --col-bc: 36% 64%;   /* B(แผนที่จังหวัด) : C(กราฟแนวโน้ม) */
-  --col-ef: 38% 62%;   /* E(Hotspot map)   : F(กราฟโรค)     */
+.wrap{max-width:1280px;margin:0 auto;padding:24px 32px 40px;display:flex;flex-direction:column;gap:28px}
 
-  /* ── สีระดับ AQI (ตรงกับ config.json) ── */
-  --c-vgood:  #009ede;  /* ดีมาก            0 – 15 µg/m³  */
-  --c-good:   #0e8a00;  /* ดี             16 – 25 µg/m³  */
-  --c-medium: #ffd500;  /* ปานกลาง       26 – 37.5 µg/m³ */
-  --c-start:  #ff8400;  /* เริ่มมีผล   37.6 – 75 µg/m³ */
-  --c-bad:    #d10000;  /* มีผลต่อสุขภาพ    > 75 µg/m³   */
+/* ---------- หัวข้อ section: กรอบ + ไอคอน ---------- */
+.sec-h{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--sec,var(--brand));border-radius:12px;padding:10px 16px;margin-bottom:14px}
+.sec-h .badge{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--sec,var(--brand)) 12%,#fff);color:var(--sec,var(--brand));flex:none}
+.sec-h .badge .ico{width:22px;height:22px}
+.sec-h h2{font-size:19px;font-weight:700}
+.sec-h p{color:var(--ink-3);font-size:12.5px;line-height:1.4}
+.sec-h .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
-  /* ── สีธีม ── */
-  --c-header:       #1a4f7a;
-  --c-th-bg:        #1a4f7a;
-  --c-footer:       #1a4f7a;
-  --c-footer-text:  #ffffff;
-  --c-export:  #27ae60;
-  --c-border:  #d0d7de;
-  --c-zone-bg: #fafafa;
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 1px 2px rgba(15,27,45,.04)}
+/* ข้อความรองอ่านง่าย: หนาขึ้น เข้มขึ้น */
+.wx-hero .loc,.fact span,.fc .sub,.fc-row .d small,.tile .ft,.ring .c span,.icd,.dz .lg,.legend,.crumb,.kv .label,.mini7 .c,.muted,.hot-row,.conf,.adv-row .a span{font-weight:600}
+.fact span,.fc .sub,.icd,.dz .lg,.legend{font-size:13px!important;color:var(--ink-2)!important}
+.fc-row .d small{color:var(--ink-2)!important}
+/* การ์ดมีสีพื้นอ่อนตามสีของหัวข้อ (--sec) — ไม่ขาวโล่ง */
+section[style*="--sec"] .card,section[style*="--sec"] .glass{background:linear-gradient(160deg,color-mix(in srgb,var(--sec) 9%,#fff),color-mix(in srgb,var(--sec) 20%,#fff));border-color:color-mix(in srgb,var(--sec) 30%,#fff)}
+.sec-h{background:linear-gradient(90deg,color-mix(in srgb,var(--sec,var(--brand)) 88%,#000),color-mix(in srgb,var(--sec,var(--brand)) 70%,#fff))!important;border:0!important;border-left:6px solid color-mix(in srgb,var(--sec,var(--brand)) 60%,#000)!important;box-shadow:0 6px 18px color-mix(in srgb,var(--sec,var(--brand)) 25%,transparent)}
+.sec-h h2{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.sec-h p{color:#fff!important;font-size:14px!important;font-weight:600;opacity:.97}
+.sec-h .badge{background:#fff!important;box-shadow:0 2px 6px rgba(15,27,45,.08)}
+section .tile{background:linear-gradient(170deg,color-mix(in srgb,var(--tint,#fff) 45%,#fff),var(--tint,#fff))!important;border-color:color-mix(in srgb,var(--tc,#ccc) 30%,#fff)!important}
+section .dz.card{background:linear-gradient(165deg,color-mix(in srgb,var(--dsoft) 40%,#fff),var(--dsoft) 100%)!important;border-color:color-mix(in srgb,var(--dc) 25%,#fff)!important}
+.kv div,.fact{background:rgba(255,255,255,.7)!important}
+.muted{color:var(--ink-3)}
+.label{font-size:13px;color:var(--ink-2);font-weight:600}
 
-  /* ── Font size scale ── */
-  --fs-title:         12.5px;
-  --fs-label:         11px;
-  --fs-cell:          12px;
-  --fs-small:         10px;
-  --fs-hdr-date:      12px;
-  --fs-hdr-time:      10px;
-  --fs-th:            10.5px;
-  --fs-rec-level:     11px;
-  --fs-rec-range:     9.5px;
-  --fs-rec-body:      9.5px;
-  --fs-disease:       9px;
-  --fs-disease-total: 12px;
+/* ---------- วันนี้ ---------- */
+.today{display:grid;grid-template-columns:330px repeat(4,minmax(0,1fr));gap:14px}
+.hero{padding:20px;background:linear-gradient(160deg,#fff,var(--lv-tint));border-color:color-mix(in srgb,var(--lv) 35%,var(--line))}
+.hero .big{font-family:"Anuphan";font-weight:700;font-size:64px;line-height:1;margin:6px 0 2px}
+.hero .big small{font-size:16px;color:var(--ink-3);font-weight:500;margin-left:4px}
+.hero .lvl{font-family:"Anuphan";font-weight:700;font-size:20px;color:var(--lv-ink)}
+.hero .facts{margin-top:14px;border-top:1px dashed var(--line-strong);padding-top:10px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.hero .facts div{display:flex;justify-content:space-between;gap:8px}
+.hero .facts b{font-weight:600}
+.pv{padding:16px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid var(--line);transition:border-color .15s,box-shadow .15s}
+.pv:hover{border-color:var(--line-strong);box-shadow:0 4px 14px rgba(15,27,45,.08)}
+.pv[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.pv .bar{height:5px;border-radius:3px}
+.pv .name{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:600}
+.pv .v{font-family:"Anuphan";font-size:38px;font-weight:700;line-height:1.1}
+.pv .v small{font-size:13px;color:var(--ink-3);font-weight:500}
+.delta{font-size:12.5px}
+.delta.up{color:var(--up)} .delta.down{color:var(--down)}
+.pv .go{margin-top:auto;font-size:12px;color:var(--accent);font-weight:600}
 
-  /* ── Typography (ปรับได้จาก Admin) ── */
-  --c-zone-title: #0e2a47;
+/* ---------- เจาะลึก ---------- */
+.drill{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+.drill .fc{position:static}
+.today-map{padding:18px 18px 14px;display:flex;flex-direction:column}
+.today-map svg#drillMap{flex:1 1 auto;min-height:0}
+/* หัวกล่องแบบมีไอคอน + ข้อความ (การ์ดแผนที่ / แผงคาดการณ์) */
+.box-h{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,var(--lv-soft),#fff);border:1px solid color-mix(in srgb,var(--lv) 30%,var(--line));border-radius:12px;padding:8px 12px;margin-bottom:8px}
+.box-h .bi{width:40px;height:40px;border-radius:10px;background:var(--lv-ink);color:#fff;display:grid;place-items:center;flex:none}
+.box-h .bi .ico{width:22px;height:22px}
+.box-h h3{font-size:17px;font-weight:700;color:var(--lv-ink);line-height:1.3}
+.box-h p{font-size:12.5px;font-weight:600;color:var(--ink-2);line-height:1.35}
+.map-note{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.map-note div{display:flex;align-items:center;gap:8px;border-radius:10px;padding:7px 10px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--ink-2);line-height:1.3}
+.map-note .ni{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none}
+.map-note .ni .ico{width:18px;height:18px}
+.map-note b{display:block;font-size:15px;color:var(--ink-1)}
+.today-map svg#drillMap{display:block;width:100%}
+#drillMap path.pv-shape{cursor:pointer;stroke:#fff;stroke-width:1.5;transition:opacity .15s}
+#drillMap path.pv-shape:hover{opacity:.82}
+#drillMap path.pv-shape.sel{stroke:var(--ink-1);stroke-width:2.5}
+.crumb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}
+.crumb button{background:none;border:0;color:var(--accent);font-weight:600;padding:2px 4px;border-radius:6px}
+.crumb button[disabled]{color:var(--ink-1);cursor:default}
+.crumb .sep{color:var(--ink-3)}
+.panel{padding:18px;display:flex;flex-direction:column;gap:14px}
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kv div{background:var(--subtle);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kv b{display:block;font-family:"Anuphan";font-size:22px}
+.pending{border:1.5px dashed var(--line-strong);border-radius:12px;padding:14px 16px;background:var(--subtle);font-size:13px;color:var(--ink-2)}
+.pending code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12px}
+.mini7{display:flex;align-items:flex-end;gap:6px;height:90px}
+.mini7 .c{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--ink-3)}
+.mini7 .c i{width:100%;border-radius:4px 4px 0 0;display:block}
+.mini7 .c b{font-size:11.5px;color:var(--ink-1)}
 
-  /* ── Misc ── */
-  --font: 'IBM Plex Sans Thai', 'Sarabun', sans-serif;
-  --radius: 5px;
-}
-/* ══════════════════════════════════════════════════════════════ */
+/* ---------- แนวโน้ม + ตาราง ---------- */
+.trend{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+.chart-card{padding:16px 18px;position:relative}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:16px;height:3px;border-radius:2px}
+/* โซนแนวโน้ม — ตัวอักษรใหญ่และเข้มขึ้นทั้งโซน */
+.trend .chart-card{padding:18px 20px}
+.trend .label{font-size:15.5px;font-weight:700;color:var(--ink-1)}
+.trend .legend{font-size:14px;font-weight:700;color:var(--ink-1)}
+.trend .legend i{width:22px;height:4px}
+.trend .tip{font-size:14px}
+.trend .tip .r b{font-size:15px}
+.trend .t7{width:100%;margin-top:10px;font-size:15.5px}
+.trend .t7 th{font-size:13.5px;font-weight:700;color:var(--ink-2);padding:6px 4px}
+.trend .t7 td{padding:9px 6px}
+.trend .t7 td:first-child{font-size:15px;font-weight:700;color:var(--ink-1);padding-right:10px}
+.trend .t7-note{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.trend .t7-note span{display:flex;align-items:center;gap:5px}
+.trend .t7-note i{width:14px;height:14px;border-radius:4px}
+.chart-wrap{position:relative;margin-top:8px}
+.chart-wrap svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--line-strong);border-radius:10px;padding:8px 12px;font-size:12.5px;box-shadow:0 8px 24px rgba(15,27,45,.14);opacity:0;transition:opacity .12s;z-index:20;min-width:160px}
+.tip.on{opacity:1}
+.tip .t{color:var(--ink-3);margin-bottom:2px}
+.tip .r{display:flex;justify-content:space-between;gap:14px}
+.tip .r span{display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.tip .r i{width:10px;height:3px;border-radius:2px}
+table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:13px}
+.t7 th{font-weight:500;color:var(--ink-3);font-size:12px;padding:4px 6px;text-align:center}
+.t7 th:first-child,.t7 td:first-child{text-align:left}
+.t7 td{padding:6px;text-align:center;font-weight:600}
+.t7 td.cell{border-radius:6px;font-weight:700;border:2px solid #fff}
+.t7 td.na{color:var(--ink-3);font-weight:400;font-size:11.5px;background:var(--subtle)}
+.t7 .today-col{outline:3px solid var(--ink-1);outline-offset:-3px}
 
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+/* ---------- Hotspot ---------- */
+.hot{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+#map{height:460px;border-radius:var(--r);border:1px solid var(--line);z-index:0}
+.hot-side{padding:16px;display:flex;flex-direction:column;gap:12px}
+.hot-total{font-family:"Anuphan";font-size:44px;font-weight:700;line-height:1}
+.hot-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}
+.hot-row b{font-variant-numeric:tabular-nums}
+.conf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-2)}
+.conf span{display:flex;align-items:center;gap:8px}
+.conf i{width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.note-box{background:#fff8e6;border:1px solid #ffe0a3;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#7a5200}
+.leaflet-tooltip.hs-tip{font-family:"IBM Plex Sans Thai",sans-serif;font-size:12px;line-height:1.6;border-radius:10px;padding:8px 10px;border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(15,27,45,.16)}
+.hs-tip b.t{font-size:12.5px}
+.hs-tip hr{border:0;border-top:1px solid var(--line);margin:4px 0}
 
-body {
-  background: #b0bec5;
-  font-family: var(--font);
-  display: flex;
-  justify-content: center;
-  padding: 24px 0 40px;
-}
+/* ---------- โรค ---------- */
+.dz-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.dz{padding:16px 18px;display:flex;flex-direction:column;gap:6px;position:relative}
+.dz-top{display:flex;align-items:center;gap:12px}
+.dz-icon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex:none}
+.dz-icon svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dz h3{font-size:16px;font-weight:700}
+.dz .icd{font-size:12px;color:var(--ink-3)}
+.dz .tot{margin-left:auto;text-align:right}
+.dz .tot b{font-family:"Anuphan";font-size:28px;font-weight:700;display:block;line-height:1.1}
+.dz svg.bars{width:100%;height:auto;display:block;margin-top:6px}
+.dz .lg{display:flex;gap:16px;font-size:12px;color:var(--ink-2)}
+.dz .lg span{display:flex;align-items:center;gap:6px}
+.dz .lg i{width:12px;height:12px;border-radius:3px}
 
-/* ── A4 fixed canvas ── */
-#dashboard {
-  width:  794px;
-  height: 1123px;           /* A4 exact */
-  background: #fff;
-  padding: var(--pad);
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  box-shadow: 0 6px 28px rgba(0,0,0,.3);
-  overflow: hidden;         /* ไม่ให้เกิน A4 */
-}
+/* ---------- คำแนะนำ ---------- */
+.adv-now{display:grid;grid-template-columns:260px minmax(0,1fr) minmax(0,1fr);gap:0;overflow:hidden;border:2px solid var(--lv)}
+.adv-now .lvbox{background:linear-gradient(160deg,var(--lv),var(--lv-ink));color:#fff;padding:22px;display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:center;text-align:center;font-weight:600}
+.adv-now .lvbox .face{font-size:44px;line-height:1}
+.adv-now .lvbox b{font-family:"Anuphan";font-size:32px;font-weight:700;color:#fff}
+.adv-now .lvbox .face{font-size:56px!important}
+.adv-now .who{padding:20px 22px;display:flex;flex-direction:column;gap:8px;border-left:1px solid var(--line)}
+.adv-now .who h3{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:700;color:var(--lv-ink)}
+.adv-now .who h3 span{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--lv-soft);color:var(--lv-ink)}
+.dos{display:flex;flex-direction:column;gap:8px}
+.do{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid color-mix(in srgb,var(--lv) 30%,#fff);border-left:5px solid var(--lv);border-radius:12px;padding:10px 14px;font-size:18px;font-weight:600;line-height:1.45;color:var(--ink-1)}
+.do span{width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--lv-soft);color:var(--lv-ink)}
+.do .ico{width:22px;height:22px}
+.adv-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}
+.adv-row .a{padding:10px 12px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:12.5px;display:flex;flex-direction:column;gap:2px}
+.adv-row .a b{display:flex;align-items:center;gap:6px;font-size:13px}
+.adv-row .a b i{width:10px;height:10px;border-radius:50%}
+.adv-row .a.cur{border:2px solid var(--lv);background:var(--lv-tint)}
+.foot-note{font-size:12px;color:var(--ink-3);margin-top:8px}
 
-/* ══════════════════════════════════════════════
-   ZONE HELPER — ใช้ร่วมกัน
-══════════════════════════════════════════════ */
-.zone {
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-zone-bg);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-.zone-title {
-  font-size: var(--fs-title);
-  font-weight: 700;
-  color: var(--c-zone-title, #0e2a47);
-  text-align: left;
-  padding: 4px 10px 4px 13px;
-  background: linear-gradient(90deg, rgba(26,79,122,.11) 0%, rgba(41,128,185,.06) 70%, transparent 100%);
-  border-bottom: 1.5px solid rgba(26,79,122,.10);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-  position: relative;
-}
-/* Left liquid accent bar */
-.zone-title::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 18%;
-  width: 5px; height: 64%;
-  background: linear-gradient(180deg, #1a4f7a 0%, #2980b9 100%);
-  border-radius: 0 4px 4px 0;
-}
-/* Right blob glow */
-.zone-title::after {
-  content: '';
-  position: absolute;
-  right: -10px; top: -10px;
-  width: 38px; height: 38px;
-  background: radial-gradient(circle at 40% 40%, rgba(26,79,122,.14), transparent 65%);
-  border-radius: 55% 45% 65% 35% / 40% 60% 40% 60%;
-  pointer-events: none;
-}
-.zone-inner {
-  height: calc(100% - 26px);  /* zone height minus title bar */
-  overflow: hidden;
-}
+footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);font-size:12.5px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 
-/* ══════════════════════════════════════════════
-   AQI palette
-══════════════════════════════════════════════ */
-.aqi-vgood  { background:var(--c-vgood);  color:#fff; }
-.aqi-good   { background:var(--c-good);   color:#fff; }
-.aqi-medium { background:var(--c-medium); color:#333; }
-.aqi-start  { background:var(--c-start);  color:#fff; }
-.aqi-bad    { background:var(--c-bad);    color:#fff; }
+/* ---------- modal ดาวน์โหลด ---------- */
+.modal{position:fixed;inset:0;background:rgba(15,27,45,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal.on{display:flex}
+.modal .box{background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.modal .bar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.modal .bar h3{font-size:16px;margin-right:auto}
+.modal .img{overflow:auto;background:var(--bg);padding:16px;text-align:center}
+.modal .img img{max-width:100%;box-shadow:0 6px 24px rgba(0,0,0,.15)}
+.modal .hint{font-size:12px;color:var(--ink-3);padding:8px 16px}
 
-/* ══════════════════════════════════════════════
-   ZONE A — HEADER (รูปปก + วันที่ overlay)
-══════════════════════════════════════════════ */
-#zone-a {
-  height: var(--h-a);
-  border-radius: var(--radius);
-  flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--c-header) 0%, #2980b9 100%); /* fallback */
-  color: #fff;
-}
-#hdr-bg {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; object-position: center;
-  display: block;
-}
-.date-wrap {
-  position: absolute;
-  right: 14px; top: 50%; transform: translateY(-50%);
-  text-align: right; font-size: var(--fs-hdr-time); line-height: 1.7;
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0,0,0,.55);
-  z-index: 1;
-}
-.date-wrap .date-big { font-size: var(--fs-hdr-date); font-weight: 700; }
+/* ================= INFOGRAPHIC (สำหรับ export เท่านั้น 1080×1528 ≈ A4) ================= */
+#ig-holder{position:absolute;left:-20000px;top:0}
+#ig{width:1080px;height:1528px;background:#fff;font-family:"IBM Plex Sans Thai",sans-serif;color:var(--ink-1);display:flex;flex-direction:column;overflow:hidden}
+#ig .ig-h{background:linear-gradient(180deg,var(--lv-soft),var(--lv-tint));border-bottom:8px solid var(--lv);padding:30px 44px 26px;display:flex;align-items:center;gap:20px}
+#ig .ig-h .logo{width:72px;height:72px;font-size:15px}
+#ig .ig-h h1{font-size:34px;font-weight:700;line-height:1.25}
+#ig .ig-h p{font-size:17px;color:var(--ink-2)}
+#ig .ig-body{padding:26px 44px 0;display:flex;flex-direction:column;gap:20px;flex:1}
+#ig .ig-sec{display:flex;align-items:center;gap:10px;font-family:"Anuphan";font-weight:700;font-size:21px;color:#fff;background:linear-gradient(90deg,var(--lv-ink),color-mix(in srgb,var(--lv) 75%,#fff));border-radius:12px;padding:6px 14px 6px 8px}
+#ig .ig-sec small{color:#fff!important;font-weight:600!important;font-size:16px!important}
+#ig .box h4 small,#ig .avg .k,#ig .dzl,#ig .scalev span,#ig .t7 th{font-weight:600;color:var(--ink-2)!important}
+#ig .box h4 small{font-size:15px!important}
+#ig .ig-sec span{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#fff;color:var(--lv-ink)}
+#ig .ig-sec .ico{width:20px;height:20px}
+#ig .row1{display:grid;grid-template-columns:480px 1fr;gap:18px}
+#ig .avg{border:3px solid var(--lv);border-radius:20px;padding:20px 24px;background:var(--lv-tint);display:flex;flex-direction:column;justify-content:center}
+#ig .avg .k{font-size:18px;color:var(--ink-2)}
+#ig .avg .v{font-family:"Anuphan";font-weight:700;font-size:84px;line-height:1}
+#ig.social .avg .v{font-size:110px}
+#ig .avg .v small{font-size:22px;color:var(--ink-3)}
+#ig .avg .l{font-family:"Anuphan";font-weight:700;font-size:30px;color:var(--lv-ink)}
+#ig .pvs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#ig .pvs div{border:1px solid var(--line);border-radius:16px;padding:12px 16px;display:flex;flex-direction:column}
+#ig .pvs .n{font-size:18px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+#ig .pvs .x{font-family:"Anuphan";font-size:46px;font-weight:700;line-height:1.1}
+#ig .pvs .x small{font-size:16px;color:var(--ink-3)}
+#ig .pvs .x .pm,#ig .pvrow .x .pm{font-style:normal;font-family:"IBM Plex Sans Thai";font-size:15px;font-weight:700;color:#fff;border-radius:6px;padding:1px 7px;margin-right:8px;vertical-align:middle;position:relative;top:-6px}
+#ig .avg .k .pm-tag{font-size:20px;padding:2px 12px}
+#ig .advice{border-radius:20px;border:3px solid var(--lv);overflow:hidden;display:grid;grid-template-columns:200px 1fr 1fr}
+#ig .advice .lv{background:var(--lv);color:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px}
+#ig .advice .lv .f{font-size:56px;line-height:1}
+#ig .advice .lv b{font-family:"Anuphan";font-size:24px}
+#ig .advice .w{padding:20px 22px;font-size:21px;line-height:1.55}
+#ig .advice .w + .w{border-left:1px solid var(--line)}
+#ig .advice .w h4{font-family:"Anuphan";font-size:24px;margin-bottom:8px;color:var(--lv-ink);display:flex;align-items:center;gap:8px}
+#ig .advice .w{display:flex;flex-direction:column;gap:8px}
+#ig .advice .w h4{margin-bottom:2px}
+#ig .do{font-size:21px;padding:8px 12px}
+#ig:not(.social) .do{font-size:19px;padding:6px 10px}
+#ig .do span{width:38px;height:38px}
+#ig .advice .lv{background:linear-gradient(160deg,var(--lv),var(--lv-ink))!important}
+#ig .advice .lv b{font-size:30px!important}
+#ig .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+#ig .scale div{border-radius:12px;padding:10px 12px;font-size:15px;line-height:1.35;border:2px solid transparent}
+#ig .scale b{font-family:"Anuphan";font-size:18px;display:block}
+#ig .scale .cur{border-color:var(--ink-1);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+#ig:not(.social) .ig-body{gap:12px;padding-top:16px}
+#ig:not(.social) .avg .v{font-size:72px}
+#ig:not(.social) .pvs .x{font-size:38px}
+#ig:not(.social) .pvs div{padding:8px 14px}
+#ig:not(.social) .advice .w{font-size:19px;padding:14px 18px}
+#ig:not(.social) .advice .w h4{font-size:21px;margin-bottom:4px}
+#ig:not(.social) .advice .lv .f{font-size:46px}
+#ig:not(.social) .ig-date{padding:8px 44px;font-size:18px}
+#ig:not(.social) .ig-date .d b{font-size:24px}
+#ig:not(.social) .ig-date .d em{font-size:19px}
+#ig:not(.social) .t7 td{padding:4px 6px}
+#ig:not(.social) .scalev div{padding:4px 12px}
+#ig:not(.social) .ig-f{padding:12px 44px}
+/* ขั้นย่อ (data-dense) */
+#ig[data-dense="1"] .ig-body{gap:10px}
+#ig[data-dense="1"] .avg .wart{width:120px;height:88px}
+#ig[data-dense="1"].social .facts3{display:none}
+#ig[data-dense="2"] .ig-body,#ig[data-dense="3"] .ig-body{gap:8px;padding-top:12px}
+#ig[data-dense="2"] .do,#ig[data-dense="3"] .do{padding:4px 10px}
+#ig[data-dense="2"] .advice .w,#ig[data-dense="3"] .advice .w{padding:10px 14px;gap:6px}
+#ig[data-dense="2"] .dzl,#ig[data-dense="3"] .dzl{display:none}
+#ig[data-dense="2"] .t7 td,#ig[data-dense="3"] .t7 td{padding:2px 6px}
+#ig[data-dense="2"] .scalev div,#ig[data-dense="3"] .scalev div{padding:2px 10px}
+#ig[data-dense="2"].social .facts3,#ig[data-dense="3"].social .facts3{display:none}
+#ig[data-dense="3"] .avg .v{font-size:60px!important}
+#ig[data-dense="3"] .pvs .x,#ig[data-dense="3"] .pvrow .x{font-size:32px!important}
+#ig[data-dense="3"] .do{font-size:17px!important}
+#ig .row3{display:grid;grid-template-columns:1.45fr 1fr;gap:18px}
+#ig .dzg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#ig .dzg>div{border:1px solid var(--line);border-radius:18px;padding:10px 14px 4px}
+#ig .dh{display:flex;align-items:center;gap:10px}
+#ig .dh .dz-icon{width:40px;height:40px;border-radius:12px}
+#ig .dh .nm{font-family:Anuphan;font-weight:700;font-size:18px}
+#ig .dh .tt{margin-left:auto;text-align:right;line-height:1.15}
+#ig .dh .tt b{font-family:Anuphan;font-size:26px;display:block}
+#ig .dh .tt span{font-size:13px}
+#ig .up{color:var(--up)} #ig .down{color:var(--down)}
+#ig .dzl{display:flex;gap:18px;font-size:14px;color:var(--ink-2);margin-top:-8px}
+#ig .dzl span{display:flex;align-items:center;gap:6px}
+#ig .dzl i{width:14px;height:14px;border-radius:3px}
+#ig .scalev{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+#ig .scalev div{display:flex;justify-content:space-between;align-items:center;border-radius:10px;padding:6px 12px;font-size:15px;border:2px solid transparent}
+#ig .scalev .cur{border-color:var(--ink-1)}
+#ig .scalev b{font-family:Anuphan;font-size:16px}
+#ig .box{border:1px solid var(--line);border-radius:18px;padding:12px 16px}
+#ig .box h4{font-family:"Anuphan";font-size:19px;display:flex;justify-content:space-between;align-items:baseline}
+#ig .box h4 small{font-family:"IBM Plex Sans Thai";font-size:14px;color:var(--ink-3);font-weight:400}
+#ig .dzs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+#ig .dzs div{display:flex;align-items:center;gap:10px;background:var(--subtle);border-radius:12px;padding:10px}
+#ig .dzs .dz-icon{width:42px;height:42px}
+#ig .dzs b{font-family:"Anuphan";font-size:24px;display:block;line-height:1.1}
+#ig .dzs span{font-size:14px;color:var(--ink-2);line-height:1.3}
+#ig .t7 {font-size:15px}
+#ig.social{height:1350px}
+#ig .ig-banner{border-bottom:8px solid var(--lv);background:var(--lv-soft)}
+#ig .ig-banner img{display:block;width:100%;height:auto;aspect-ratio:2000/250}
+#ig .ig-date{display:flex;justify-content:space-between;align-items:center;padding:12px 44px;background:linear-gradient(90deg,var(--lv-soft),var(--lv-tint));font-size:19px;font-weight:600}
+#ig .ig-date .d{display:flex;align-items:center;gap:12px}
+#ig .ig-date .d b{font-family:"Anuphan";font-size:27px;font-weight:700;color:var(--lv-ink)}
+#ig .ig-date .d em{font-style:normal;background:var(--lv-ink);color:#fff;border-radius:999px;padding:3px 16px;font-size:21px;font-weight:700;white-space:nowrap}
+#ig .avg{flex-direction:row;align-items:center;gap:6px;padding:12px 18px}
+#ig .avg .wart{flex:none}
+#ig .pvrow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+#ig .facts3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#ig .facts3 div{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:var(--subtle)}
+#ig .facts3 .fi{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:none}
+#ig .facts3 b{font-family:"Anuphan";font-size:24px;display:block;line-height:1.2}
+#ig .facts3 span.k{font-size:15px;color:var(--ink-2)}
+#ig.social .advice .w{font-size:23px}
+#ig.social .advice .w h4{font-size:26px}
+#ig .pvrow div{border:1px solid var(--line);border-radius:16px;padding:10px 14px;text-align:center}
+#ig .pvrow .n{font-size:18px;font-weight:600}
+#ig .pvrow .x{font-family:"Anuphan";font-size:44px;font-weight:700;line-height:1.3;display:block;margin-bottom:4px}
+#ig .ig-f{margin-top:auto;padding:16px 44px;background:var(--subtle);border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:14px;color:var(--ink-2);gap:20px}
 
-/* ══════════════════════════════════════════════
-   ZONE BC — Province Map + Trend Line Chart
-══════════════════════════════════════════════ */
-#zone-bc {
-  height: var(--h-bc);
-  display: grid;
-  grid-template-columns: var(--col-bc);
-  gap: var(--gap);
-  flex-shrink: 0;
+@media (max-width:1100px){
+  .ws{grid-template-columns:1fr}
+  .fc{position:static}
+  .wx-hero{grid-template-columns:200px minmax(0,1fr)}
+  .wx-hero .art{width:200px;height:146px}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .today{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hero{grid-column:1/-1}
+  .drill,.trend,.hot{grid-template-columns:1fr}
+  .adv-now{grid-template-columns:1fr}
+  .adv-now .who{border-left:0;border-top:1px solid var(--line)}
+  .adv-row{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
-#zone-b {
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  position: relative;
-  background: #e8f4f9;
-  display: flex;
-  flex-direction: column;
+@media (max-width:680px){
+  .wx-hero{grid-template-columns:1fr;text-align:center}
+  .wx-hero .art{margin:0 auto}
+  .wx-hero .loc{justify-content:center}
+  .wx-hero .big{font-size:72px}
+  .kpi-h{border-left:0;padding-left:0;align-items:center}
+  .kpi-title{font-size:26px}
+  .kpi-v{justify-content:center}
+  .kpi-num{font-size:84px}
+  .wx-hero .facts{grid-template-columns:1fr}
+  .hdr-in .meta .btns{margin-left:0;flex-wrap:wrap}
+  .rep-date{flex-wrap:wrap;row-gap:8px}
+  .rep-date .txt b{font-size:20px;white-space:nowrap}
+  .rep-date .t07{font-size:15.5px;padding:6px 14px}
+  .hdr-in,.wrap{padding-left:16px;padding-right:16px}
+  .hdr .meta{margin-left:0}
+  .today,.dz-grid{grid-template-columns:1fr}
+  .kv{grid-template-columns:1fr 1fr}
+  .adv-row{grid-template-columns:1fr 1fr}
+  #map{height:360px}
 }
-#map-province { flex: 1; }
-
-#zone-c {
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-zone-bg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-#zone-c .zone-inner { padding: 4px 6px; }
-#zone-c canvas { display: block; }
-
-/* ══════════════════════════════════════════════
-   ZONE D — Heatmap Table 7 days
-══════════════════════════════════════════════ */
-#zone-d {
-  height: var(--h-d);
-  display: flex;
-  flex-direction: column;
-}
-#zone-d .zone-inner { flex: 1; padding: 4px 8px 6px; overflow: hidden; }
-
-#heatmap-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  height: 100%;
-}
-#heatmap-table th {
-  background: var(--c-th-bg);
-  color: #fff;
-  font-size: var(--fs-th);
-  font-weight: 600;
-  padding: 4px 2px;
-  text-align: center;
-  border: 1px solid #4a7fa5;
-}
-#heatmap-table th:first-child { width: 80px; text-align: left; padding-left: 6px; }
-#heatmap-table td {
-  font-size: var(--fs-cell);
-  font-weight: 700;
-  text-align: center;
-  padding: 0;
-  border: 1px solid #e0e0e0;
-  vertical-align: middle;
-}
-#heatmap-table td.pname {
-  text-align: left;
-  padding-left: 6px;
-  background: #f0f4f8;
-  font-size: 11px;
-  font-weight: 600;
-  color: #333;
-}
-/* today column highlight */
-.col-today { border: 2px solid #f07d00 !important; }
-#heatmap-table th.col-today {
-  background: #e8590c !important;
-  color: #fff !important;
-  text-shadow: 0 1px 3px rgba(0,0,0,.4);
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,.25), 2px 0 0 #f07d00, -2px 0 0 #f07d00;
-}
-
-/* ══════════════════════════════════════════════
-   ZONE EF — GISTDA Hotspot + Mixed Chart
-══════════════════════════════════════════════ */
-#zone-ef {
-  height: var(--h-ef);
-  display: grid;
-  grid-template-columns: var(--col-ef);
-  gap: var(--gap);
-  flex-shrink: 0;
-}
-#zone-e {
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: #e8f4f9;
-  display: flex;
-  flex-direction: column;
-}
-#map-hotspot { flex: 1; }
-
-#zone-f {
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-zone-bg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-#zone-f .zone-inner { flex: 1; padding: 4px 6px; overflow: hidden; }
-#zone-f canvas { display: block; }
-
-/* ══════════════════════════════════════════════
-   ZONE G — Public Recommendations
-══════════════════════════════════════════════ */
-#zone-g {
-  height: var(--h-g);
-  display: flex;
-  flex-direction: column;
-}
-#zone-g .zone-inner { flex: 1; padding: 5px 8px 4px; display: flex; flex-direction: column; gap: 4px; }
-
-#rec-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 5px;
-  flex: 1;
-}
-.rec-card {
-  border-radius: 4px;
-  padding: 6px 5px 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow: hidden;
-}
-.rec-icon   { font-size: 20px; line-height: 1; }
-.rec-level  { font-size: var(--fs-rec-level); font-weight: 700; line-height: 1.2; }
-.rec-range  { font-size: var(--fs-rec-range); opacity: .85; }
-.rec-body   { font-size: var(--fs-rec-body);  line-height: 1.45; margin-top: 2px; }
-.rec-note   { font-size: var(--fs-small); color: #888; }
-
-/* ══════════════════════════════════════════════
-   FOOTER
-══════════════════════════════════════════════ */
-#zone-footer {
-  height: var(--h-footer);
-  background: var(--c-footer);
-  color: var(--c-footer-text);
-  border-radius: var(--radius);
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: var(--fs-small);
-  flex-shrink: 0;
-}
-
-/* ── Leaflet overrides ── */
-.leaflet-control-attribution { font-size: 7px !important; }
-#map-province { background: linear-gradient(160deg, #c8e6f5 0%, #d8f0e4 100%); }
-#map-hotspot  .leaflet-container { background: #dce8f0; }
-.leaflet-control-zoom a {
-  width: 20px !important; height: 20px !important;
-  line-height: 20px !important; font-size: 13px !important;
-}
-.leaflet-control-zoom { margin: 0 4px 4px 0 !important; }
-
-/* ── Province label on map ── */
-.pv-label {
-  text-align: center; line-height: 1.35; pointer-events: none;
-}
-.pv-name {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 11px; font-weight: 700; color: #1a2e3d;
-}
-.pv-val {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 16px; font-weight: 800; color: #1a2e3d;
-}
-
-/* ── Date badge on map ── */
-.map-date-badge {
-  position: absolute; top: 6px; left: 6px; z-index: 500;
-  background: rgba(255,255,255,.88);
-  border: 1px solid #bbb; border-radius: 4px;
-  padding: 3px 9px; font-size: 11px; font-weight: 600;
-  font-family: 'Sarabun', sans-serif; color: #333;
-  pointer-events: none;
-}
-
-/* ── Disease banner ── */
-#disease-banner {
-  background: linear-gradient(135deg, #1a4f7a11, #2980b911);
-  border: 1px solid #1a4f7a33;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 9px;
-  color: #1a4f7a;
-  font-weight: 600;
-  flex-shrink: 0;
-  line-height: 1.5;
-}
-
-/* ป้ายเตือนเมื่อข้อมูลกลุ่มโรคค้าง — ต้องเด่นพอให้เห็นในภาพ export ที่ส่งเข้า LINE */
-#disease-banner.is-stale {
-  background: linear-gradient(135deg, #e67e2218, #c0392b18);
-  border-color: #e67e2266;
-}
-.stale-badge {
-  display: inline-block;
-  background: #e67e22;
-  color: #fff;
-  border-radius: 3px;
-  padding: 0 5px;
-  margin-left: 4px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* ── Disease 4 mini charts grid ── */
-#disease-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 4px;
-  flex: 1;
-  min-height: 0;
-}
-.mini-chart-wrap {
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-  padding: 3px 5px 2px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.mini-kpi {
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-  flex-shrink: 0;
-  margin-bottom: 1px;
-}
-.mini-icon    { font-size: 10px; }
-.mini-disease { font-size: var(--fs-disease);       font-weight: 600; color: #444; flex: 1; }
-.mini-total   { font-size: var(--fs-disease-total); font-weight: 800; color: #e8192c; }
-.mini-unit    { font-size: 8.5px; color: #888; }
-.mini-chart-wrap canvas { flex: 1; min-height: 0; }
-
-/* ── Zone title 3D icon ── */
-.zt-icon {
-  display: inline-block;
-  transform: perspective(60px) rotateY(-15deg) translateZ(1px);
-  filter: drop-shadow(2px 3px 4px rgba(0,0,0,.22));
-  vertical-align: middle;
-  font-size: calc(var(--fs-title) + 2px);
-  margin-right: 4px;
-  line-height: 1;
-}
-
-/* ── Skeleton shimmer ── */
-@keyframes sk-shimmer {
-  0%   { background-position: -600px 0; }
-  100% { background-position: 600px 0; }
-}
-.sk {
-  background: linear-gradient(90deg, #eaeaea 25%, #d4d4d4 50%, #eaeaea 75%);
-  background-size: 1200px 100%;
-  animation: sk-shimmer 1.5s infinite linear;
-  border-radius: 3px;
-}
-.sk-map {
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, #e3ecf0 25%, #d3e4ea 50%, #e3ecf0 75%);
-  background-size: 1200px 100%;
-  animation: sk-shimmer 1.5s infinite linear;
-}
-.sk-chart {
-  display: flex; align-items: flex-end; gap: 3px;
-  height: calc(100% - 16px); padding: 8px 8px 0; width: 100%;
-}
-.sk-chart-bar {
-  flex: 1; border-radius: 2px 2px 0 0;
-  background: linear-gradient(90deg, #eaeaea 25%, #d4d4d4 50%, #eaeaea 75%);
-  background-size: 1200px 100%;
-  animation: sk-shimmer 1.5s infinite linear;
-}
-
-/* ── Heatmap cell hover ── */
-#heatmap-table td:not(.pname) {
-  transition: filter .12s, box-shadow .12s;
-}
-#heatmap-table td:not(.pname):hover {
-  filter: brightness(1.14) saturate(1.2);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.3);
-  position: relative; z-index: 1; cursor: default;
-}
-
-/* ── Loading spinner ── */
-.loading {
-  display: flex; align-items: center; justify-content: center;
-  height: 100%; color: #999; font-size: 10px; gap: 5px;
-}
-
-/* ── Error badge ── */
-.err-badge {
-  display: flex; align-items: center; justify-content: center;
-  height: 100%; color: #c0392b; font-size: 9.5px;
-  text-align: center; padding: 8px; line-height: 1.5;
-}
-
-/* ── Floating action menu (outside A4) ── */
-#fab-menu {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-}
-#fab-btn {
-  width: 44px; height: 44px;
-  background: #1a4f7a; color: #fff;
-  border: none; border-radius: 50%;
-  font-size: 22px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35);
-  display: flex; align-items: center; justify-content: center;
-  transition: background .2s;
-  line-height: 1;
-}
-#fab-btn:hover { background: #2980b9; }
-#fab-btn:disabled { background: #777; cursor: not-allowed; }
-#fab-popup {
-  display: none;
-  position: absolute;
-  top: 52px; right: 0;
-  background: #fff;
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  padding: 6px 0;
-  min-width: 210px;
-  white-space: nowrap;
-}
-#fab-popup.open { display: block; }
-#fab-popup button {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 11px 18px;
-  background: none; border: none;
-  font-family: var(--font); font-size: 13px; color: #333;
-  cursor: pointer; text-align: left;
-  transition: background .15s;
-}
-#fab-popup button:hover { background: #f0f4f8; }
-
-/* ══════════════════════════════════════════════
-   MOBILE — จอเล็กกว่า 820px
-══════════════════════════════════════════════ */
-@media (max-width: 820px) {
-  body {
-    padding: 8px 0 32px;
-    background: #e8edf2;
-  }
-  #dashboard {
-    width: 100%;
-    height: auto;
-    overflow: visible;
-    box-shadow: 0 2px 12px rgba(0,0,0,.15);
-    padding: 8px;
-    gap: 8px;
-  }
-  /* BC — เรียงแนวตั้ง */
-  #zone-bc {
-    height: auto !important;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  #zone-b { height: 260px !important; }
-  #zone-c { height: 220px !important; }
-
-  /* D — ตารางเลื่อนแนวนอน */
-  #zone-d { height: auto !important; }
-  #zone-d .zone-inner { overflow-x: auto; padding: 4px 6px 6px; }
-  #heatmap-table { min-width: 520px; }
-
-  /* EF — เรียงแนวตั้ง */
-  #zone-ef {
-    height: auto !important;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  #zone-e { height: 280px !important; }
-  #zone-f { height: 280px !important; }
-
-  /* G — 2 คอลัมน์ + แถว wrap */
-  #zone-g { height: auto !important; }
-  #zone-g .zone-inner { height: auto; }
-  #rec-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-  }
-  .rec-card { padding: 8px 6px 6px; }
-
-  /* Footer */
-  #zone-footer {
-    height: auto !important;
-    min-height: 38px;
-    flex-wrap: wrap;
-    padding: 6px 10px;
-    gap: 4px;
-    font-size: 8px;
-  }
-
-  /* FAB */
-  #fab-menu { top: 12px; right: 12px; }
-  #fab-btn  { width: 40px; height: 40px; font-size: 20px; }
-}
-
-/* ══════════════════════════════════════════════
-   EXPORT MODE — บังคับ A4 ตอน capture PNG
-   (ใช้ทั้ง desktop และ mobile)
-══════════════════════════════════════════════ */
-#dashboard.export-mode {
-  width:    794px  !important;
-  height:   1123px !important;
-  overflow: hidden !important;
-  padding:  var(--pad)  !important;
-  gap:      var(--gap)  !important;
-  display:  flex        !important;
-  flex-direction: column !important;
-}
-#dashboard.export-mode #zone-bc {
-  height: var(--h-bc)  !important;
-  display: grid        !important;
-  grid-template-columns: var(--col-bc) !important;
-  flex-direction: unset !important;
-}
-#dashboard.export-mode #zone-b,
-#dashboard.export-mode #zone-c { height: 100% !important; }
-
-#dashboard.export-mode #zone-d  { height: var(--h-d)  !important; }
-#dashboard.export-mode #zone-d .zone-inner { overflow: hidden !important; }
-#dashboard.export-mode #heatmap-table { min-width: unset !important; }
-
-#dashboard.export-mode #zone-ef {
-  height: var(--h-ef) !important;
-  display: grid       !important;
-  grid-template-columns: var(--col-ef) !important;
-  flex-direction: unset !important;
-}
-#dashboard.export-mode #zone-e,
-#dashboard.export-mode #zone-f { height: 100% !important; }
-
-#dashboard.export-mode #zone-g      { height: var(--h-g)      !important; }
-#dashboard.export-mode #zone-g .zone-inner { height: calc(100% - 26px) !important; }
-#dashboard.export-mode #rec-grid    { grid-template-columns: repeat(5,1fr) !important; }
-#dashboard.export-mode #zone-footer { height: var(--h-footer)  !important; flex-wrap: nowrap !important; }
-  </style>
+</style>
 </head>
 <body>
 
-<!-- ── Floating menu (outside A4 canvas) ── -->
-<div id="fab-menu">
-  <button id="fab-btn" title="เมนู" onclick="toggleFabMenu()">⋮</button>
-  <div id="fab-popup">
-    <button onclick="exportPNG()">📥 ดาวน์โหลด Dashboard (PNG)</button>
-    <button onclick="exportHotspotCSV(_hotspots)">📋 ดาวน์โหลด Hotspot (CSV)</button>
-    <button onclick="lockMapPositions()">📌 ล็อกตำแหน่งแผนที่นี้</button>
+<!-- ไอคอนใช้ซ้ำ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4"/><path d="M3.3 17a9 9 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.5"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"/></symbol>
+    <symbol id="i-steth" viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="11" r="2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+    <symbol id="i-dn" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></symbol>
+    <symbol id="i-sat" viewBox="0 0 24 24"><path d="m13 7 4-4 4 4-4 4zM3 17l4-4 4 4-4 4z"/><path d="m9 11 4 4M8.5 15.5l7-7"/><path d="M16 21a5 5 0 0 0 5-5"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5A5 5 0 0 1 21 19"/></symbol>
+    <symbol id="i-heartp" viewBox="0 0 24 24"><path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.7-7 10-7 10z"/><path d="M12 10v5M9.5 12.5h5"/></symbol>
+    <!-- ไอคอนการปฏิบัติตัว -->
+    <symbol id="a-mask" viewBox="0 0 24 24"><path d="M4 9c3-2 13-2 16 0v4c0 3-4 6-8 6s-8-3-8-6z"/><path d="M4 10H2.5a1.5 1.5 0 0 0 0 3H4M20 10h1.5a1.5 1.5 0 0 1 0 3H20"/><path d="M8 12h8M8.5 15h7"/></symbol>
+    <symbol id="a-run" viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="2"/><path d="M8 21l3-6 3 2v4"/><path d="M6 12l3-4h5l2 3 3 1"/><path d="M11 8l-1 5 4 2"/></symbol>
+    <symbol id="a-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></symbol>
+    <symbol id="a-doc" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M12 10.5v6M9 13.5h6"/></symbol>
+    <symbol id="a-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="a-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></symbol>
+    <symbol id="a-dust" viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h7"/></symbol>
+    <!-- ไอคอนกลุ่มโรค -->
+    <symbol id="d-lung" viewBox="0 0 24 24"><path d="M12 4v8"/><path d="M12 12c-1.5 0-2-1-3-1"/><path d="M12 12c1.5 0 2-1 3-1"/><path d="M9 7.5C7 6.5 3 9 3 15c0 3 1.5 4.5 3.5 4.5S10 18 10 15V9"/><path d="M15 7.5c2-1 6 1.5 6 7.5 0 3-1.5 4.5-3.5 4.5S14 18 14 15V9"/></symbol>
+    <symbol id="d-heart" viewBox="0 0 24 24"><path d="M12 20s-8-4.6-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.4 12 20 12 20z"/><path d="M4.5 12h4l1.5-3 2.5 6 1.5-3h5.5"/></symbol>
+    <symbol id="d-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M18 3l-1.5 2.5M12 2v2.5M6 3l1.5 2.5"/></symbol>
+    <symbol id="d-skin" viewBox="0 0 24 24"><path d="M7 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M10 9V4a1.5 1.5 0 0 1 3 0v5"/><path d="M13 9.5V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M16 9.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-5-2.7L4 14.5a1.6 1.6 0 0 1 2.6-1.8L8 14"/><circle cx="11.5" cy="16" r=".6"/><circle cx="14.5" cy="14" r=".6"/></symbol>
+  </defs>
+</svg>
+
+<header class="hdr">
+  <!-- ภาพหัว header-v2.webp (2000×250, สัดส่วน 8:1) — ถ้าโหลดไม่ได้ซ่อนไป แล้วใช้หัวข้อตัวอักษรแทน -->
+  <div class="hdr-banner"><img src="/header-v2.webp" width="2000" height="250" alt="รายงานสถานการณ์ละอองฝุ่นขนาดเล็ก PM2.5 เขตสุขภาพที่ 7 · กรมควบคุมโรค" onerror="this.parentElement.style.display='none';document.getElementById('hdrText').hidden=false"></div>
+  <div class="hdr-in">
+    <div id="hdrText" hidden><h1>รายงานสถานการณ์ฝุ่นละออง PM2.5 เขตสุขภาพที่ 7</h1><div class="sub">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</div></div>
+    <div class="meta">
+      <div class="date" id="hdrDate">–</div>
+      <div class="btns">
+        <label class="sr-only" for="igSize">ขนาดรูป</label>
+        <select class="size" id="igSize">
+          <option value="a4">A4 · พิมพ์ติดบอร์ด</option>
+          <option value="social">1080×1350 · โพสต์ Facebook/LINE</option>
+        </select>
+        <button class="btn primary" id="btnIg"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลด Infographic</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 1) วันนี้ — สไตล์ Weather Station -->
+  <section style="--sec:var(--lv-ink)">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-gauge"/></svg></div>
+      <div><h2>สถานการณ์ฝุ่นวันนี้</h2><p id="todaySub">ค่า PM2.5 รายจังหวัด · µg/m³</p></div></div>
+    <div class="ws">
+      <div class="ws-left">
+        <div class="glass wx-hero" id="hero"></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <!-- แผนที่ค่าฝุ่นวันนี้ — คลิกจังหวัดแล้วเลื่อนไปแผงเจาะลึก -->
+      <div class="glass mapbox today-map">
+        <div class="box-h"><span class="bi"><svg class="ico"><use href="#i-map"/></svg></span>
+          <div><h3>แผนที่ค่าฝุ่น PM2.5 วันนี้</h3><p>ค่าเฉลี่ย 24 ชม. ณ 07.00 น. · คลิกจังหวัดเพื่อดูรายละเอียด</p></div></div>
+        <svg id="drillMap" viewBox="0 0 400 290" role="img" aria-label="แผนที่ค่าฝุ่น PM2.5 วันนี้ 4 จังหวัด คลิกเพื่อดูรายละเอียด"></svg>
+        <div class="legend" style="justify-content:center;margin-top:6px" id="aqiLegend"></div>
+        <div class="map-note" id="mapNote"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2) แนวโน้ม -->
+  <section style="--sec:#7048e8">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-chart"/></svg></div>
+      <div><h2>แนวโน้มค่าฝุ่น</h2><p>ค่าเฉลี่ยรายสัปดาห์ และค่าย้อนหลัง 7 วัน</p></div></div>
+    <div class="trend">
+      <div class="card chart-card">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div class="label" id="trendSub"></div><div class="legend" id="legend"></div></div>
+        <div class="chart-wrap" id="cw"><svg id="chart" viewBox="0 0 760 372" role="img" aria-label="กราฟเส้นค่าเฉลี่ยรายสัปดาห์ 4 จังหวัด"></svg><div class="tip" id="tip"></div></div>
+      </div>
+      <div class="card chart-card"><div class="label">ค่าฝุ่น PM2.5 ย้อนหลัง 7 วัน · เฉลี่ย 24 ชม. ณ 07.00 น. · µg/m³</div><table class="t7 num" id="t7"></table><div class="t7-note" id="t7Note"></div></div>
+    </div>
+  </section>
+
+  <!-- 3) เจาะลึก จังหวัด → อำเภอ → ตำบล (อำเภอ/ตำบล + คาดการณ์ จาก GISTDA) -->
+  <section style="--sec:#1c6ed6">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-layers"/></svg></div>
+      <div><h2>เจาะลึกรายพื้นที่</h2><p>จังหวัด → อำเภอ → ตำบล · คลิกจังหวัดบนแผนที่หรือการ์ดด้านบน</p></div></div>
+    <div class="drill">
+      <div class="card panel" id="drillPanel"></div>
+      <aside class="glass fc" id="forecast" aria-label="การคาดการณ์ค่าฝุ่น PM2.5 ล่วงหน้า 3 วัน"></aside>
+    </div>
+  </section>
+
+  <!-- 4) Hotspot -->
+  <section style="--sec:#e8590c">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-fire"/></svg></div>
+      <div><h2>จุดความร้อน (Hotspot) 4 จังหวัด</h2><p>ดาวเทียม VIIRS ผ่าน GISTDA · ย้อนหลัง 24 ชม. · ชี้ที่จุดเพื่อดูรายละเอียด</p></div></div>
+    <div class="hot">
+      <div id="map"></div>
+      <div class="card hot-side" id="hotSide"></div>
+    </div>
+  </section>
+
+  <!-- 5) โรค -->
+  <section style="--sec:#c2255c">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-steth"/></svg></div>
+      <div><h2>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น</h2><p id="dzSub">ผู้ป่วยรายเดือน เทียบปี 2568 กับ 2569</p></div></div>
+    <div class="dz-grid" id="dz"></div>
+  </section>
+
+  <!-- 6) คำแนะนำ -->
+  <section style="--sec:var(--lv-ink)">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-shield"/></svg></div>
+      <div><h2>คำแนะนำการปฏิบัติตัววันนี้</h2><p>ตามระดับคุณภาพอากาศเฉลี่ยของเขตสุขภาพที่ 7</p></div></div>
+    <div class="card adv-now" id="advNow"></div>
+    <div class="adv-row" id="advRow"></div>
+    <div class="foot-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
+  </section>
+</main>
+<footer><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span>กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น · Dev: วัฒนพงษ์ พลแสน</span></footer>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="box">
+    <div class="bar"><h3 id="mTitle">Infographic พร้อมดาวน์โหลด</h3><a class="btn primary" id="mDl" download><svg class="ico"><use href="#i-down"/></svg>บันทึกรูป</a><button class="btn" id="mClose">ปิด</button></div>
+    <div class="hint" id="mHint"></div>
+    <div class="img"><img id="mImg" alt="Infographic สถานการณ์ PM2.5 เขตสุขภาพที่ 7"></div>
   </div>
 </div>
 
-<div id="dashboard">
+<div id="ig-holder"><div id="ig"></div></div>
 
-  <!-- ════════════════ ZONE A : HEADER ════════════════ -->
-  <div id="zone-a">
-    <img id="hdr-bg" src="/header.png?t=1" alt="" onerror="this.style.display='none'" />
-    <img id="hdr-logo" src="/logo.png?t=1" alt="logo"
-      style="position:absolute;top:50%;left:10px;transform:translateY(-50%);
-             height:72%;max-height:60px;width:auto;object-fit:contain;
-             border-radius:4px;z-index:1;opacity:0.95;"
-      onerror="this.style.display='none'" />
-    <div class="date-wrap">
-      <span class="date-big" id="hdr-date">--/--/----</span><br>
-      <span id="hdr-time">ข้อมูล ณ เวลา 07:00 น.</span>
-      <span id="live-badge" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;opacity:0.85;margin-left:6px;vertical-align:middle;">
-        <span id="live-dot" style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 4px #4ade80;"></span>
-        <span id="live-txt">LIVE</span>
-      </span>
-    </div>
-  </div>
-
-  <!-- ════════════════ ZONE BC : Map | Trend ════════════════ -->
-  <div id="zone-bc">
-
-    <!-- Zone B : Choropleth Province Map -->
-    <div id="zone-b">
-      <div class="zone-title"><span class="zt-text">ค่า PM<sub>2.5</sub> รายจังหวัด <span style="font-size:0.75em;opacity:.8;">(µg/m³)</span></span></div>
-      <div id="map-province"><div class="sk-map"></div></div>
-    </div>
-
-    <!-- Zone C : Daily Trend Line Chart -->
-    <div id="zone-c">
-      <div class="zone-title" style="position:relative;">
-        <span class="zt-text">แนวโน้ม PM<sub>2.5</sub> รายวัน ราย 4 จังหวัด <span id="trend-range">(กำลังโหลด)</span></span>
-        <button id="btn-reset-zoom" onclick="resetChartZoom()"
-          style="display:none;position:absolute;right:4px;top:50%;transform:translateY(-50%);
-                 background:#1a4f7a;color:#fff;border:none;border-radius:3px;
-                 padding:1px 7px;font-size:8.5px;font-family:'Sarabun',sans-serif;cursor:pointer;">
-          🔍 Reset
-        </button>
-      </div>
-      <div class="zone-inner" style="position:relative;">
-        <div id="sk-zone-c" class="sk-chart">
-          <div class="sk-chart-bar" style="height:35%"></div><div class="sk-chart-bar" style="height:55%"></div>
-          <div class="sk-chart-bar" style="height:45%"></div><div class="sk-chart-bar" style="height:70%"></div>
-          <div class="sk-chart-bar" style="height:60%"></div><div class="sk-chart-bar" style="height:80%"></div>
-          <div class="sk-chart-bar" style="height:50%"></div><div class="sk-chart-bar" style="height:90%"></div>
-          <div class="sk-chart-bar" style="height:65%"></div><div class="sk-chart-bar" style="height:75%"></div>
-          <div class="sk-chart-bar" style="height:55%"></div><div class="sk-chart-bar" style="height:85%"></div>
-          <div class="sk-chart-bar" style="height:40%"></div><div class="sk-chart-bar" style="height:60%"></div>
-          <div class="sk-chart-bar" style="height:70%"></div><div class="sk-chart-bar" style="height:50%"></div>
-        </div>
-        <canvas id="chart-trend" style="display:none;"></canvas>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ════════════════ ZONE D : Heatmap 7 days ════════════════ -->
-  <div id="zone-d" class="zone">
-    <div class="zone-title"><span class="zt-text">ค่าฝุ่น PM<sub>2.5</sub> ย้อนหลัง 7 วันล่าสุด รายจังหวัด (µg/m³)</span></div>
-    <div class="zone-inner">
-      <table id="heatmap-table">
-        <thead>
-          <tr>
-            <th>จังหวัด</th>
-            <th id="th0">-</th><th id="th1">-</th><th id="th2">-</th>
-            <th id="th3">-</th><th id="th4">-</th><th id="th5">-</th>
-            <th id="th6" class="col-today">วันนี้</th>
-          </tr>
-        </thead>
-        <tbody id="heatmap-body">
-          <!-- skeleton rows -->
-          <tr><td class="pname"><div class="sk" style="height:11px;width:64px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td>
-          </tr>
-          <tr><td class="pname"><div class="sk" style="height:11px;width:72px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td>
-          </tr>
-          <tr><td class="pname"><div class="sk" style="height:11px;width:56px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td>
-          </tr>
-          <tr><td class="pname"><div class="sk" style="height:11px;width:68px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td><td><div class="sk" style="height:11px;"></div></td>
-            <td><div class="sk" style="height:11px;"></div></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ════════════════ ZONE EF : Hotspot | Disease ════════════════ -->
-  <div id="zone-ef">
-
-    <!-- Zone E : GISTDA Hotspot Map -->
-    <div id="zone-e">
-      <div class="zone-title"><span class="zt-text">🔥 จุด Hotspot ในเขตสุขภาพที่ 7</span></div>
-      <div id="map-hotspot"><div class="sk-map"></div></div>
-    </div>
-
-    <!-- Zone F : Disease Summary + Mini Charts -->
-    <div id="zone-f">
-      <div class="zone-title"><span class="zt-text">สถานการณ์โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น PM<sub>2.5</sub></span></div>
-      <div class="zone-inner" style="padding:4px 6px;display:flex;flex-direction:column;gap:4px;">
-
-        <!-- Update info banner -->
-        <div id="disease-banner">
-          <span id="disease-banner-text"><span class="sk" style="display:inline-block;height:10px;width:220px;border-radius:3px;"></span></span>
-        </div>
-
-        <!-- 4 KPI cards + sparkline -->
-        <div id="disease-grid">
-          <div class="mini-chart-wrap"><div class="mini-kpi"><div class="sk" style="height:11px;width:80%;"></div></div><div class="sk" style="flex:1;min-height:40px;margin-top:4px;border-radius:3px;"></div></div>
-          <div class="mini-chart-wrap"><div class="mini-kpi"><div class="sk" style="height:11px;width:75%;"></div></div><div class="sk" style="flex:1;min-height:40px;margin-top:4px;border-radius:3px;"></div></div>
-          <div class="mini-chart-wrap"><div class="mini-kpi"><div class="sk" style="height:11px;width:70%;"></div></div><div class="sk" style="flex:1;min-height:40px;margin-top:4px;border-radius:3px;"></div></div>
-          <div class="mini-chart-wrap"><div class="mini-kpi"><div class="sk" style="height:11px;width:65%;"></div></div><div class="sk" style="flex:1;min-height:40px;margin-top:4px;border-radius:3px;"></div></div>
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ════════════════ ZONE G : Recommendations ════════════════ -->
-  <div id="zone-g" class="zone">
-    <div class="zone-title"><span class="zt-text">คำแนะนำประชาชน ตามระดับคุณภาพอากาศ PM<sub>2.5</sub></span></div>
-    <div class="zone-inner">
-      <div id="rec-grid">
-
-        <div class="rec-card aqi-vgood">
-          <div class="rec-icon">😊</div>
-          <div class="rec-level">ดีมาก</div>
-          <div class="rec-range">0 – 15 µg/m³</div>
-          <div class="rec-body">ทำกิจกรรมกลางแจ้งได้ตามปกติ ไม่มีข้อจำกัด</div>
-        </div>
-
-        <div class="rec-card aqi-good">
-          <div class="rec-icon">🙂</div>
-          <div class="rec-level">ดี</div>
-          <div class="rec-range">16 – 25 µg/m³</div>
-          <div class="rec-body">ทำกิจกรรมได้ตามปกติ ไม่มีผลกระทบต่อประชาชนทั่วไป</div>
-        </div>
-
-        <div class="rec-card aqi-medium">
-          <div class="rec-icon">😐</div>
-          <div class="rec-level">ปานกลาง</div>
-          <div class="rec-range">26 – 37.5 µg/m³</div>
-          <div class="rec-body">กลุ่มเสี่ยง* ควรลดกิจกรรมกลางแจ้งที่ใช้แรงมาก</div>
-        </div>
-
-        <div class="rec-card aqi-start">
-          <div class="rec-icon">😷</div>
-          <div class="rec-level">เริ่มมีผลต่อสุขภาพ</div>
-          <div class="rec-range">37.6 – 75 µg/m³</div>
-          <div class="rec-body">ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95</div>
-        </div>
-
-        <div class="rec-card aqi-bad">
-          <div class="rec-icon">🚨</div>
-          <div class="rec-level">มีผลต่อสุขภาพ</div>
-          <div class="rec-range">&gt; 75 µg/m³</div>
-          <div class="rec-body">หลีกเลี่ยงกิจกรรมกลางแจ้ง อยู่ในอาคาร ปิดประตูหน้าต่าง</div>
-        </div>
-
-      </div>
-      <div class="rec-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
-    </div>
-  </div>
-
-  <!-- ════════════════ FOOTER ════════════════ -->
-  <div id="zone-footer">
-    <div>
-      แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) &nbsp;|&nbsp;
-      GISTDA (จุด Hotspot) &nbsp;|&nbsp;
-      กรมควบคุมโรค / สคร.7 ขอนแก่น
-    </div>
-    <div id="footer-dev" style="font-size:9px;opacity:.9;text-align:right;line-height:1.7;">
-      กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น<br>Dev: วัฒนพงษ์ พลแสน
-    </div>
-  </div>
-
-</div><!-- /#dashboard -->
-
-<!-- ═══════════════════════════════════════════════════
-     JAVASCRIPT
-═══════════════════════════════════════════════════ -->
 <script>
-/* ════════════════════════════════════════════════════
-   GLOBAL STATE
-════════════════════════════════════════════════════ */
-let DCFG   = {};   // Dashboard config (from server)
-let mapE      = null; // Leaflet — Zone E
-let chartC    = null; // Chart.js — Zone C
-let _boundsE  = null; // Province bounds for fitBounds
-let _hotspots = [];   // Hotspot features (filtered) — ใช้โดย FAB CSV export
+/* ===================================================================
+   ต้นแบบ Dashboard v2 — ดึงข้อมูลสดจาก API เดียวกับหน้าเว็บจริง
+   เปิดผ่าน server (http://localhost:3000/design-preview/dashboard-v2.html)
+   ถ้าเปิดเป็นไฟล์ตรงๆ จะดึงจาก Render แทน
+=================================================================== */
+const API = location.protocol === "file:" ? "https://pm25-dashboard-ex8l.onrender.com" : "";
+const PROV = [
+  { name: "ขอนแก่น",   code: 40, color: "#2a78d6" },
+  { name: "มหาสารคาม", code: 44, color: "#eb6834" },
+  { name: "ร้อยเอ็ด",   code: 45, color: "#1baf7a" },
+  { name: "กาฬสินธุ์",  code: 46, color: "#eda100" },
+];
+// ระดับ AQI ไทย + สีหัวกระดาษแบบอ่อน + คำแนะนำ (ข้อความเดียวกับรายงาน LINE OA)
+const LV = [
+  { max: 15,  name: "ดีมาก", range: "0 – 15", c: "#009ede", soft: "#e2f3fb", tint: "#f2fafd", ink: "#00618c", face: "😊",
+    pub: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"], risk: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"] },
+  { max: 25,  name: "ดี", range: "16 – 25", c: "#0e8a00", soft: "#e6f4e2", tint: "#f4faf2", ink: "#0b5e00", face: "🙂",
+    pub: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"], risk: ["ควรเฝ้าระวังสุขภาพ", "ถ้ามีอาการเบื้องต้น ควรลดระยะเวลาทำกิจกรรมกลางแจ้ง"] },
+  { max: 37.5,name: "ปานกลาง", range: "26 – 37.5", c: "#e0b800", soft: "#fff6cc", tint: "#fffbe8", ink: "#7a5c00", face: "😐",
+    pub: ["เลี่ยงออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"],
+    risk: ["ลดเวลาออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้งเมื่ออยู่กลางแจ้ง", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"] },
+  { max: 75,  name: "เริ่มมีผลต่อสุขภาพ", range: "37.6 – 75", c: "#ff8400", soft: "#ffead3", tint: "#fff6ec", ink: "#8a4300", face: "😷",
+    pub: ["ลดเวลาออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้งเมื่ออยู่กลางแจ้ง", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"],
+    risk: ["จำกัดเวลาออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้ง อยู่ในห้องปลอดฝุ่น", "ลดกิจกรรมที่ก่อฝุ่นในบ้าน", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"] },
+  { max: 1e9, name: "มีผลต่อสุขภาพ", range: "มากกว่า 75", c: "#d10000", soft: "#fde0e0", tint: "#fef3f3", ink: "#9b0000", face: "🚨",
+    pub: ["งดออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้งเมื่ออยู่กลางแจ้ง", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"],
+    risk: ["งดกิจกรรมกลางแจ้ง อยู่ในห้องปลอดฝุ่น", "ลดกิจกรรมที่ก่อฝุ่นในบ้าน", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"] },
+];
+const DZ = [
+  { key: "ทางเดินหายใจ", label: "ระบบทางเดินหายใจ", icd: "J44, J45 และกลุ่มที่เกี่ยวข้อง", icon: "d-lung",  c: "#1c6ed6", soft: "#e7f0fc" },
+  { key: "หัวใจ",        label: "ระบบหัวใจและหลอดเลือด", icd: "I20–I25", icon: "d-heart", c: "#d6336c", soft: "#fce8ef" },
+  { key: "ตาอักเสบ",     label: "เยื่อบุตาอักเสบ", icd: "H10", icon: "d-eye",   c: "#0c8599", soft: "#e3f5f8" },
+  { key: "ผิวหนัง",      label: "ผิวหนังอักเสบ", icd: "L30.9, L50", icon: "d-skin",  c: "#e8590c", soft: "#fdeee5" },
+];
+const TH_M = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const TH_DS = ["อา.","จ.","อ.","พ.","พฤ.","ศ.","ส."];
+const TH_D = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+const TH_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+// ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. ณ 07:00 (ดู plan07Row_ ใน tools/line_report.gs)
+const REPORT_TIME = "07.00 น.";
+const r1 = x => Math.round(x * 10 + 1e-9) / 10;          // ปัดแบบปกติ (21.35 → 21.4)
+const f1 = x => r1(x).toFixed(1);
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const lvOf = v => LV.findIndex(l => v <= l.max);
+const thDate = iso => { const d = new Date(iso + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]}`; };
+const thFull = iso => { const d = new Date(iso + "T00:00:00"); return `วัน${TH_D[d.getDay()]}ที่ ${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; };
+const thLong = iso => { const d = new Date(iso + "T00:00:00"); return `วัน${TH_D[d.getDay()]}ที่ ${d.getDate()} ${TH_MF[d.getMonth()]} ${d.getFullYear() + 543}`; };
+const clockSvg = s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3.5 2"/></svg>`;
+const getJSON = p => fetch(API + p).then(r => r.ok ? r.json() : null).catch(() => null);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
-/* ════════════════════════════════════════════════════
-   BOOT
-════════════════════════════════════════════════════ */
-async function initDashboard() {
-  try {
-    DCFG = await fetch('/api/config').then(r => r.json());
-    _lastConfigStr = JSON.stringify(DCFG);
-    applyTheme();
-    applyRecommendations();
-    updateClock();
-    setInterval(updateClock, 60000);
+const S = {};   // state กลาง
 
-    await Promise.all([
-      initZoneB(),
-      initZoneCD(),
-      initZoneE(),
-      initZoneF(),
-    ]);
-  } catch (e) {
-    console.error('Dashboard init error:', e);
-  }
-}
+(async function init() {
+  const [pm, dz, hs, geo, gpv] = await Promise.all([getJSON("/api/sheet-pm25"), getJSON("/api/sheet-disease"), getJSON("/api/hotspot"), getJSON("/api/provinces-geojson"), getJSON("/api/pm25/provinces")]);
+  S.pm = pm; S.dz = dz; S.geo = geo;
+  S.gpv = gpv?.ok ? gpv : null;   // GISTDA: ค่าประมาณดาวเทียม + คาดการณ์ 3 วัน (รายจังหวัด)
+  // ---- วันนี้ / เมื่อวาน จาก last7 (แถวล่าสุดที่มีค่า) ----
+  const rows = (pm?.last7 || []).filter(r => PROV.some(p => r[p.name] != null));
+  S.todayRow = rows.at(-1); S.prevRow = rows.at(-2);
+  S.last7 = pm?.last7 || [];
+  const vals = PROV.map(p => S.todayRow?.[p.name]).filter(v => v != null);
+  S.avg = vals.length ? r1(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  const pv = PROV.map(p => S.prevRow?.[p.name]).filter(v => v != null);
+  S.prevAvg = pv.length ? r1(pv.reduce((a, b) => a + b, 0) / pv.length) : null;
+  S.lv = S.avg == null ? 1 : lvOf(S.avg);
+  // ---- hotspot: กรองเฉพาะ 4 จังหวัด ----
+  const names = new Set(PROV.map(p => p.name));
+  S.hsToday = (hs?.geojson?.features || []).filter(f => names.has(f.properties.changwat));
+  S.hsOk = !!hs?.ok;
 
-/* ════════════════════════════════════════════════════
-   APPLY CONFIG → CSS variables + DOM text
-════════════════════════════════════════════════════ */
+  applyTheme(); renderHeader(); renderToday(); renderDrill(PROV[0].name); renderTrend(); renderT7(); renderHotspot(S.hsToday, false); renderDisease(); renderAdvice();
+  // #ig-preview = แสดงหน้า infographic ทับด้านบน ใช้ตรวจเลย์เอาต์ (headless screenshot)
+  const lvO = /lv=(\d)/.exec(location.hash); if (lvO) { S.lv = +lvO[1]; applyTheme(); renderAdvice(); }
+  if (location.hash.startsWith("#ig-preview")) { fitInfographic(location.hash.includes("social") ? "social" : "a4"); document.getElementById("ig-holder").style.cssText = "position:absolute;left:0;top:0;z-index:5000"; }
+})();
+
+// ---------- ธีมหัวกระดาษตามระดับเฉลี่ย ----------
 function applyTheme() {
-  const r = document.documentElement;
-  const { theme, layout } = DCFG;
-  // ซิงค์สี AQI จาก config.json → CSS variables (ให้ Zone G ตรงกับ map/ตาราง)
-  if (DCFG.aqi?.length >= 5) {
-    const keys = ['--c-vgood','--c-good','--c-medium','--c-start','--c-bad'];
-    DCFG.aqi.slice(0,5).forEach((a, i) => r.style.setProperty(keys[i], a.bg));
+  const L = LV[S.lv], st = document.documentElement.style;
+  st.setProperty("--lv", L.c); st.setProperty("--lv-soft", L.soft); st.setProperty("--lv-tint", L.tint); st.setProperty("--lv-ink", L.ink);
+}
+function renderHeader() {
+  if (S.todayRow) {
+    const d = new Date(S.todayRow.date + "T00:00:00");
+    document.getElementById("hdrDate").innerHTML =
+      `<div class="rep-date"><span class="cal"><i>${TH_M[d.getMonth()]}</i><em>${d.getDate()}</em></span>` +
+      `<span class="txt"><small>รายงานข้อมูลประจำ</small><b>${thLong(S.todayRow.date)}</b></span>` +
+      `<span class="t07">${clockSvg(16)} ณ เวลา ${REPORT_TIME}</span></div>`;
+  } else {
+    document.getElementById("hdrDate").textContent = "ไม่มีข้อมูล";
   }
+  document.getElementById("todaySub").textContent = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · µg/m³ · เทียบกับวันก่อนหน้า` + (S.prevRow ? ` (${thDate(S.prevRow.date)})` : "");
+}
 
-  if (theme) {
-    r.style.setProperty('--c-header',      theme.color_header);
-    r.style.setProperty('--c-footer',      theme.color_footer);
-    r.style.setProperty('--c-export',      theme.color_export_btn);
-    r.style.setProperty('--c-th-bg',       theme.color_table_header);
-    if (theme.color_footer_text)
-      r.style.setProperty('--c-footer-text', theme.color_footer_text);
+// ---------- ภาพท้องฟ้า 3D ตามระดับฝุ่น (วาดเอง ไม่ใช้ภาพจากต้นแบบ) ----------
+let ART_N = 0;
+function weatherArt(lv, w = 260, h = 190) {
+  const u = "a" + (++ART_N);
+  const cloud = (x, y, s, fill, op = 1) => `<g transform="translate(${x} ${y}) scale(${s})" opacity="${op}">
+      <ellipse cx="0" cy="58" rx="92" ry="10" fill="#0f1b2d" opacity=".08"/>
+      <path d="M-78 40a30 30 0 0 1 14-56 42 42 0 0 1 78-14 34 34 0 0 1 58 22 26 26 0 0 1 6 48z" fill="url(#${fill})"/>
+      <path d="M-60 6a22 22 0 0 1 22-10" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity=".7"/></g>`;
+  const sun = (x, y, r, op = 1) => `<g opacity="${op}"><circle cx="${x}" cy="${y}" r="${r * 1.6}" fill="url(#${u}g)"/><circle cx="${x}" cy="${y}" r="${r}" fill="url(#${u}s)"/>
+      <ellipse cx="${x - r * .35}" cy="${y - r * .4}" rx="${r * .35}" ry="${r * .22}" fill="#fff" opacity=".55"/></g>`;
+  const dots = (n, c, seed) => Array.from({ length: n }, (_, i) => { const a = (i * 97 + seed) % 360, rr = 30 + (i * 37 % 70);
+      return `<circle cx="${130 + Math.cos(a) * rr * 1.4}" cy="${100 + Math.sin(a) * rr * .7}" r="${2 + (i % 3)}" fill="${c}" opacity=".55"/>`; }).join("");
+  const haze = op => [0, 1, 2].map(i => `<rect x="${40 + i * 18}" y="${132 + i * 14}" width="${170 - i * 30}" height="6" rx="3" fill="#b9b2a6" opacity="${op}"/>`).join("");
+  const body = [
+    sun(150, 82, 52) + cloud(92, 118, .55, u + "w"),
+    sun(168, 70, 44) + cloud(120, 108, .85, u + "w"),
+    sun(170, 66, 40, .55) + cloud(118, 110, .9, u + "w") + haze(.45),
+    sun(176, 60, 34, .3) + cloud(128, 106, 1, u + "m") + dots(14, "#8c7d6b", 11) + haze(.6),
+    cloud(128, 104, 1.05, u + "d") + dots(22, "#7a1f1f", 5) + haze(.75),
+  ][lv];
+  return `<svg class="wart" viewBox="0 0 260 190" width="${w}" height="${h}" aria-hidden="true"><defs>
+    <radialGradient id="${u}s" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff7c2"/><stop offset=".45" stop-color="#ffcf3a"/><stop offset="1" stop-color="#ff8a1f"/></radialGradient>
+    <radialGradient id="${u}g"><stop offset=".55" stop-color="#ffd25a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd25a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${u}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6e0ec"/></linearGradient>
+    <linearGradient id="${u}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece5da"/><stop offset="1" stop-color="#a8998a"/></linearGradient>
+    <linearGradient id="${u}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9aea6"/><stop offset="1" stop-color="#5e524c"/></linearGradient>
+  </defs>${body}</svg>`;
+}
+
+// ---------- วงแหวนวัดค่า (แบบการ์ด Humidity ของ Weather Station) ----------
+function ring(v, size = 128) {
+  const R = 48, C = 2 * Math.PI * R, l = v != null ? LV[lvOf(v)] : null, p = v != null ? Math.min(v, 100) / 100 : 0;
+  return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 118 118"><circle cx="59" cy="59" r="${R}" fill="none" stroke="#edf1f5" stroke-width="10"/>
+    <circle cx="59" cy="59" r="${R}" fill="none" stroke="${l ? l.c : "#ccd4de"}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * p).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 59 59)"/></svg>
+    <div class="c"><em>PM2.5</em><b class="num">${v != null ? f1(v) : "–"}</b><span>µg/m³</span></div></div>`;
+}
+
+// ---------- วันนี้: hero + การ์ดจังหวัด + แผงย้อนหลัง ----------
+function renderToday() {
+  const L = LV[S.lv], d = S.prevAvg != null ? r1(S.avg - S.prevAvg) : null;
+  const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
+  const maxP = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)[0];
+  document.getElementById("hero").innerHTML = `
+    <div class="art">${weatherArt(S.lv)}</div>
+    <div class="kpi">
+      <div class="kpi-h"><h3 class="kpi-title">ค่าฝุ่น PM2.5</h3><span class="kpi-sub">เฉลี่ย 4 จังหวัด · เขตสุขภาพที่ 7</span></div>
+      <div class="kpi-v"><span class="kpi-num num">${S.avg != null ? f1(S.avg) : "–"}</span>
+        <span class="kpi-unit"><b>µg/m³</b><small>ไมโครกรัม<br>ต่อลูกบาศก์เมตร</small></span></div>
+      <div class="kpi-lv"><span aria-hidden="true">${L.face}</span>คุณภาพอากาศ${L.name}</div>
+      ${d != null ? `<div class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : d < 0 ? "▼" : "●"} ${Math.abs(d).toFixed(1)} จากวันก่อนหน้า (${f1(S.prevAvg)})</div>` : ""}
+    </div>
+    <div class="facts">
+      <div class="fact"><span class="fi" style="background:#e7f0fc;color:#1c6ed6"><svg class="ico"><use href="#i-shield"/></svg></span><div><span>เกณฑ์เปิด PHEOC</span><b>${pheoc ? "มีจังหวัดถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></div></div>
+      <div class="fact"><span class="fi" style="background:#fdeee5;color:#e8590c"><svg class="ico"><use href="#i-fire"/></svg></span><div><span>จุดความร้อน 24 ชม.</span><b>${S.hsOk ? S.hsToday.length + " จุด" : "ดึงข้อมูลไม่ได้"}</b></div></div>
+      ${maxP ? `<div class="fact"><span class="fi" style="background:${LV[lvOf(maxP.v)].soft};color:${LV[lvOf(maxP.v)].ink}"><svg class="ico"><use href="#i-pin"/></svg></span><div><span>สูงสุดวันนี้</span><b>${maxP.p.name} ${f1(maxP.v)}</b></div></div>` : ""}
+    </div>`;
+  document.getElementById("tiles").innerHTML = PROV.map(p => {
+    const v = S.todayRow?.[p.name], pr = S.prevRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, dd = v != null && pr != null ? r1(v - pr) : null;
+    return `<button class="glass tile" data-pv="${p.name}" aria-pressed="false" style="--tint:${l ? l.soft : "#f3f6f9"};--tc:${l ? l.c : "#ccd4de"};--tk:${l ? l.ink : "#5b6b7f"}">
+      <span class="th"><span><svg class="ico" style="width:15px;height:15px"><use href="#i-pin"/></svg>${p.name}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink}">${l.name}</span>` : ""}</span>
+      ${ring(v)}
+      <span class="ft delta ${dd > 0 ? "up" : "down"}">${dd != null ? `${dd > 0 ? "▲" : dd < 0 ? "▼" : "●"} ${Math.abs(dd).toFixed(1)} จากวันก่อนหน้า` : "ไม่มีค่าวันก่อนหน้า"}</span></button>`; }).join("");
+  document.querySelectorAll(".tile[data-pv]").forEach(b => b.addEventListener("click", () => { renderDrill(b.dataset.pv); document.getElementById("drillPanel").scrollIntoView({ behavior: "smooth", block: "center" }); }));
+  // กล่องสรุปใต้แผนที่: จังหวัดที่ค่าสูงสุด / ต่ำสุดวันนี้
+  const sorted = PROV.map(p => ({ n: p.name, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
+  const note = (o, ic, t) => { const l = LV[lvOf(o.v)]; return `<div><span class="ni" style="background:${l.soft};color:${l.ink}"><svg class="ico"><use href="#${ic}"/></svg></span><span>${t}<b>${o.n} ${f1(o.v)}</b></span></div>`; };
+  document.getElementById("mapNote").innerHTML = sorted.length > 1 ? note(sorted[0], "i-up", "ค่าสูงสุด") + note(sorted.at(-1), "i-dn", "ค่าต่ำสุด") : "";
+  renderForecast();
+}
+// แผงคาดการณ์ล่วงหน้า 3 วัน — ค่าคาดการณ์ PM2.5 รายจังหวัดจาก GISTDA (pred1–3)
+function renderForecast() {
+  const el = document.getElementById("forecast");
+  const head = `<div class="box-h"><span class="bi"><svg class="ico"><use href="#i-cal"/></svg></span>
+    <div><h3>การคาดการณ์ล่วงหน้า 3 วัน</h3><p>ค่าฝุ่น PM2.5 คาดการณ์ · µg/m³</p></div></div>`;
+  const items = PROV.map(p => ({ p, it: S.gpv?.items.find(i => i.code === String(p.code)) })).filter(o => o.it);
+  if (!items.length) { el.innerHTML = head + `<div class="pending">ดึงข้อมูลคาดการณ์จาก GISTDA ไม่สำเร็จ ลองใหม่ภายหลัง</div>`; return; }
+  const SC = 50, base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00");
+  const rows = [0, 1, 2].map(k => {
+    const dt = new Date(base.getTime() + (k + 1) * 864e5), vs = items.map(o => o.it.pred[k]).filter(x => x != null);
+    const lab = `${dt.getDate()} ${TH_M[dt.getMonth()]}`, sub = k === 0 ? "พรุ่งนี้" : TH_DS[dt.getDay()];
+    if (!vs.length) return `<div class="fc-row"><div class="d">${lab}<small>${sub}</small></div><span></span><span class="muted" style="font-size:12px">ไม่มีข้อมูล</span><span class="avg muted">–</span></div>`;
+    const mn = Math.min(...vs), mx = Math.max(...vs), av = r1(vs.reduce((a, b) => a + b, 0) / vs.length), l = LV[lvOf(av)];
+    return `<div class="fc-row"><div class="d">${lab}<small>${sub}</small></div><span class="fc-face" style="background:${l.soft}" title="${l.name}">${l.face}</span>
+      <div class="rng" title="ต่ำสุด ${f1(mn)} · สูงสุด ${f1(mx)}"><b style="left:${mn / SC * 100}%;width:${Math.max(2, (mx - mn) / SC * 100)}%;background:linear-gradient(90deg,${LV[lvOf(mn)].c},${LV[lvOf(mx)].c})"></b><em style="left:${Math.min(av, SC) / SC * 100}%"></em></div>
+      <span class="avg" style="color:${l.ink}">${f1(av)}</span></div>`; }).join("");
+  // ตารางรายจังหวัด × 3 วัน สีเต็มตามระดับ (แบบเดียวกับตาราง 7 วัน)
+  const days = [0, 1, 2].map(k => { const d = new Date(base.getTime() + (k + 1) * 864e5); return `${d.getDate()}/${d.getMonth() + 1}`; });
+  const tbl = `<table class="t7 fc-t num"><tr><th>จังหวัด</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>${items.map(({ p, it }) => `<tr><td>${p.name}</td>${it.pred.map(x => x == null
+    ? `<td class="na">–</td>` : `<td class="cell" style="background:${LV[lvOf(x)].c};color:${textOn(LV[lvOf(x)].c)}">${f1(x)}</td>`).join("")}</tr>`).join("")}</table>`;
+  el.innerHTML = head + `<div class="sub">แถบ = ต่ำสุด–สูงสุดของ 4 จังหวัด · จุด = ค่าเฉลี่ย</div>${rows}<div class="fc-scale num"><span>0</span><span>25</span><span>50</span></div>${tbl}
+    <div class="fc-src"><svg class="ico"><use href="#i-sat"/></svg><span>แบบจำลองจากดาวเทียม GISTDA · ประมวลผล ${esc(S.gpv.asOfThai || S.gpv.asOf || "")}<br>เป็นค่าประมาณ อาจต่างจากค่าสถานีตรวจวัด Air4Thai</span></div>`;
+}
+const countBy = feats => feats.reduce((a, f) => (a[f.properties.changwat] = (a[f.properties.changwat] || 0) + 1, a), {});
+
+// ---------- แผนที่ SVG (ใช้ทั้งเจาะลึกและ infographic) ----------
+function projector(geo, W, H, pad = 8) {
+  const rings = f => f.geometry.type === "Polygon" ? f.geometry.coordinates : f.geometry.coordinates.flat();
+  let a = [1e9, 1e9, -1e9, -1e9];
+  for (const f of geo.features) for (const r of rings(f)) for (const [x, y] of r) { a[0] = Math.min(a[0], x); a[1] = Math.min(a[1], y); a[2] = Math.max(a[2], x); a[3] = Math.max(a[3], y); }
+  const k = Math.cos((a[1] + a[3]) / 2 * Math.PI / 180), s = Math.min((W - 2 * pad) / ((a[2] - a[0]) * k), (H - 2 * pad) / (a[3] - a[1]));
+  const ox = (W - (a[2] - a[0]) * k * s) / 2, oy = (H - (a[3] - a[1]) * s) / 2;
+  const P = ([x, y]) => [ox + (x - a[0]) * k * s, oy + (a[3] - y) * s];
+  const path = f => rings(f).map(r => "M" + r.map(p => P(p).map(n => n.toFixed(1)).join(" ")).join("L") + "Z").join("");
+  const centroid = f => { let sx = 0, sy = 0, n = 0; for (const r of rings(f)) for (const p of r) { const q = P(p); sx += q[0]; sy += q[1]; n++; } return [sx / n, sy / n]; };
+  return { P, path, centroid };
+}
+const LABEL_NUDGE = { "ขอนแก่น": [10, 30] };   // centroid ของขอนแก่นตกขอบตะวันตก — ขยับเข้ากลางพื้นที่
+
+function renderDrill(pvName, level = "province", amp = null) {
+  S.sel = pvName;
+  document.querySelectorAll(".tile[data-pv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.pv === pvName));
+  // แผนที่
+  const svg = document.getElementById("drillMap");
+  if (S.geo?.features?.length) {
+    const pj = projector(S.geo, 400, 290);
+    svg.innerHTML = S.geo.features.map(f => {
+      const n = f.properties.name_th, v = S.todayRow?.[n], l = v != null ? LV[lvOf(v)] : null;
+      const [cx, cy] = pj.centroid(f), [dx, dy] = LABEL_NUDGE[n] || [0, 0];
+      return `<path class="pv-shape ${n === pvName ? "sel" : ""}" data-pv="${n}" d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" tabindex="0" role="button" aria-label="${n} ${v != null ? f1(v) : ""}"></path>
+        <g pointer-events="none" text-anchor="middle" font-family="IBM Plex Sans Thai"><text x="${cx + dx}" y="${cy + dy - 4}" fill="#fff" font-size="12" font-weight="600">${n}</text>
+        <text x="${cx + dx}" y="${cy + dy + 16}" fill="#fff" font-size="19" font-weight="700">${v != null ? f1(v) : "–"}</text></g>`;
+    }).join("");
+    // แผนที่อยู่ส่วน "วันนี้" แผงรายละเอียดอยู่ส่วนเจาะลึกด้านล่าง → คลิกแล้วเลื่อนลงไปให้เห็นผล
+    const pick = n => { renderDrill(n); document.getElementById("drillPanel").scrollIntoView({ behavior: "smooth", block: "center" }); };
+    svg.querySelectorAll(".pv-shape").forEach(p => { p.addEventListener("click", () => pick(p.dataset.pv)); p.addEventListener("keydown", e => { if (e.key === "Enter") pick(p.dataset.pv); }); });
   }
-  if (layout) {
-    r.style.setProperty('--h-a',       layout.h_header + 'px');
-    r.style.setProperty('--h-bc',      layout.h_bc     + 'px');
-    r.style.setProperty('--h-d',       layout.h_d      + 'px');
-    r.style.setProperty('--h-ef',      layout.h_ef     + 'px');
-    r.style.setProperty('--h-g',       layout.h_g      + 'px');
-    r.style.setProperty('--h-footer',  layout.h_footer + 'px');
-    r.style.setProperty('--col-bc',    layout.col_bc);
-    r.style.setProperty('--col-ef',    layout.col_ef);
+  document.getElementById("aqiLegend").innerHTML = LV.map(l => `<span><i style="background:${l.c};height:10px;width:10px;border-radius:2px"></i>${l.name}</span>`).join("");
+  if (level !== "province") return renderArea(pvName, level, amp);
+
+  // แผงรายละเอียด
+  const v = S.todayRow?.[pvName], l = v != null ? LV[lvOf(v)] : null;
+  const days = S.last7, mx = Math.max(40, ...days.map(d => d[pvName] ?? 0));
+  const hsN = countBy(S.hsToday)[pvName] || 0;
+  const crumb = `<nav class="crumb" aria-label="ระดับพื้นที่"><button data-l="region">เขตสุขภาพที่ 7</button><span class="sep">›</span>
+    <button ${level === "province" ? "disabled" : ""} data-l="province">จ.${pvName}</button><span class="sep">›</span>
+    <button ${level === "district" ? "disabled" : ""} data-l="district">อำเภอ</button><span class="sep">›</span><button disabled style="color:var(--ink-3)">ตำบล</button></nav>`;
+  const panel = document.getElementById("drillPanel");
+  panel.innerHTML = crumb + `
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="font-size:22px">จังหวัด${pvName}</h3>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink}">${l.face} ${l.name}</span>` : ""}</div>
+    <div class="kv num">
+      <div><span class="label">ค่าวันนี้</span><b>${v != null ? f1(v) : "–"}</b></div>
+      <div><span class="label">สูงสุด 7 วัน</span><b>${f1(Math.max(...days.map(d => d[pvName] ?? -1)))}</b></div>
+      <div><span class="label">เฉลี่ย 7 วัน</span><b>${(() => { const a = days.map(d => d[pvName]).filter(x => x != null); return a.length ? f1(a.reduce((x, y) => x + y, 0) / a.length) : "–"; })()}</b></div>
+      <div><span class="label">จุดความร้อน 24 ชม.</span><b>${hsN}</b></div>
+    </div>
+    <div><div class="label" style="margin-bottom:6px">7 วันย้อนหลัง · µg/m³</div><div class="mini7">${days.map(d => {
+      const x = d[pvName]; const ll = x != null ? LV[lvOf(x)] : null;
+      return `<div class="c"><b class="num">${x != null ? f1(x) : "–"}</b><i style="height:${x != null ? Math.max(3, x / mx * 60) : 2}px;background:${ll ? ll.c : "var(--line)"}"></i>${thDate(d.date)}</div>`; }).join("")}</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="toDistrict"><svg class="ico"><use href="#i-layers"/></svg>ดูรายอำเภอใน จ.${pvName}</button>
+      ${v != null ? `<button class="btn primary" id="pvCard"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลดภาพสถานการณ์ จ.${pvName}</button>` : ""}
+    </div>`;
+  bindCrumb(panel, pvName);
+  panel.querySelector("#toDistrict")?.addEventListener("click", () => renderDrill(pvName, "district"));
+  panel.querySelector("#pvCard")?.addEventListener("click", e => showProvinceCard(pvName, e.currentTarget));
+}
+function drillCrumb(pvName, level, amp) {
+  return `<nav class="crumb" aria-label="ระดับพื้นที่"><button data-l="region">เขตสุขภาพที่ 7</button><span class="sep">›</span>
+    <button ${level === "province" ? "disabled" : ""} data-l="province">จ.${pvName}</button><span class="sep">›</span>
+    <button ${level === "district" ? "disabled" : ""} data-l="district">${amp ? "อ." + esc(amp.name) : "อำเภอ"}</button><span class="sep">›</span>
+    <button disabled ${level === "subdistrict" ? "" : 'style="color:var(--ink-3)"'}>ตำบล</button></nav>`;
+}
+function bindCrumb(panel, pvName) {
+  panel.querySelectorAll(".crumb button[data-l]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.l === "province") renderDrill(pvName);
+    else if (b.dataset.l === "district") renderDrill(pvName, "district");
+    else document.querySelector(".today-map").scrollIntoView({ behavior: "smooth", block: "center" }); }));
+}
+// ระดับอำเภอ / ตำบล — ค่าประมาณจากดาวเทียม GISTDA (server: /api/pm25/districts, /api/pm25/subdistricts)
+async function renderArea(pvName, level, amp) {
+  const panel = document.getElementById("drillPanel"), pv = PROV.find(p => p.name === pvName);
+  const unit = level === "district" ? "อำเภอ" : "ตำบล";
+  const title = level === "district" ? `รายอำเภอ · จังหวัด${pvName}` : `รายตำบล · อำเภอ${esc(amp.name)}`;
+  panel.innerHTML = drillCrumb(pvName, level, amp) + `<h3 style="font-size:22px">${title}</h3><div class="muted">กำลังโหลดข้อมูลจาก GISTDA…</div>`;
+  bindCrumb(panel, pvName);
+  const tok = (S.areaTok = (S.areaTok || 0) + 1);   // คลิกเร็วๆ หลายครั้ง → แสดงเฉพาะผลของคำขอล่าสุด
+  const slow = setTimeout(() => { if (tok === S.areaTok) panel.querySelector(".muted")?.insertAdjacentHTML("beforeend", " ครั้งแรกอาจใช้เวลาราว 10 วินาที"); }, 2500);
+  const isD = level === "district";
+  const [r, bounds] = await Promise.all([
+    getJSON(isD ? `/api/pm25/districts?pv=${pv.code}` : `/api/pm25/subdistricts?amp=${amp.code}`),
+    isD ? (S.ampGeoP ??= getJSON("/districts-r7.geojson")) : null,
+  ]);
+  clearTimeout(slow);
+  if (tok !== S.areaTok) return;
+  if (!r?.ok || !r.items?.length) {
+    panel.innerHTML = drillCrumb(pvName, level, amp) + `<h3 style="font-size:22px">${title}</h3><div class="pending">ดึงข้อมูลค่าฝุ่นราย${unit}จาก GISTDA ไม่สำเร็จ ลองใหม่ภายหลัง</div>`;
+    return bindCrumb(panel, pvName);
   }
-  // Zone Styles — background + 3D icon per zone
-  const zs = DCFG.zone_styles || {};
-  const zoneMap = { b:'#zone-b', c:'#zone-c', d:'#zone-d', e:'#zone-e', f:'#zone-f', g:'#zone-g' };
-  Object.entries(zoneMap).forEach(([key, sel]) => {
-    const el = document.querySelector(sel + ' .zone-title');
-    if (!el) return;
-    const s = zs[key] || {};
-    if (s.type === 'gradient' && s.c1 && s.c2) {
-      el.style.background = `linear-gradient(${s.deg||'135deg'}, ${s.c1} 0%, ${s.c2} 100%)`;
-    } else if (s.type === 'solid' && s.c1) {
-      el.style.background = s.c1;
+  const items = r.items.filter(i => i.avg24 != null).sort((a, b) => b.avg24 - a.avg24);
+
+  // ขอบเขตอำเภอ + จุดความร้อนรายอำเภอ (นับด้วยพิกัด ไม่ใช่ชื่ออังกฤษซึ่งสะกดไม่ตรงกันระหว่างระบบ)
+  let feats = [];
+  if (isD && bounds?.features) {
+    feats = bounds.features.filter(f => f.properties.pv === String(pv.code));
+    for (const it of items) {
+      // รหัสอำเภอเวียงเก่าไม่ตรงกัน (GISTDA 4029 / ขอบเขต 4026) → ใช้ชื่อเป็นทางสำรอง
+      it.f = feats.find(f => f.properties.code === it.code) || feats.find(f => f.properties.name === it.name);
+      it.hs = it.f ? S.hsToday.filter(h => inFeature(h.geometry.coordinates, it.f)).length : 0;
     }
-    if (s.tc) { el.style.color = s.tc; el.style.setProperty('--zt-c1', s.c1||'#1a4f7a'); }
-    if (s.icon) {
-      let span = el.querySelector('.zt-icon');
-      if (!span) { span = document.createElement('span'); span.className = 'zt-icon'; el.insertBefore(span, el.firstChild); }
-      span.textContent = s.icon;
-    }
-    // Zone title text
-    const zt = DCFG.zone_titles || {};
-    if (zt[key]) {
-      const textEl = el.querySelector('.zt-text');
-      if (textEl) textEl.innerHTML = pm25html(zt[key]);
-    }
-  });
+  }
+  const hsTotal = items.reduce((a, it) => a + (it.hs || 0), 0), hsAreas = items.filter(it => it.hs).length;
+  const counts = LV.map((l, i) => ({ l, n: items.filter(it => lvOf(it.avg24) === i).length })).filter(o => o.n);
+  const dm = iso => { const d = new Date(iso + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]}`; };
+  const cell = (x, strong) => { if (x == null) return `<td class="na">–</td>`; const l = LV[lvOf(x)];
+    return strong ? `<td class="cell" style="background:${l.c};color:${textOn(l.c)}">${f1(x)}</td>` : `<td class="cell" style="background:${l.soft};color:${l.ink}">${f1(x)}</td>`; };
+  const maxCell = m => { if (!m) return `<td class="na">–</td>`; const l = LV[lvOf(m.v)];
+    return `<td class="cell mx" style="background:${l.soft};color:${l.ink};box-shadow:inset 0 0 0 2px ${l.c}"><b>${f1(m.v)}</b><small>${dm(m.date)}</small></td>`; };
 
-  // rec_note
-  const zt = DCFG.zone_titles || {};
-  if (zt.rec_note) {
-    const rn = document.querySelector('.rec-note');
-    if (rn) rn.textContent = zt.rec_note;
+  // แผนที่อำเภอ (เฉพาะระดับอำเภอ — ระดับตำบลยังไม่มีขอบเขต)
+  let mapHtml = "";
+  if (isD && feats.length) {
+    const pj = projector({ type: "FeatureCollection", features: feats }, 520, 340, 10);
+    const byF = new Map(items.filter(it => it.f).map(it => [it.f, it]));
+    mapHtml = `<div class="area-map"><svg viewBox="0 0 520 340" role="img" aria-label="แผนที่ค่าฝุ่นรายอำเภอ จังหวัด${pvName}">${feats.map(f => {
+      const it = byF.get(f), l = it ? LV[lvOf(it.avg24)] : null;
+      return `<path class="amp-shape" ${it ? `data-code="${esc(it.code)}" data-name="${esc(it.name)}" tabindex="0" role="button"` : ""} d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}"><title>อ.${esc(f.properties.name)} ${it ? f1(it.avg24) + " µg/m³" : ""}${it?.hs ? ` · จุดความร้อน ${it.hs}` : ""}</title></path>`; }).join("")}
+      ${feats.map(f => { const it = byF.get(f); if (!it) return ""; const [x, y] = pj.centroid(f), l = LV[lvOf(it.avg24)];
+        return `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${textOn(l.c)}" pointer-events="none">${f1(it.avg24)}</text>`; }).join("")}
+      ${S.hsToday.filter(h => feats.some(f => inFeature(h.geometry.coordinates, f))).map(h => { const [x, y] = pj.P(h.geometry.coordinates);
+        return `<circle cx="${x}" cy="${y}" r="4" fill="#e8192c" stroke="#fff" stroke-width="1.5" pointer-events="none"/>`; }).join("")}
+    </svg><div class="legend" style="justify-content:center">${LV.map(l => `<span><i style="background:${l.c};height:10px;width:10px;border-radius:2px"></i>${l.name}</span>`).join("")}<span><i style="background:#e8192c;height:10px;width:10px;border-radius:50%"></i>จุดความร้อน</span></div></div>`;
   }
 
-  // Developer credit
-  if (DCFG.site?.developer_credit) {
-    const devEl = document.getElementById('footer-dev');
-    if (devEl) devEl.innerHTML = DCFG.site.developer_credit.replace(/\|/g,'<br>');
-  }
-
-  // Typography
-  const ty = DCFG.typography || {};
-  if (ty.font_family)        r.style.setProperty('--font',              `'${ty.font_family}', 'Sarabun', sans-serif`);
-  if (ty.zone_title_size)    r.style.setProperty('--fs-title',          ty.zone_title_size    + 'px');
-  if (ty.zone_title_color)   r.style.setProperty('--c-zone-title',      ty.zone_title_color);
-  if (ty.cell_size)          r.style.setProperty('--fs-cell',           ty.cell_size          + 'px');
-  if (ty.label_size)         r.style.setProperty('--fs-label',          ty.label_size         + 'px');
-  if (ty.small_size)         r.style.setProperty('--fs-small',          ty.small_size         + 'px');
-  if (ty.hdr_date_size)      r.style.setProperty('--fs-hdr-date',       ty.hdr_date_size      + 'px');
-  if (ty.hdr_time_size)      r.style.setProperty('--fs-hdr-time',       ty.hdr_time_size      + 'px');
-  if (ty.th_size)            r.style.setProperty('--fs-th',             ty.th_size            + 'px');
-  if (ty.rec_level_size)     r.style.setProperty('--fs-rec-level',      ty.rec_level_size     + 'px');
-  if (ty.rec_range_size)     r.style.setProperty('--fs-rec-range',      ty.rec_range_size     + 'px');
-  if (ty.rec_body_size)      r.style.setProperty('--fs-rec-body',       ty.rec_body_size      + 'px');
-  if (ty.disease_size)       r.style.setProperty('--fs-disease',        ty.disease_size       + 'px');
-  if (ty.disease_total_size) r.style.setProperty('--fs-disease-total',  ty.disease_total_size + 'px');
-
-  if (DCFG.site) {
-    document.querySelector('#zone-footer div').textContent = 'แหล่งข้อมูล: ' + DCFG.site.footer_source;
-    const hdrBg = document.getElementById('hdr-bg');
-    if (hdrBg) {
-      hdrBg.src = '/header.png?t=' + Date.now();
-      hdrBg.style.objectPosition = DCFG.site.header_position || '50% 50%';
-    }
-    const dateWrap = document.querySelector('.date-wrap');
-    if (dateWrap) {
-      dateWrap.style.color = DCFG.site.header_date_color || '#ffffff';
-    }
-  }
-}
-
-function applyRecommendations() {
-  if (!DCFG.recommendations || !DCFG.aqi) return;
-  const grid = document.getElementById('rec-grid');
-  const aqiClasses = ['aqi-vgood','aqi-good','aqi-medium','aqi-start','aqi-bad'];
-  grid.innerHTML = DCFG.recommendations.map((r, i) => `
-    <div class="rec-card ${aqiClasses[i] || ''}">
-      <div class="rec-icon">${r.icon}</div>
-      <div class="rec-level">${r.level}</div>
-      <div class="rec-range">${pm25html(r.range)}</div>
-      <div class="rec-body">${r.body}</div>
-    </div>`).join('');
-}
-
-/* ════════════════════════════════════════════════════
-   UTILITIES
-════════════════════════════════════════════════════ */
-function pm25html(str) {
-  const safe = str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return safe.replace(/PM2\.5/g,'PM<sub>2.5</sub>');
-}
-
-function getAQI(val) {
-  if (!DCFG.aqi) return { bg: '#ccc', text: '#333', label: '-' };
-  return DCFG.aqi.find(a => val <= a.max) || DCFG.aqi[DCFG.aqi.length - 1];
-}
-
-function thDisplayDate(isoStr) {
-  if (!isoStr) return '-';
-  const [y, m, d] = isoStr.split('-');
-  const thY = parseInt(y) + 543;
-  return `${parseInt(d)}/${parseInt(m)}/${thY}`;
-}
-
-function updateClock() {
-  const now = new Date();
-  document.getElementById('hdr-date').textContent =
-    now.toLocaleDateString('th-TH', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  const t = DCFG.site?.data_time || '07.00';
-  document.getElementById('hdr-time').textContent = `ข้อมูล ณ เวลา ${t} น.`;
-}
-
-/* ════════════════════════════════════════════════════
-   ZONE B — Choropleth Province Map
-════════════════════════════════════════════════════ */
-async function initZoneB() {
-  const el = document.getElementById('map-province');
-  try {
-    const [geojsonRes, sheetRes] = await Promise.all([
-      fetch('/api/provinces-geojson'),
-      fetch('/api/sheet-pm25'),
-    ]);
-    if (!geojsonRes.ok) throw new Error('โหลด GeoJSON ไม่สำเร็จ');
-
-    const geojson = await geojsonRes.json();
-    const sheet   = sheetRes.ok ? await sheetRes.json() : { ok: false };
-
-    // ใช้ last7 วันสุดท้าย — ตรงกับตาราง Zone D 100%
-    const todayRow = (sheet.last7 || []).slice(-1)[0] || {};
-
-    const pvById = {};
-    (DCFG.provinces || []).forEach(pv => {
-      const val = (typeof todayRow[pv.name] === 'number' && todayRow[pv.name] > 0)
-                  ? todayRow[pv.name] : null;
-      pvById[pv.pv_idn] = { name: pv.name, val, aqi: val !== null ? getAQI(val) : null };
-    });
-
-    el.innerHTML = '';
-    el.style.position = 'relative';
-
-    // ── Pure SVG choropleth — ไม่ใช้ Leaflet ไม่มี transform ──
-    const W = el.offsetWidth  || 280;
-    const H = el.offsetHeight || 230;
-    const PAD = 16;
-
-    // หา bounding box ของ GeoJSON
-    let mnLng=Infinity, mxLng=-Infinity, mnLat=Infinity, mxLat=-Infinity;
-    geojson.features.forEach(f => {
-      const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-      polys.forEach(poly => poly[0].forEach(([lng, lat]) => {
-        mnLng = Math.min(mnLng,lng); mxLng = Math.max(mxLng,lng);
-        mnLat = Math.min(mnLat,lat); mxLat = Math.max(mxLat,lat);
-      }));
-    });
-
-    const lngRange = mxLng - mnLng, latRange = mxLat - mnLat;
-    const scale = Math.min((W - 2*PAD) / lngRange, (H - 2*PAD) / latRange);
-    const cx = (mnLng + mxLng) / 2, cy = (mnLat + mxLat) / 2;
-
-    const proj = (lng, lat) => ({
-      x: (lng - cx) * scale + W/2,
-      y: (cy  - lat) * scale + H/2,
-    });
-
-    const ringD = ring => ring.map(([lng,lat],i) => {
-      const {x,y} = proj(lng,lat);
-      return `${i?'L':'M'}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join('') + 'Z';
-
-    const featureD = f => {
-      const polys = f.geometry.type==='Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-      return polys.map(p => p.map(ringD).join('')).join('');
-    };
-
-    const NS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('width', W); svg.setAttribute('height', H);
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    svg.style.cssText = 'display:block;position:absolute;inset:0;width:100%;height:100%;';
-
-    // วาด polygons
-    geojson.features.forEach(f => {
-      const pvid = f.properties.pv_idn;
-      const info = pvById[pvid] || {};
-      const fill = info.aqi ? info.aqi.bg : '#b0c4de';
-      const path = document.createElementNS(NS, 'path');
-      path.setAttribute('d', featureD(f));
-      path.setAttribute('fill', fill);
-      path.setAttribute('fill-opacity', '0.90');
-      path.setAttribute('stroke', '#fff');
-      path.setAttribute('stroke-width', '2.2');
-      path.setAttribute('stroke-linejoin', 'round');
-      // tooltip
-      const t = document.createElementNS(NS, 'title');
-      const v = info.val;
-      t.textContent = `${info.name||''}: ${v!==null ? v.toFixed(1)+' µg/m³' : 'ไม่มีข้อมูล'}`;
-      path.appendChild(t);
-      svg.appendChild(path);
-    });
-
-    // วาด labels
-    geojson.features.forEach(f => {
-      const pvid = f.properties.pv_idn;
-      const info = pvById[pvid] || {};
-      const val  = info.val;
-      const name = info.name || f.properties.name_th || '';
-      const valStr = val !== null ? val.toFixed(1) : '-';
-
-      // centroid โดยประมาณ (average of outer ring)
-      const polys = f.geometry.type==='Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-      const ring = polys[0][0];
-      let sLng=0, sLat=0;
-      ring.forEach(([lng,lat]) => { sLng+=lng; sLat+=lat; });
-      const {x, y} = proj(sLng/ring.length, sLat/ring.length);
-
-      const mk = (tag, attrs, text) => {
-        const el2 = document.createElementNS(NS, tag);
-        Object.entries(attrs).forEach(([k,v]) => el2.setAttribute(k, v));
-        if (text) el2.textContent = text;
-        return el2;
-      };
-
-      const mapFont  = `'${DCFG.typography?.font_family || 'Sarabun'}',sans-serif`;
-      const mapNameSz = String(DCFG.typography?.map_name_size  || 12);
-      const mapValSz  = String(DCFG.typography?.map_val_size   || 18);
-      const mapColor  = DCFG.typography?.map_label_color || '#1a2e3d';
-
-      // ชื่อจังหวัด
-      svg.appendChild(mk('text', {
-        x, y: y-5, 'text-anchor':'middle',
-        'font-family': mapFont, 'font-size': mapNameSz,
-        'font-weight':'700', fill: mapColor,
-        'paint-order':'stroke', stroke:'#fff',
-        'stroke-width':'3', 'stroke-linejoin':'round',
-      }, name));
-
-      // ค่า PM2.5
-      svg.appendChild(mk('text', {
-        x, y: y + parseFloat(mapValSz), 'text-anchor':'middle',
-        'font-family': mapFont, 'font-size': mapValSz,
-        'font-weight':'800', fill: mapColor,
-        'paint-order':'stroke', stroke:'#fff',
-        'stroke-width':'4', 'stroke-linejoin':'round',
-      }, valStr));
-    });
-
-    el.appendChild(svg);
-
-    // Badge
-    const badge = document.createElement('div');
-    badge.className = 'map-date-badge';
-    const dataTime = DCFG.site?.data_time || '07.00';
-    badge.textContent = `🕖 ข้อมูล ณ เวลา ${dataTime} น.`;
-    el.appendChild(badge);
-
-  } catch (e) {
-    el.innerHTML = `<div class="err-badge">⚠️ ${e.message}</div>`;
-    console.error('Zone B error:', e);
-  }
-}
-
-/* ── Export Hotspot → CSV ── */
-function exportHotspotCSV(features) {
-  const BOM = '﻿'; // UTF-8 BOM ให้ Excel เปิดภาษาไทยถูก
-  const header = 'วันที่,เวลา(ไทย),จังหวัด,อำเภอ,ตำบล,การใช้ที่ดิน,ความเชื่อมั่น,FRP,Latitude,Longitude';
-  const rows = features.map(f => {
-    const p = f.properties || {};
-    const [lng, lat] = f.geometry.coordinates;
-    const date    = p.acq_date  ? p.acq_date.slice(0, 10) : '';
-    const time    = p.th_time   ? p.th_time.slice(0,2) + ':' + p.th_time.slice(2) : '';
-    const confTH  = p.confidence === 'high' ? 'สูง' : p.confidence === 'nominal' ? 'ปานกลาง' : 'ต่ำ';
-    const lu      = (p.lu_hp_name || p.lu_name || '').replace(/,/g, ' ');
-    const prov    = (p.changwat  || '').replace(/,/g, ' ');
-    const ap      = (p.ap_en     || '').replace(/,/g, ' ');
-    const tb      = (p.tb_en     || '').replace(/,/g, ' ');
-    return [date, time, prov, ap, tb, lu, confTH, p.frp ?? '', lat, lng].join(',');
-  });
-  const csv  = BOM + [header, ...rows].join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const today = new Date().toISOString().slice(0, 10);
-  a.href = url; a.download = `hotspot_สคร7_${today}.csv`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-}
-
-/* ── Point-in-polygon (ray-casting) — ใช้กับ GeoJSON province boundaries ── */
-function _raycast(x, y, ring) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
-    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi)
-      inside = !inside;
-  }
-  return inside;
-}
-function _pointInRings(x, y, rings) {
-  if (!_raycast(x, y, rings[0])) return false;
-  for (let i = 1; i < rings.length; i++) if (_raycast(x, y, rings[i])) return false;
-  return true;
-}
-function pointInProvince(lng, lat, featureCollection) {
-  return (featureCollection.features || []).some(f => {
-    const g = f.geometry;
-    if (!g) return false;
-    if (g.type === 'Polygon')      return _pointInRings(lng, lat, g.coordinates);
-    if (g.type === 'MultiPolygon') return g.coordinates.some(p => _pointInRings(lng, lat, p));
-    return false;
+  panel.innerHTML = drillCrumb(pvName, level, amp) + `
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="font-size:22px">${title}</h3><span class="muted">${items.length} ${unit}</span></div>
+    <div class="area-sum">${counts.map(o => `<span class="chip" style="background:${o.l.soft};color:${o.l.ink}">${o.l.face} ${o.l.name} ${o.n} ${unit}</span>`).join("")}
+      ${isD ? `<span class="chip" style="background:#fdeee5;color:#a23d00">🔥 จุดความร้อนวันนี้ ${hsTotal} จุด${hsTotal ? ` ใน ${hsAreas} อำเภอ` : ""}</span>` : ""}</div>
+    ${mapHtml}
+    <div class="area-wrap"><table class="t7 area-t num">
+      <thead><tr><th rowspan="2">${unit}</th><th rowspan="2">เฉลี่ย 24 ชม.<br><small>วันนี้</small></th><th colspan="3">ย้อนหลัง 3 วัน</th><th rowspan="2">สูงสุดฤดูฝุ่น<br><small>${esc(r.season?.label || "")}</small></th>${isD ? `<th rowspan="2">จุด<br>ความร้อน</th>` : ""}</tr>
+      <tr>${(r.days || []).map(d => `<th>${dm(d)}</th>`).join("")}</tr></thead>
+      <tbody>${items.map(it => `<tr ${isD ? `class="clk" tabindex="0" role="button" data-code="${esc(it.code)}" data-name="${esc(it.name)}"` : ""}>
+        <td>${esc(it.name)}${isD ? ' <span class="go">›</span>' : ""}</td>${cell(it.avg24, true)}${(it.past.length ? it.past : [null, null, null]).map(x => cell(x, false)).join("")}${maxCell(it.max)}
+        ${isD ? `<td class="hs-n">${it.hs ? `🔥 ${it.hs}` : `<span class="muted">–</span>`}</td>` : ""}</tr>`).join("")}</tbody>
+    </table></div>
+    <div class="fc-src"><svg class="ico"><use href="#i-sat"/></svg><span>ค่าฝุ่นราย${unit}: ค่าประมาณจากดาวเทียม GISTDA · ข้อมูล ณ ${esc(r.asOfThai || r.asOf || "")} · ค่าย้อนหลังและสูงสุดฤดูเป็นค่าเฉลี่ยรายวัน${isD ? " · คลิกอำเภอบนแผนที่หรือตารางเพื่อดูรายตำบล" : ""}<br>ค่ารายจังหวัดในส่วนอื่นของหน้ามาจากสถานีตรวจวัด Air4Thai จึงอาจต่างกัน${isD ? " · จุดความร้อน: GISTDA VIIRS 24 ชม." : ""}</span></div>`;
+  bindCrumb(panel, pvName);
+  panel.querySelectorAll("tr.clk, .amp-shape[data-code]").forEach(el => {
+    const go = () => renderDrill(pvName, "subdistrict", { code: el.dataset.code, name: el.dataset.name });
+    el.addEventListener("click", go); el.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
   });
 }
-
-/* ════════════════════════════════════════════════════
-   ZONE E — GISTDA / NASA FIRMS Hotspot Map
-════════════════════════════════════════════════════ */
-async function initZoneE() {
-  const el = document.getElementById('map-hotspot');
-  try {
-    const [hotspotRes, geojsonRes] = await Promise.all([
-      fetch('/api/hotspot'),
-      fetch('/api/provinces-geojson'),
-    ]);
-
-    const firms   = hotspotRes.ok  ? await hotspotRes.json()  : { ok: false, geojson: { features: [] } };
-    const geojson = geojsonRes.ok  ? await geojsonRes.json()  : { features: [] };
-
-    el.innerHTML = '';
-
-    mapE = L.map('map-hotspot', {
-      zoomControl:        true,
-      scrollWheelZoom:    true,
-      dragging:           true,
-      doubleClickZoom:    true,
-      attributionControl: false,
-      center:             [DCFG.map_export?.e_lat || DCFG.map?.center_lat || 16.2,
-                           DCFG.map_export?.e_lng || DCFG.map?.center_lng || 103.5],
-      zoom:               DCFG.map_export?.e_zoom || DCFG.map?.zoom || 8,
-    });
-    mapE.zoomControl.setPosition('bottomright');
-    setTimeout(() => mapE.invalidateSize(), 100);
-
-    // Tile layer — OSM standard (crossOrigin: true เพื่อให้ drawImage ลง canvas ได้เวลา export)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      opacity: 0.9,
-      crossOrigin: true,
-    }).addTo(mapE);
-
-    // Hotspot markers — filter เฉพาะ 4 จังหวัดในเขต สคร.7
-    const pvNames = new Set(geojson.features.map(f => f.properties.name_th));
-    _hotspots = (firms.geojson?.features || [])
-      .filter(f => pvNames.has(f.properties.changwat));
-    const hotspots = _hotspots;
-    hotspots.forEach(f => {
-      const [lng, lat] = f.geometry.coordinates;
-      const { confidence, frp, acq_date, acq_time } = f.properties;
-
-      // สีตาม confidence
-      const dotColor = confidence === 'high'    ? '#e8192c'
-                     : confidence === 'nominal' ? '#f07d00'
-                     :                            '#f5ce00';
-      // ขนาดตาม FRP (Fire Radiative Power)
-      const r = Math.min(5 + frp * 0.4, 14);
-
-      const circle = L.circleMarker([lat, lng], {
-        radius:      r,
-        fillColor:   dotColor,
-        color:       '#fff',
-        weight:      0.8,
-        fillOpacity: 0.88,
-      });
-
-      // Popup — ข้อมูลละเอียดจาก GISTDA
-      const p        = f.properties;
-      const thTime   = p.th_time   ? p.th_time.slice(0,2)+':'+p.th_time.slice(2)+' น.' : '-';
-      const dateStr  = p.acq_date  ? p.acq_date.slice(0,10) : '-';
-      const pvTh     = p.changwat  || p.pv_en  || '';
-      const apEn     = p.ap_en     || '';
-      const tbEn     = p.tb_en     || '';
-      const luName   = p.lu_hp_name|| p.lu_name || '-';
-      const confMap  = { high:'สูง 🔴', nominal:'ปานกลาง 🟠', low:'ต่ำ 🟡' };
-      circle.bindPopup(
-        `<div style="font-family:'Sarabun',sans-serif;font-size:10px;line-height:1.75;">
-          <b>🔥 จุด Hotspot</b><br>
-          <b>จังหวัด:</b> ${pvTh}<br>
-          <b>อำเภอ:</b> ${apEn}<br>
-          <b>ตำบล:</b> ${tbEn}<br>
-          <b>การใช้ที่ดิน:</b> ${luName}<br>
-          <hr style="margin:2px 0;border-color:#eee;">
-          <b>วันที่:</b> ${dateStr}<br>
-          <b>เวลา (ไทย):</b> ${thTime}<br>
-          <b>ความเชื่อมั่น:</b> ${confMap[confidence] || confidence}
-        </div>`,
-        { maxWidth: 160, offset: [0, -r], autoPanPadding: [5, 5] }
-      );
-      circle.addTo(mapE);
-    });
-
-    // Fit map — ล็อกไว้ใช้ lock, ไม่งั้น fitBounds จากขอบ สคร.7
-    const me = DCFG.map_export || {};
-    if (me.e_lat && me.e_lng && me.e_zoom) {
-      mapE.setView([me.e_lat, me.e_lng], me.e_zoom, { animate: false });
-    } else {
-      try {
-        // ใช้ GeoJSON สำหรับคำนวณ bounds เท่านั้น ไม่แสดงผล
-        const pvLayer = L.geoJSON(geojson);
-        const bounds  = pvLayer.getBounds();
-        if (bounds.isValid()) {
-          _boundsE = bounds;
-          mapE.fitBounds(bounds, { padding: [18, 18] });
-        } else throw new Error('invalid bounds');
-      } catch (_) {
-        // fallback: bounding box ของ สคร.7 (ขอนแก่น+กาฬสินธุ์+มหาสารคาม+ร้อยเอ็ด)
-        _boundsE = L.latLngBounds([15.4, 101.7], [17.1, 104.5]);
-        mapE.fitBounds(_boundsE, { padding: [18, 18] });
-      }
-    }
-
-    // นับจุด Hotspot รายจังหวัด
-    const pvCount = {};
-    hotspots.forEach(f => {
-      const pv = f.properties.changwat || '?';
-      pvCount[pv] = (pvCount[pv] || 0) + 1;
-    });
-    const pvRows = Object.entries(pvCount)
-      .sort((a, b) => b[1] - a[1])
-      .map(([pv, n]) => `<tr><td>${pv}</td><td style="text-align:right;padding-left:8px;font-weight:bold;">${n}</td></tr>`)
-      .join('');
-
-    // Legend + count badge
-    const legend = L.control({ position: 'topleft' });
-    legend.onAdd = () => {
-      const d = L.DomUtil.create('div');
-      d.style.cssText = 'background:rgba(255,255,255,.88);padding:5px 8px;border-radius:4px;font-family:Sarabun,sans-serif;font-size:8.5px;line-height:1.8;border:1px solid #ccc;max-width:160px;';
-      d.innerHTML = `
-        <b>🔥 Hotspot 24 ชม. (${hotspots.length} จุด)</b>
-        <table style="width:100%;border-collapse:collapse;margin-top:2px;">${pvRows}</table>
-        <div style="margin-top:2px;font-size:7px;color:#888;">แหล่งข้อมูล: GISTDA VIIRS</div>
-      `;
-      return d;
-    };
-    legend.addTo(mapE);
-
-    // Attribution
-    L.control.attribution({ prefix: 'GISTDA VIIRS', position: 'bottomleft' }).addTo(mapE);
-
-    // อัปเดต Zone E title จาก config
-    const eTitleEl = document.querySelector('#zone-e .zone-title .zt-text');
-    if (eTitleEl && DCFG.zone_titles?.e) eTitleEl.innerHTML = pm25html(DCFG.zone_titles.e);
-
-  } catch (e) {
-    el.innerHTML = `<div class="err-badge">⚠️ ${e.message}</div>`;
-    console.error('Zone E error:', e);
+// จุด [lng, lat] อยู่ในขอบเขต feature ไหม (ray casting · รองรับรูในโพลิกอน)
+function inRing([x, y], r) {
+  let c = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const [xi, yi] = r[i], [xj, yj] = r[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
   }
+  return c;
+}
+function inFeature(pt, f) {
+  if (!pt) return false;
+  const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+  return polys.some(p => inRing(pt, p[0]) && !p.slice(1).some(h => inRing(pt, h)));
 }
 
-/* ════════════════════════════════════════════════════
-   ZONE F — 4 Mini Charts โรคเฝ้าระวัง
-   แท่ง = 2568 | เส้น = 2569
-════════════════════════════════════════════════════ */
-const miniCharts = [];
-
-async function initZoneF() {
-  try {
-    const res  = await fetch('/api/sheet-disease');
-    if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
-    const data = await res.json();
-
-    const d2025 = data['2025'] || [];
-    const d2026 = data['2026'] || [];
-
-    // อ่านจาก config (แก้ได้ใน Admin Panel → โรคเฝ้าระวัง)
-    const DISEASES = (DCFG.diseases || [
-      { key: 'ทางเดินหายใจ', label: 'ระบบทางเดินหายใจ', icon: '😷', color: '#2980b9' },
-      { key: 'หัวใจ',        label: 'หัวใจ/หลอดเลือด',  icon: '❤️',  color: '#e74c3c' },
-      { key: 'ตาอักเสบ',     label: 'ตาอักเสบ',          icon: '👁️',  color: '#27ae60' },
-      { key: 'ผิวหนัง',      label: 'ผิวหนัง',           icon: '🧴',  color: '#f39c12' },
-    ]);
-
-    const WKS    = Array.from({ length: 53 }, (_, i) => i + 1);
-    const labels = WKS.map(w => String(w));
-
-    function getVal(rows, wk, keyPart) {
-      const row = rows.find(r => r.wk === wk);
-      if (!row) return null;
-      const k = Object.keys(row).find(k => k.includes(keyPart));
-      const v = k ? row[k] : null;
-      return (v !== null && v !== undefined && !isNaN(v) && v > 0) ? v : null;
-    }
-
-    // หา WK สุดท้ายที่มีข้อมูล 2569 แล้วถอยกลับมา 1 สัปดาห์
-    // สัปดาห์ล่าสุดที่ HDC เพิ่งเริ่มรายงานยัง query ไม่ครบ (มักมีแค่ไม่กี่ราย) ถ้าเอามาแสดง
-    // กราฟจะดิ่งลงเกือบศูนย์ที่จุดสุดท้าย และยอดสะสมจะต่ำกว่าความจริง
-    // → ใช้ "สัปดาห์รองสุดท้าย" เป็นสัปดาห์อ้างอิงแทน
-    // ยกเว้นมี meta.reportWeek = สัปดาห์ที่ LINE OA รายงาน (ตัดสัปดาห์ที่ยังไม่นิ่งแล้ว)
-    // → ใช้ตัวนั้น ให้ตัวเลขบนหน้าเว็บตรงกับข้อความ LINE
-    const wksWithData = d2026
-      .filter(r => DISEASES.some(d => getVal(d2026, r.wk, d.key) !== null))
-      .map(r => r.wk)
-      .sort((a, b) => a - b);
-    const rptWk    = Number(data.meta?.reportWeek);
-    const lastWK26 = (rptWk > 0 && wksWithData.includes(rptWk))
-      ? rptWk
-      : wksWithData.length > 1
-        ? wksWithData[wksWithData.length - 2]
-        : (wksWithData[0] || 0);
-
-    // หาวันที่อัปเดต — ค้นจาก key ที่มีคำว่า "อัพเดท" หรือ "update"
-    let updateDateStr = '';
-    for (const row of d2026) {
-      const dateKey = Object.keys(row).find(k =>
-        k.includes('อัพเดท') || k.includes('อัปเดท') || k.toLowerCase().includes('update')
-      );
-      if (dateKey && row[dateKey] && String(row[dateKey]).includes('/')) {
-        const raw    = String(row[dateKey]).trim();
-        const parts  = raw.split('/');
-        if (parts.length === 3) {
-          const [d, m, y] = parts;
-          const thY = parseInt(y) + 543;
-          updateDateStr = `${parseInt(d)}/${parseInt(m)}/${thY}`;
-        } else {
-          updateDateStr = raw;
-        }
-        break;
-      }
-    }
-
-    // คำนวณยอดสะสม 2569 ถึง WK สุดท้าย
-    const totals26 = DISEASES.map(d =>
-      WKS.filter(w => w <= lastWK26)
-         .reduce((sum, w) => sum + (getVal(d2026, w, d.key) || 0), 0)
-    );
-
-    // Banner + ป้ายบอกอายุข้อมูล
-    // meta มาจาก /api/sheet-disease (คำนวณจาก date_com ของ MOPH ไม่ใช่เวลาที่ sync)
-    // จึงเตือนได้แม้ตัวเก็บข้อมูลฝั่ง Apps Script จะหยุดทำงานไปเงียบๆ
-    const meta      = data.meta || {};
-    const bannerEl  = document.getElementById('disease-banner-text');
-    const bannerBox = document.getElementById('disease-banner');
-    if (bannerBox) bannerBox.classList.toggle('is-stale', !!meta.stale);
-    if (bannerEl) {
-      const dateInfo = updateDateStr ? ` (วันที่: ${updateDateStr})` : '';
-      const badge    = meta.stale
-        ? ` <span class="stale-badge" title="ข้อมูลกลุ่มโรคยังไม่อัปเดตจาก HDC กระทรวงสาธารณสุข ${meta.ageDays} วัน (ล่าสุด ${updateDateStr})">⚠️ ยังไม่อัปเดต ${meta.ageDays} วัน</span>`
-        : '';
-      bannerEl.innerHTML =
-        `👥 ยอดผู้ป่วยสะสม ปี 2569 ตั้งแต่สัปดาห์ที่ 1 – ${lastWK26}${dateInfo}${badge}<br>` +
-        `📈 ยอดสะสม ณ สัปดาห์ที่ <b>${lastWK26}</b>`;
-    }
-
-    // สร้าง card HTML จาก DCFG.diseases
-    const grid = document.getElementById('disease-grid');
-    grid.innerHTML = DISEASES.map((d, i) => `
-      <div class="mini-chart-wrap">
-        <div class="mini-kpi">
-          <span class="mini-icon">${d.icon || '●'}</span>
-          <span class="mini-disease">${d.label || d.key}</span>
-          <span class="mini-total" id="kt-${i}">-</span>
-          <span class="mini-unit">ราย</span>
-        </div>
-        <canvas id="cd-${i}"></canvas>
-      </div>`).join('');
-
-    // KPI totals (ต้องสร้าง DOM ก่อนถึงจะหา element ได้)
-    totals26.forEach((total, i) => {
-      const el = document.getElementById(`kt-${i}`);
-      if (el) el.textContent = total.toLocaleString();
-    });
-
-    // ทำลาย chart เก่า
-    miniCharts.forEach(c => c.destroy());
-    miniCharts.length = 0;
-
-    DISEASES.forEach((d, i) => {
-      const canvas = document.getElementById(`cd-${i}`);
-      if (!canvas) return;
-
-      const data2025 = WKS.map(w => getVal(d2025, w, d.key));
-      // ตัดเส้น 2569 ที่สัปดาห์อ้างอิง — ไม่ลากไปถึงสัปดาห์ที่ยังรายงานไม่ครบ
-      const data2026 = WKS.map(w => (w <= lastWK26 ? getVal(d2026, w, d.key) : null));
-
-      const chart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            {
-              type:            'bar',
-              label:           '2568',
-              data:            data2025,
-              backgroundColor: d.color + '50',
-              borderColor:     d.color + '99',
-              borderWidth:     0.5,
-              barPercentage:   0.85,
-              categoryPercentage: 1.0,
-              pointStyle:      'rect',
-            },
-            {
-              type:            'line',
-              label:           '2569',
-              data:            data2026,
-              borderColor:     d.color,
-              backgroundColor: 'transparent',
-              borderWidth:     1.8,
-              pointRadius:     0,
-              pointHoverRadius: 3,
-              tension:         0.3,
-              pointStyle:      'line',
-              spanGaps:        false,
-            },
-          ],
-        },
-        options: {
-          devicePixelRatio:    2,
-          responsive:          true,
-          maintainAspectRatio: false,
-          animation:           false,
-          interaction:         { mode: 'index', intersect: false },
-          plugins: {
-            legend: {
-              position: 'top',
-              align:    'end',
-              labels: {
-                font:      { family: "'Sarabun', sans-serif", size: 7.5 },
-                boxWidth:  16,
-                padding:   4,
-                usePointStyle: true,
-              },
-            },
-            tooltip: {
-              backgroundColor: 'rgba(20,40,65,.92)',
-              titleColor:      '#fff',
-              bodyColor:       '#c8dff0',
-              borderColor:     'rgba(255,255,255,.12)',
-              borderWidth:     1,
-              cornerRadius:    5,
-              titleFont: { family: "'Sarabun', sans-serif", size: 9, weight: '700' },
-              bodyFont:  { family: "'Sarabun', sans-serif", size: 9 },
-              padding:   6,
-              callbacks: {
-                title: items => `WK ${items[0].label}`,
-                label: ctx => {
-                  const v = ctx.parsed.y;
-                  return v !== null ? ` ${ctx.dataset.label}: ${v?.toLocaleString()} ราย` : null;
-                },
-              },
-            },
-          },
-          scales: {
-            x: {
-              ticks: {
-                font:          { size: 7, family: "'Sarabun', sans-serif" },
-                maxRotation:   0,
-                autoSkip:      true,
-                maxTicksLimit: 14,
-                callback:      (_, idx) => (idx + 1) % 8 === 1 ? String(idx + 1) : '',
-              },
-              grid: { display: false },
-            },
-            y: {
-              min: 0,
-              ticks: {
-                font:          { size: 7, family: "'Sarabun', sans-serif" },
-                maxTicksLimit: 4,
-                callback:      v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v,
-              },
-              grid: { color: '#f5f5f5' },
-            },
-          },
-        },
-      });
-      miniCharts.push(chart);
-    });
-
-  } catch (e) {
-    document.getElementById('disease-grid').innerHTML =
-      `<div class="err-badge" style="grid-column:span 2;">⚠️ ${e.message}</div>`;
-    console.error('Zone F error:', e);
+// ---------- แนวโน้มรายสัปดาห์ (crosshair + tooltip) ----------
+function weekly() {
+  const all = S.pm?.allData || {}, dates = Object.keys(all).sort();
+  if (!dates.length) return [];
+  const t0 = new Date(dates[0]); const wk = [];
+  for (const d of dates) {
+    const i = Math.floor((new Date(d) - t0) / 864e5 / 7);
+    (wk[i] ||= { s: d, e: d, v: PROV.map(() => []) }).e = d;
+    PROV.forEach((p, k) => { const x = all[d]?.[p.name]; if (x != null && x > 0) wk[i].v[k].push(x); });
   }
+  return wk.filter(Boolean).map(w => ({ s: w.s, e: w.e, v: w.v.map(a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null) }));
+}
+function renderTrend() {
+  const W = weekly(), svg = document.getElementById("chart");
+  if (!W.length) { svg.outerHTML = `<p class="muted">ไม่มีข้อมูล</p>`; return; }
+  document.getElementById("trendSub").textContent = `ค่าเฉลี่ยรายสัปดาห์ ${thDate(W[0].s)} – ${thDate(W.at(-1).e)} · µg/m³`;
+  document.getElementById("legend").innerHTML = PROV.map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
+  const VW = 760, VH = 372, L = 48, R = 132, T = 30, B = 34, pw = VW - L - R, ph = VH - T - B, n = W.length;
+  const top = Math.max(80, Math.ceil(Math.max(...W.flatMap(w => w.v.filter(x => x != null))) / 20) * 20);
+  const X = i => L + i / (n - 1) * pw, Y = v => T + ph - Math.min(v, top) / top * ph;
+  const AX = `font-size="13" font-weight="600" fill="#46546a"`;
+  let g = "";
+  // แถบสีพื้นหลังตามระดับคุณภาพอากาศ — อ่านได้ทันทีว่าเส้นอยู่ช่วงไหน
+  LV.forEach((l, i) => { const lo = i ? LV[i - 1].max : 0, hi = Math.min(l.max, top); if (lo >= top) return;
+    g += `<rect x="${L}" y="${Y(hi)}" width="${pw}" height="${Y(lo) - Y(hi)}" fill="${l.c}" opacity=".09"/>`; });
+  for (let t = 0; t <= top; t += 20) g += `<line x1="${L}" x2="${L + pw}" y1="${Y(t)}" y2="${Y(t)}" stroke="#dfe4ec"/><text x="${L - 10}" y="${Y(t) + 4.5}" text-anchor="end" ${AX}>${t}</text>`;
+  g += `<text x="${L - 10}" y="${T - 14}" text-anchor="start" font-size="12" font-weight="700" fill="#46546a" dx="-28">µg/m³</text>`;
+  for (const [v, lab, c] of [[37.5, "37.5 · เกินค่ามาตรฐาน", "#b84a00"], [75, "75 · มีผลต่อสุขภาพ", "#b00000"]])
+    g += `<line x1="${L}" x2="${L + pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="6 4" stroke-width="1.6"/>
+      <text x="${L + pw - 6}" y="${Y(v) - 7}" text-anchor="end" font-size="13" font-weight="700" fill="${c}" stroke="#fff" stroke-width="4" paint-order="stroke">${lab}</text>`;
+  let lm = -1; W.forEach((w, i) => { const m = new Date(w.s).getMonth(); if (m !== lm) { lm = m; g += `<line x1="${X(i)}" x2="${X(i)}" y1="${T + ph}" y2="${T + ph + 5}" stroke="#9aa6b6"/><text x="${X(i)}" y="${VH - 8}" text-anchor="middle" ${AX}>${TH_M[m]}</text>`; } });
+  // ป้ายท้ายเส้น: ชื่อจังหวัด + ค่าสัปดาห์ล่าสุด สีเดียวกับเส้น (ดันไม่ให้ซ้อนกัน)
+  const last = W.at(-1), ends = PROV.map((p, k) => ({ k, y: Y(last.v[k] ?? 0) })).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 17) ends[i].y = ends[i - 1].y + 17;
+  PROV.forEach((p, k) => {
+    let d = "", pen = false; W.forEach((w, i) => { if (w.v[k] == null) { pen = false; return; } d += (pen ? "L" : "M") + X(i).toFixed(1) + " " + Y(w.v[k]).toFixed(1); pen = true; });
+    g += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if (last.v[k] != null) g += `<circle cx="${X(n - 1)}" cy="${Y(last.v[k])}" r="4.5" fill="${p.color}" stroke="#fff" stroke-width="2"/>`;
+    const e = ends.find(o => o.k === k);
+    g += `<text x="${X(n - 1) + 10}" y="${e.y + 4.5}" font-size="13" font-weight="700" fill="${p.color}">${p.name} <tspan fill="#0f1b2d">${last.v[k] != null ? f1(last.v[k]) : "–"}</tspan></text>`;
+  });
+  g += `<line id="xh" y1="${T}" y2="${T + ph}" stroke="#46546a" stroke-width="1" opacity="0"/><g id="dots"></g><rect id="hit" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="transparent"/>`;
+  svg.innerHTML = g;
+  const tip = document.getElementById("tip"), xh = svg.querySelector("#xh"), dots = svg.querySelector("#dots"), hit = svg.querySelector("#hit");
+  hit.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * VW;
+    const i = Math.max(0, Math.min(n - 1, Math.round((sx - L) / pw * (n - 1)))), w = W[i];
+    xh.setAttribute("x1", X(i)); xh.setAttribute("x2", X(i)); xh.setAttribute("opacity", .5);
+    dots.innerHTML = PROV.map((p, k) => w.v[k] == null ? "" : `<circle cx="${X(i)}" cy="${Y(w.v[k])}" r="5" fill="${p.color}" stroke="#fff" stroke-width="2"/>`).join("");
+    tip.innerHTML = `<div class="t">${thDate(w.s)} – ${thDate(w.e)}</div>` + PROV.map((p, k) => ({ p, v: w.v[k] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)
+      .map(o => `<div class="r"><span><i style="background:${o.p.color}"></i>${o.p.name}</span><b class="num">${f1(o.v)}</b></div>`).join("");
+    const px = X(i) / VW * r.width; tip.style.left = (px > r.width * .6 ? px - tip.offsetWidth - 12 : px + 12) + "px"; tip.style.top = "6px"; tip.classList.add("on");
+  });
+  hit.addEventListener("pointerleave", () => { tip.classList.remove("on"); xh.setAttribute("opacity", 0); dots.innerHTML = ""; });
+}
+function t7Html(compact) {
+  const days = S.last7;
+  // หัวคอลัมน์แบบสั้น 26/9 ไม่ให้ตัดบรรทัด · ช่องไม่มีข้อมูลใช้ "–" + title
+  const short = iso => { const d = new Date(iso + "T00:00:00"); return `${d.getDate()}/${d.getMonth() + 1}`; };
+  let h = `<tr><th>จังหวัด</th>${days.map((d, i) => `<th style="white-space:nowrap">${i === days.length - 1 ? "วันนี้" : short(d.date)}</th>`).join("")}</tr>`;
+  for (const p of PROV) h += `<tr><td style="white-space:nowrap">${p.name}</td>${days.map((d, i) => {
+    const x = d[p.name], l = x != null ? LV[lvOf(x)] : null, today = i === days.length - 1;
+    return x == null ? `<td class="na" title="ไม่มีข้อมูล">–</td>` : `<td class="cell ${today ? "today-col" : ""}" style="background:${l.c};color:${textOn(l.c)}">${f1(x)}</td>`; }).join("")}</tr>`;
+  return h;
+}
+// สีตัวอักษรบนพื้นสีเต็มของระดับฝุ่น — เลือกขาวหรือเข้มตามที่อ่านชัดกว่า (ฟ้า/เหลือง/ส้ม = ตัวเข้ม)
+function textOn(hex) {
+  const ch = i => { const c = parseInt(hex.slice(i, i + 2), 16) / 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
+  const L = .2126 * ch(1) + .7152 * ch(3) + .0722 * ch(5);
+  return (1.05 / (L + .05)) >= ((L + .05) / (0.0137 + .05)) ? "#fff" : "#0f1b2d";
+}
+function renderT7() {
+  document.getElementById("t7").innerHTML = t7Html(false);
+  document.getElementById("t7Note").innerHTML = LV.map(l => `<span><i style="background:${l.c}"></i>${l.name} ${l.range}</span>`).join("");
 }
 
-/* ════════════════════════════════════════════════════
-   ZONE C + D — Line Chart + Heatmap Table
-   ใช้ข้อมูลจาก /api/sheet-pm25 ร่วมกัน
-════════════════════════════════════════════════════ */
-async function initZoneCD() {
-  try {
-    const res  = await fetch('/api/sheet-pm25');
-    const data = res.ok ? await res.json() : { ok: false };
-    if (!data.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ');
-
-    await Promise.all([
-      renderZoneC(data),
-      renderZoneD(data),
-    ]);
-  } catch (e) {
-    console.error('Zone C/D error:', e);
-    document.getElementById('chart-trend').closest('.zone-inner').innerHTML =
-      `<div class="err-badge">⚠️ ${e.message}</div>`;
-  }
-}
-
-/* ─── Zone C : Line Chart แนวโน้ม PM2.5 ───────────── */
-function renderZoneC(data) {
-  const pvs      = DCFG.provinces || [];
-  const allData  = data.allData   || {};
-  const sortedD  = data.sortedDates || Object.keys(allData).sort();
-
-  // จำนวนวันและเส้นเกณฑ์จาก config (แก้ได้ใน Admin Panel)
-  // days_trend = 0 → แสดงทุกวันตั้งแต่วันแรกที่เก็บข้อมูล (ผู้ใช้ซูม/เลื่อนดูเองได้)
-  const MAX_DAYS   = Number(DCFG.chart?.days_trend ?? 0);
-  const THRESHOLDS = DCFG.chart?.thresholds   || [
-    { value: 37.5, label: 'เกณฑ์พิจารณา', color: '#f07d00' },
-    { value: 75.0, label: 'มาตรฐาน',      color: '#e8192c' },
-  ];
-  // slice() คืน array ใหม่เสมอ — สำคัญ เพราะ reverse() แก้ต้นฉบับ
-  // ถ้า reverse() โดน data.sortedDates ตรงๆ Zone D ที่ใช้ค่าเดียวกันจะเพี้ยนตาม
-  const dates    = sortedD.slice(0, MAX_DAYS > 0 ? MAX_DAYS : undefined).reverse(); // เก่า→ใหม่
-
-  // เขียนช่วงเวลาจริงลงหัวข้อ — ของเดิมฮาร์ดโค้ด "ต.ค. 2568" ไว้ ซึ่งไม่ตรงกับข้อมูล
-  const rangeEl = document.getElementById('trend-range');
-  if (rangeEl) {
-    if (dates.length) {
-      const TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
-                      'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-      const [y, m] = dates[0].split('-').map(Number);
-      rangeEl.textContent = `(${TH_MON[m - 1]} ${y + 543} – ปัจจุบัน · ${dates.length} วัน)`;
-    } else {
-      rangeEl.textContent = '(ยังไม่มีข้อมูล)';
+// ---------- Hotspot: Leaflet + tooltip เมื่อชี้ ----------
+let MAP, HS_LAYER;
+const CONF = { high: ["สูง", "#e8192c"], nominal: ["ปานกลาง", "#f07d00"], low: ["ต่ำ", "#f5ce00"] };
+function renderHotspot(feats, isSample) {
+  if (!MAP) {
+    MAP = L.map("map", { attributionControl: true, scrollWheelZoom: false }).setView([16.2, 103.4], 8);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, crossOrigin: true, attribution: "© OpenStreetMap" }).addTo(MAP);
+    if (S.geo?.features?.length) {
+      const b = L.geoJSON(S.geo, { style: { color: "#0e2a47", weight: 2, fillColor: "#1c6ed6", fillOpacity: .04 }, interactive: false }).addTo(MAP);
+      MAP.fitBounds(b.getBounds(), { padding: [12, 12] });
+      S.geo.features.forEach(f => L.marker(b.getLayers().find(l => l.feature === f).getBounds().getCenter(), {
+        icon: L.divIcon({ className: "", html: `<div style="font:600 12px 'IBM Plex Sans Thai';color:#0e2a47;text-shadow:0 0 3px #fff,0 0 3px #fff;white-space:nowrap;transform:translate(-50%,-50%)">${f.properties.name_th}</div>` }), interactive: false }).addTo(MAP));
     }
   }
-
-  // สร้าง dataset ราย Province
-  const datasets = pvs.map(pv => {
-    const vals = dates.map(d => {
-      const row = allData[d];
-      if (!row) return null;
-      const key = Object.keys(row).find(k =>
-        k.trim() === pv.name.trim() || k.includes(pv.name)
-      );
-      const v = key ? row[key] : null;
-      return (v !== null && v > 0) ? v : null;
-    });
-    return {
-      label:           pv.name,
-      data:            vals,
-      borderColor:     pv.color,
-      backgroundColor: pv.color + '22',
-      borderWidth:     1.5,
-      pointRadius:     0,
-      pointHitRadius:  6,
-      tension:         0.3,
-      spanGaps:        true,
-    };
-  });
-
-  // เส้นเกณฑ์ — อ่านจาก config
-  THRESHOLDS.forEach(t => {
-    datasets.push({
-      label:           t.label + ' ' + t.value,
-      data:            Array(dates.length).fill(t.value),
-      borderColor:     t.color,
-      borderWidth:     1.2,
-      borderDash:      [5, 4],
-      pointRadius:     0,
-      spanGaps:        true,
-      _thresholdLabel: String(t.value),
-      _thresholdColor: t.color,
-    });
-  });
-
-  // แปลงวันที่เป็น Thai short (dd/mm)
-  const labels = dates.map(d => {
-    const [y, m, day] = d.split('-');
-    return `${parseInt(day)}/${parseInt(m)}`;
-  });
-
-  // Plugin วาด label บนเส้นเกณฑ์ (ฝั่งขวา)
-  const thresholdLabelPlugin = {
-    id: 'thresholdLabels',
-    afterDatasetsDraw(chart) {
-      const { ctx, chartArea: { right }, scales: { y } } = chart;
-      chart.data.datasets.forEach((ds, i) => {
-        if (!ds._thresholdLabel) return;
-        const meta = chart.getDatasetMeta(i);
-        if (meta.hidden) return;
-        const yPx = y.getPixelForValue(parseFloat(ds._thresholdLabel));
-        ctx.save();
-        ctx.font = 'bold 8.5px Sarabun, sans-serif';
-        ctx.fillStyle = ds._thresholdColor;
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(ds._thresholdLabel + ' µg/m³', right - 2, yPx - 2);
-        ctx.restore();
-      });
-    }
-  };
-
-  const skC = document.getElementById('sk-zone-c');
-  if (skC) skC.remove();
-  const canvas = document.getElementById('chart-trend');
-  canvas.style.display = '';
-  if (chartC) chartC.destroy();
-
-  // Crosshair vertical line on hover
-  const crosshairPlugin = {
-    id: 'crosshair',
-    afterDraw(chart) {
-      if (!chart.tooltip._active?.length) return;
-      const { ctx, chartArea: { top, bottom } } = chart;
-      const x = chart.tooltip._active[0].element.x;
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x, top); ctx.lineTo(x, bottom);
-      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.12)';
-      ctx.setLineDash([4, 3]); ctx.stroke();
-      ctx.restore();
-    }
-  };
-
-  chartC = new Chart(canvas, {
-    type: 'line',
-    data: { labels, datasets },
-    plugins: [thresholdLabelPlugin, crosshairPlugin],
-    options: {
-      devicePixelRatio:    2,
-      responsive:          true,
-      maintainAspectRatio: false,
-      animation:           false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            font: { family: "'Sarabun', sans-serif", size: 9 },
-            boxWidth: 20, padding: 6,
-            usePointStyle: true,
-            pointStyle: 'line',
-            filter: item => {
-            const thLabels = (DCFG.chart?.thresholds || []).map(t => t.label + ' ' + t.value);
-            return !thLabels.includes(item.text);
-          },
-          },
-        },
-        tooltip: {
-          backgroundColor:  'rgba(20,40,65,.92)',
-          titleColor:       '#fff',
-          bodyColor:        '#c8dff0',
-          borderColor:      'rgba(255,255,255,.12)',
-          borderWidth:      1,
-          padding:          8,
-          cornerRadius:     6,
-          titleFont: { family: "'Sarabun', sans-serif", size: 10, weight: '700' },
-          bodyFont:  { family: "'Sarabun', sans-serif", size: 10 },
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : '-'} µg/m³`,
-          },
-        },
-        zoom: {
-          pan:  {
-            enabled: true, mode: 'x', threshold: 5,
-            // เดิมมีแต่ onZoomComplete → ถ้าผู้ใช้แค่ลากเลื่อนโดยไม่ซูม
-            // ปุ่ม Reset จะไม่โผล่ กลับไปช่วงเต็มไม่ได้นอกจาก refresh
-            onPanComplete: () => {
-              const btn = document.getElementById('btn-reset-zoom');
-              if (btn) btn.style.display = 'inline-flex';
-            },
-          },
-          zoom: {
-            wheel: { enabled: true, speed: 0.08 },
-            pinch: { enabled: true },
-            mode:  'x',
-            onZoomComplete: () => {
-              const btn = document.getElementById('btn-reset-zoom');
-              if (btn) btn.style.display = 'inline-flex';
-            },
-          },
-          limits: { x: { minRange: 7 } },
-        },
-      },
-      scales: {
-        x: {
-          ticks: {
-            font: { size: 7.5, family: "'Sarabun', sans-serif" },
-            maxRotation: 45,
-            autoSkip: true,
-            maxTicksLimit: 15,
-          },
-          grid: { display: false },
-        },
-        y: {
-          min: 0,
-          ticks: {
-            font: { size: 8, family: "'Sarabun', sans-serif" },
-            maxTicksLimit: 6,
-          },
-          grid: { color: '#f0f0f0' },
-          title: {
-            display: true,
-            text: 'µg/m³',
-            font: { size: 8, family: "'Sarabun', sans-serif" },
-            color: '#888',
-          },
-        },
-      },
-    },
-  });
+  if (HS_LAYER) HS_LAYER.remove();
+  HS_LAYER = L.layerGroup().addTo(MAP);
+  for (const f of feats) {
+    const [lng, lat] = f.geometry.coordinates, p = f.properties, [cn, cc] = CONF[p.confidence] || [p.confidence, "#999"];
+    const r = Math.min(5 + (p.frp || 0) * .35, 13);
+    const t = p.th_time ? `${String(p.th_time).padStart(4, "0").slice(0, 2)}:${String(p.th_time).padStart(4, "0").slice(2)} น.` : "–";
+    L.circleMarker([lat, lng], { radius: r, fillColor: cc, color: "#fff", weight: 1, fillOpacity: .9 })
+      .bindTooltip(`<b class="t">🔥 จุดความร้อน</b><br><b>จังหวัด:</b> ${esc(p.changwat)}<br><b>อำเภอ:</b> ${esc(p.ap_en || "–")}<br><b>ตำบล:</b> ${esc(p.tb_en || "–")}<br><b>การใช้ที่ดิน:</b> ${esc(p.lu_hp_name || p.lu_name || "–")}<hr><b>วันที่:</b> ${esc((p.acq_date || "").slice(0, 10))}<br><b>เวลา (ไทย):</b> ${t}<br><b>ความเชื่อมั่น:</b> ${cn}<br><b>FRP:</b> ${p.frp ?? "–"} MW`,
+        { className: "hs-tip", direction: "top", offset: [0, -r], sticky: false })
+      .addTo(HS_LAYER);
+  }
+  const by = countBy(feats);
+  document.getElementById("hotSide").innerHTML = `
+    <div class="label">${isSample ? "ข้อมูลตัวอย่าง 7 พ.ค. 2569" : "รวม 4 จังหวัด · 24 ชม."}</div>
+    <div class="hot-total num">${feats.length} <span style="font-size:18px;color:var(--ink-3)">จุด</span></div>
+    <div>${PROV.map(p => `<div class="hot-row"><span>${p.name}</span><b>${by[p.name] || 0}</b></div>`).join("")}</div>
+    <div class="conf"><div class="label">ความเชื่อมั่น (สี) · ขนาดจุดตามความร้อน (FRP)</div>${Object.values(CONF).map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}</div>
+    ${!S.hsOk ? `<div class="note-box">ดึงข้อมูล GISTDA ไม่สำเร็จ</div>` : ""}
+    ${!isSample && feats.length === 0 ? `<div class="note-box">วันนี้ไม่พบจุดความร้อนในพื้นที่ 4 จังหวัด<br><button class="btn" id="hsSample" style="margin-top:8px;padding:6px 12px">ดูตัวอย่างจากข้อมูลจริง 7 พ.ค. 2569</button></div>` : ""}
+    ${isSample ? `<div class="note-box">กำลังแสดงข้อมูลย้อนหลัง (ไม่ใช่วันนี้)<br><button class="btn" id="hsToday" style="margin-top:8px;padding:6px 12px">กลับไปข้อมูลวันนี้</button></div>` : ""}`;
+  document.getElementById("hsSample")?.addEventListener("click", async () => {
+    const j = await fetch("hotspot-sample-2026-05-07.json").then(r => r.json());
+    const names = new Set(PROV.map(p => p.name)); renderHotspot(j.features.filter(f => names.has(f.properties.changwat)), true); });
+  document.getElementById("hsToday")?.addEventListener("click", () => renderHotspot(S.hsToday, false));
 }
 
-/* ─── Zone D : Heatmap Table 7 วัน ───────────────── */
-function renderZoneD(data) {
-  const pvs   = DCFG.provinces || [];
-  const last7 = data.last7     || [];
+// ---------- โรค: แท่งรายเดือน 2568 (เทา) vs 2569 (สีกลุ่มโรค) ----------
+function monthly(rows, key, upToWk, yearCE) {
+  const m = Array(12).fill(0), has = Array(12).fill(false);
+  for (const r of rows || []) {
+    const wk = +r.wk; if (!wk || wk > upToWk) continue;
+    const k = Object.keys(r).find(x => x.includes(key)); const v = +String(r[k] ?? "").replace(/,/g, "");
+    if (!k || isNaN(v)) continue;
+    const mo = new Date(yearCE, 0, 1 + (wk - 1) * 7 + 3).getMonth(); m[mo] += v; has[mo] = true;
+  }
+  return m.map((v, i) => has[i] ? v : null);
+}
+function renderDisease() {
+  const dz = S.dz; if (!dz) { document.getElementById("dz").innerHTML = `<p class="muted">ดึงข้อมูลโรคไม่ได้</p>`; return; }
+  const wkMax = dz.meta?.reportWeek || Math.max(...(dz[2026] || []).map(r => +r.wk)) - 1;
+  S.wkMax = wkMax;
+  document.getElementById("dzSub").textContent = `ผู้ป่วยรายเดือน · ปี 2569 สะสมสัปดาห์ที่ 1–${wkMax} เทียบช่วงเดียวกันปี 2568 · ข้อมูล HDC`;
+  S.dzTot = []; S.dzData = [];
+  document.getElementById("dz").innerHTML = DZ.map((d, di) => {
+    const a = monthly(dz[2025], d.key, 53, 2025), b = monthly(dz[2026], d.key, wkMax, 2026);
+    const t26 = b.reduce((s, x) => s + (x || 0), 0), t25 = monthly(dz[2025], d.key, wkMax, 2025).reduce((s, x) => s + (x || 0), 0);
+    const pct = t25 ? (t26 - t25) / t25 * 100 : 0; S.dzTot.push({ ...d, t26, pct }); S.dzData.push({ d, a, b, t26, t25, pct });
+    const W = 560, H = 190, g = dzBars(d, a, b, W, H, 10.5);
+    return `<article class="card dz" style="--dsoft:${d.soft};--dc:${d.c}">
+      <div class="dz-top"><div class="dz-icon" style="background:${d.soft};color:${d.c}"><svg><use href="#${d.icon}"/></svg></div>
+        <div><h3>${d.label}</h3><div class="icd">${d.icd}</div></div>
+        <div class="tot"><b class="num">${fmt(t26)}</b><span class="delta ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}% จากปี 2568 (${fmt(t25)})</span></div></div>
+      <svg class="bars" viewBox="0 0 ${W} ${H}" role="img" aria-label="ผู้ป่วยรายเดือน ${d.label} ปี 2568 และ 2569">${g}</svg>
+      <div class="lg"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:${d.c}"></i>ปี 2569 (ถึงสัปดาห์ที่ ${wkMax})</span></div>
+      <div class="tip"></div></article>`; }).join("");
+  // tooltip ต่อแท่ง
+  document.querySelectorAll(".dz").forEach(card => {
+    const tip = card.querySelector(".tip");
+    card.querySelectorAll(".hb").forEach(rc => {
+      rc.addEventListener("pointerenter", () => { tip.textContent = rc.dataset.t; tip.classList.add("on"); });
+      rc.addEventListener("pointermove", e => { const r = card.getBoundingClientRect(); tip.style.left = (e.clientX - r.left + 12) + "px"; tip.style.top = (e.clientY - r.top - 34) + "px"; });
+      rc.addEventListener("pointerleave", () => tip.classList.remove("on"));
+    });
+  });
+}
+// แท่งรายเดือน: 2568 เทา / 2569 สีกลุ่มโรค — ใช้ทั้งหน้าเว็บและ infographic
+function dzBars(d, a, b, W, H, fs) {
+  const L = fs * 3.8, B = fs * 2.3, T = 8, pw = W - L - 8, ph = H - T - B, slot = pw / 12, bw = Math.min(fs * 1.6, slot / 2 - 3);
+  const mx = Math.max(...a, ...b.map(x => x || 0)) * 1.1, step = niceStep(mx);
+  let g = "";
+  for (let t = 0; t <= mx; t += step) g += `<line x1="${L}" x2="${W - 8}" y1="${T + ph - t / mx * ph}" y2="${T + ph - t / mx * ph}" stroke="rgba(15,27,45,.09)"/><text x="${L - 6}" y="${T + ph - t / mx * ph + fs * .38}" text-anchor="end" font-size="${fs}" fill="#5f6c80">${t >= 1000 ? (t / 1000) + "k" : t}</text>`;
+  for (let i = 0; i < 12; i++) {
+    const x0 = L + i * slot + slot / 2;
+    if (a[i] != null) { const h = a[i] / mx * ph; g += `<rect class="hb" x="${x0 - bw - 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="#b4bfcd" data-t="${TH_M[i]} 2568: ${fmt(a[i])} ราย"/>`; }
+    if (b[i] != null) { const h = b[i] / mx * ph; g += `<rect class="hb" x="${x0 + 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="${d.c}" data-t="${TH_M[i]} 2569: ${fmt(b[i])} ราย"/>`; }
+    g += `<text x="${x0}" y="${H - fs * .5}" text-anchor="middle" font-size="${fs}" fill="#5f6c80">${TH_M[i]}</text>`;
+  }
+  return g;
+}
+const niceStep = mx => { const raw = mx / 4, p = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 2.5, 5, 10].map(s => s * p).find(s => s >= raw); };
 
-  if (!last7.length) {
-    document.getElementById('heatmap-body').innerHTML =
-      '<tr><td class="pname" colspan="8">ไม่มีข้อมูล</td></tr>';
+// ---------- คำแนะนำ ----------
+const actIcon = t => /หน้ากาก/.test(t) ? "a-mask" : /แพทย์/.test(t) ? "a-doc" : /ห้องปลอดฝุ่น|อาคาร|ปิดประตู/.test(t) ? "a-home" : /ก่อฝุ่น/.test(t) ? "a-dust" : /เฝ้าระวัง/.test(t) ? "a-eye" : /ออกกำลังกาย|กิจกรรม|ใช้แรง/.test(t) && !/ตามปกติ/.test(t) ? "a-run" : "a-ok";
+function renderAdvice() {
+  const L = LV[S.lv];
+  document.getElementById("advNow").innerHTML = `
+    <div class="lvbox"><span class="face">${L.face}</span><span>วันนี้คุณภาพอากาศ</span><b>${L.name}</b><span class="num">PM2.5 ${L.range} µg/m³</span></div>
+    <div class="who"><h3><span><svg class="ico"><use href="#i-people"/></svg></span>ประชาชนทั่วไป</h3><div class="dos">${L.pub.map(x => `<div class="do"><span><svg class="ico"><use href="#${actIcon(x)}"/></svg></span>${x}</div>`).join("")}</div></div>
+    <div class="who"><h3><span><svg class="ico"><use href="#i-heartp"/></svg></span>กลุ่มเสี่ยง*</h3><div class="dos">${L.risk.map(x => `<div class="do"><span><svg class="ico"><use href="#${actIcon(x)}"/></svg></span>${x}</div>`).join("")}</div></div>`;
+  document.getElementById("advRow").innerHTML = LV.map((l, i) => `<div class="a ${i === S.lv ? "cur" : ""}"><b><i style="background:${l.c}"></i>${l.name}${i === S.lv ? " · วันนี้" : ""}</b><span class="muted num">${l.range} µg/m³</span><span>${l.pub[0]}</span></div>`).join("");
+}
+
+// ================= INFOGRAPHIC =================
+// html2canvas วาด <use href="#…"> ที่ชี้ไปนอก svg ไม่ได้ → ฝังเนื้อ symbol ลงไปตรงๆ
+const inl = (id, size, style = "") => { const s = document.getElementById(id);
+  return `<svg width="${size}" height="${size}" viewBox="${s.getAttribute("viewBox")}" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;${style}">${s.innerHTML}</svg>`; };
+// ถ้าเนื้อหาล้นหน้า (เช่นระดับที่มีคำแนะนำหลายข้อ) ย่อส่วนประกอบรองทีละขั้น — คำแนะนำยังใหญ่เสมอ
+function fitInfographic(size) {
+  const ig = document.getElementById("ig");
+  for (let d = 0; d <= 3; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) return d; }
+  return 3;
+}
+function buildInfographic(size = "a4", dense = 0) {
+  const L = LV[S.lv], ig = document.getElementById("ig");
+  ig.className = size; ig.dataset.dense = dense;
+  const CH = [96, 80, 66, 56][dense];
+  const avgBox = `<div class="avg">${weatherArt(S.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k"><b class="pm-tag">ค่าฝุ่น PM2.5</b>เฉลี่ย 4 จังหวัด</span><span class="v num">${f1(S.avg)}<small> µg/m³</small></span><span class="l">คุณภาพอากาศ${L.name}</span></div></div>`;
+  const head = `<div class="ig-banner"><img src="/header-v2.webp" alt="" width="2000" height="250"></div><div class="ig-date"><span class="d">${S.todayRow ? `<b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${L.face} ภาพรวมเขต: ${L.name}</span></div>`;
+  const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้</div>
+    <div class="advice"><div class="lv"><span class="f">${L.face}</span><b>${L.name}</b><span>${L.range} µg/m³</span></div>
+      <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
+      <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
+  const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === S.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === S.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
+  const foot = `<div class="ig-f"><span>แหล่งข้อมูล: Air4Thai · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
+  const maxP = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)[0];
+  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC</span><b>${PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
+    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม.</span><b>${S.hsToday.length} จุด</b></span></div>
+    <div><span class="fi" style="background:var(--lv-soft);color:var(--lv-ink)">${inl("i-pin", 26)}</span><span><span class="k">สูงสุดวันนี้</span><b>${maxP ? maxP.p.name + " " + f1(maxP.v) : "–"}</b></span></div></div>`;
+  if (size === "social") {
+    ig.innerHTML = head + `<div class="ig-body">${avgBox}
+      <div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null;
+        return `<div style="border-top:6px solid ${l ? l.c : "#ccc"}"><span class="n">${p.name}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM2.5</em>${v != null ? f1(v) : "–"}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</div>`; }).join("")}</div>
+      ${facts3}${adviceBox}${scaleBox}<div style="font-size:15px;color:var(--ink-3)">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคทางเดินหายใจ โรคหัวใจและหลอดเลือด</div></div>` + foot;
     return;
   }
-
-  // อัปเดต header — แสดงวันที่ Thai (dd/mm)
-  last7.forEach((row, i) => {
-    const el = document.getElementById(`th${i}`);
-    if (!el) return;
-    const [y, m, d] = row.date.split('-');
-    const thY = parseInt(y) + 543;
-    el.textContent = `${parseInt(d)}/${parseInt(m)}/${String(thY).slice(2)}`;
-  });
-  // Today header
-  const todayEl = document.getElementById('th6');
-  if (todayEl && last7[6]) {
-    const [y, m, d] = last7[6].date.split('-');
-    todayEl.innerHTML = `${parseInt(d)}/${parseInt(m)}<br>วันนี้`;
+  let mapSvg = "";
+  if (S.geo?.features?.length) {
+    const pj = projector(S.geo, 470, 330, 6);
+    mapSvg = S.geo.features.map(f => { const n = f.properties.name_th, v = S.todayRow?.[n], l = v != null ? LV[lvOf(v)] : null, [cx, cy] = pj.centroid(f), [dx, dy] = LABEL_NUDGE[n] || [0, 0];
+      return `<path d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" stroke="#fff" stroke-width="2"/><text x="${cx + dx * 1.15}" y="${cy + dy * 1.15}" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" font-family="IBM Plex Sans Thai">${n}</text>`; }).join("")
+      + S.hsToday.map(f => { const [x, y] = pj.P(f.geometry.coordinates); return `<circle cx="${x}" cy="${y}" r="5" fill="${(CONF[f.properties.confidence] || [0, "#e8192c"])[1]}" stroke="#fff" stroke-width="1.5"/>`; }).join("");
   }
-
-  // สร้างแถว
-  const tbody = document.getElementById('heatmap-body');
-  tbody.innerHTML = pvs.map(pv => {
-    const cells = last7.map((row, i) => {
-      // หา key ตรงกับชื่อจังหวัด
-      const key = Object.keys(row).find(k =>
-        k.trim() === pv.name.trim() || k.includes(pv.name)
-      );
-      const val = key ? row[key] : null;
-      const aqi = (val !== null && val > 0) ? getAQI(val) : null;
-      const bg  = aqi ? aqi.bg  : '#f5f5f5';
-      const fg  = aqi ? aqi.text : '#999';
-      const cls = i === 6 ? ' class="col-today"' : '';
-      const txt = (val !== null && val > 0) ? val.toFixed(1) : '-';
-      return `<td${cls} style="background:${bg};color:${fg};">${txt}</td>`;
-    }).join('');
-    return `<tr><td class="pname">${pv.name}</td>${cells}</tr>`;
-  }).join('');
+  ig.innerHTML = head + `
+  <div class="ig-body">
+    <div class="row1">
+      ${avgBox}
+      <div class="pvs">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null;
+        return `<div style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n">${p.name}${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM2.5</em>${v != null ? f1(v) : "–"}<small> µg/m³</small></span></div>`; }).join("")}</div>
+    </div>
+    ${adviceBox}
+    <div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น<small style="font-family:IBM Plex Sans Thai;font-weight:400;font-size:15px;color:var(--ink-3);margin-left:auto">ผู้ป่วยรายเดือน · ปี 2569 ถึงสัปดาห์ที่ ${S.wkMax} · HDC</small></div>
+    <div class="dzg">${(S.dzData || []).map(o => `<div style="background:linear-gradient(165deg,#fff 15%,${o.d.soft});border-color:color-mix(in srgb,${o.d.c} 25%,#fff)">
+      <div class="dh"><span class="dz-icon" style="background:#fff;color:${o.d.c}">${inl(o.d.icon, 24)}</span><span class="nm">${o.d.label}</span><span class="tt"><b class="num">${fmt(o.t26)}</b><span class="${o.pct > 0 ? "up" : "down"}">${o.pct > 0 ? "▲" : "▼"} ${Math.abs(o.pct).toFixed(1)}% จากปี 2568</span></span></div>
+      <svg viewBox="0 0 470 ${CH}" width="100%">${dzBars(o.d, o.a, o.b, 470, CH, 11)}</svg></div>`).join("")}</div>
+    <div class="dzl"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:#46546a"></i>ปี 2569 (สีตามกลุ่มโรค)</span></div>
+    <div class="row3">
+      <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าย้อนหลัง 7 วัน<small>µg/m³ · จุดความร้อน 24 ชม. ${S.hsToday.length} จุด</small></h4><table class="t7 num">${t7Html(true)}</table></div>
+      <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>ระดับคุณภาพอากาศ<small>µg/m³</small></h4><div class="scalev">${LV.map((l, i) => `<div class="${i === S.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === S.lv ? " · วันนี้" : ""}</b><span class="num">${l.range}</span></div>`).join("")}</div></div>
+    </div>
+    <div style="font-size:15px;color:var(--ink-3)">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
+  </div>
+  <div class="ig-f"><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
 }
-
-/* ════════════════════════════════════════════════════
-   ZOOM HELPERS
-════════════════════════════════════════════════════ */
-function resetChartZoom() {
-  if (chartC) {
-    chartC.resetZoom();
-    const btn = document.getElementById('btn-reset-zoom');
-    if (btn) btn.style.display = 'none';
-  }
-}
-
-
-/* ════════════════════════════════════════════════════
-   LOCK MAP POSITION (Zone E)
-════════════════════════════════════════════════════ */
-async function lockMapPositions() {
-  document.getElementById('fab-popup').classList.remove('open');
-  if (!mapE) { alert('แผนที่ยังโหลดไม่เสร็จ'); return; }
-
-  const c = mapE.getCenter();
-  const payload = {
-    map: {
-      ...DCFG.map,
-      center_lat: +c.lat.toFixed(5),
-      center_lng: +c.lng.toFixed(5),
-      zoom:       mapE.getZoom(),
-    },
-    map_export: {
-      e_lat:  +c.lat.toFixed(5),
-      e_lng:  +c.lng.toFixed(5),
-      e_zoom: mapE.getZoom(),
-    },
-  };
-
+document.getElementById("btnIg").addEventListener("click", async e => {
+  const btn = e.currentTarget, old = btn.innerHTML; btn.disabled = true; btn.textContent = "กำลังสร้างรูป…";
   try {
-    const r = await fetch('/api/admin/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const j = await r.json();
-    if (j.ok) {
-      DCFG.map = payload.map;
-      DCFG.map_export = payload.map_export;
-      const btn = document.getElementById('fab-btn');
-      if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '⋮'; }, 1800); }
-    } else if (r.status === 401) {
-      alert('⚠️ กรุณาเข้าสู่ระบบ Admin ก่อนล็อกตำแหน่งแผนที่\n\nเปิด /admin.html แล้ว login จากนั้นกลับมากดปุ่มนี้อีกครั้ง');
-    } else {
-      alert('❌ บันทึกไม่สำเร็จ: ' + (j.message || 'Unknown error'));
-    }
-  } catch (_) {
-    alert('❌ ไม่สามารถเชื่อมต่อ Server ได้');
-  }
-}
-
-/* ════════════════════════════════════════════════════
-   FAB MENU TOGGLE
-════════════════════════════════════════════════════ */
-function toggleFabMenu() {
-  document.getElementById('fab-popup').classList.toggle('open');
-}
-document.addEventListener('click', e => {
-  if (!document.getElementById('fab-menu').contains(e.target))
-    document.getElementById('fab-popup').classList.remove('open');
+    const size = document.getElementById("igSize").value;
+    await document.fonts.ready; fitInfographic(size);
+    if (typeof html2canvas !== "function") throw new Error("ไม่พบ html2canvas — เปิดหน้านี้ผ่าน server (localhost:3000)");
+    const canvas = await html2canvas(document.getElementById("ig"), { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#ffffff" });
+    const url = canvas.toDataURL("image/png");
+    document.getElementById("mTitle").textContent = "Infographic พร้อมดาวน์โหลด";
+    document.getElementById("mImg").src = url;
+    const a = document.getElementById("mDl"); a.href = url; a.download = `PM25-เขต7-${S.todayRow?.date || "today"}-${size}.png`;
+    document.getElementById("mHint").textContent = `บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" · ขนาด ${canvas.width}×${canvas.height} px ` + (size === "social" ? "(สัดส่วน 4:5 สำหรับโพสต์ Facebook/LINE)" : "(สัดส่วน A4 สำหรับพิมพ์ติดบอร์ด)");
+    document.getElementById("modal").classList.add("on"); document.getElementById("mClose").focus();
+  } catch (err) { alert("สร้าง Infographic ไม่สำเร็จ: " + err.message); }
+  finally { btn.disabled = false; btn.innerHTML = old; }
 });
-
-/* ════════════════════════════════════════════════════
-   PNG EXPORT
-════════════════════════════════════════════════════ */
-async function exportPNG() {
-  document.getElementById('fab-popup').classList.remove('open');
-  const fabBtn = document.getElementById('fab-btn');
-  if (fabBtn) { fabBtn.textContent = '⏳'; fabBtn.disabled = true; }
-
-  window.scrollTo(0, 0);
-
-  // 1. Snap แผนที่ไปตำแหน่งที่ lock ไว้
-  const me = DCFG.map_export || {};
-  if (mapE && me.e_lat && me.e_lng && me.e_zoom) {
-    mapE.setView([me.e_lat, me.e_lng], me.e_zoom, { animate: false });
-  } else if (mapE && _boundsE?.isValid()) {
-    mapE.fitBounds(_boundsE, { padding: [18, 18], animate: false });
-  }
-
-  // 2. วาดแผนที่ลง canvas โดยตรง (bypass translate3d)
-  const mapEl = document.getElementById('map-hotspot');
-  let _mapSaved = null;
-  if (mapEl) {
-    const W = mapEl.offsetWidth, H = mapEl.offsetHeight;
-    const cvs = document.createElement('canvas');
-    cvs.width = W; cvs.height = H;
-    const ctx = cvs.getContext('2d');
-    const r0  = mapEl.getBoundingClientRect();
-
-    mapEl.querySelectorAll('img.leaflet-tile').forEach(img => {
-      if (!img.complete || !img.naturalWidth) return;
-      try {
-        const r = img.getBoundingClientRect();
-        ctx.drawImage(img, r.left - r0.left, r.top - r0.top, r.width, r.height);
-      } catch (_) {}
-    });
-
-    // Leaflet 1.x render CircleMarker เป็น <path> ไม่ใช่ <circle>
-    // → ใช้ latLngToContainerPoint() แทนการ query SVG element
-    if (mapE) {
-      mapE.eachLayer(layer => {
-        if (!(layer instanceof L.CircleMarker)) return;
-        const p  = mapE.latLngToContainerPoint(layer._latlng);
-        const r  = layer.options.radius || 6;
-        ctx.save();
-        ctx.globalAlpha = layer.options.fillOpacity ?? 0.88;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = layer.options.fillColor || '#f07d00';
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = layer.options.color || '#fff';
-        ctx.lineWidth   = layer.options.weight ?? 0.8;
-        ctx.stroke();
-        ctx.restore();
-      });
-    }
-
-    // วาด legend รายจังหวัดลง canvas โดยตรง
-    if (_hotspots.length > 0) {
-      const pvCount = {};
-      _hotspots.forEach(f => {
-        const pv = f.properties.changwat || '?';
-        pvCount[pv] = (pvCount[pv] || 0) + 1;
-      });
-      const pvEntries = Object.entries(pvCount).sort((a, b) => b[1] - a[1]);
-      const lx = 8, ly = 8, lw = 130, lh = 30 + pvEntries.length * 13 + 12;
-      ctx.save();
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.strokeStyle = '#bbb';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.rect(lx, ly, lw, lh);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#111';
-      ctx.font = `bold 9px sans-serif`;
-      ctx.fillText(`Hotspot 24 ชม. (${_hotspots.length} จุด)`, lx + 6, ly + 13);
-      ctx.font = `8px sans-serif`;
-      ctx.fillStyle = '#555';
-      ctx.fillText('แหล่งข้อมูล: GISTDA VIIRS', lx + 6, ly + 24);
-      pvEntries.forEach(([pv, n], i) => {
-        const ty = ly + 35 + i * 13;
-        ctx.fillStyle = '#222';
-        ctx.font = `8.5px sans-serif`;
-        ctx.fillText(pv, lx + 6, ty);
-        ctx.font = `bold 8.5px sans-serif`;
-        ctx.fillText(String(n), lx + lw - 16, ty);
-      });
-      ctx.restore();
-    }
-
-    const snapImg = document.createElement('img');
-    snapImg.src = cvs.toDataURL();
-    snapImg.style.cssText = 'width:100%;height:100%;display:block;';
-    _mapSaved = [...mapEl.childNodes];
-    mapEl.innerHTML = '';
-    mapEl.appendChild(snapImg);
-  }
-
-  // 3. บังคับ A4 layout + ย้าย dashboard → fixed top-left เพื่อ capture ครบ
-  const db = document.getElementById('dashboard');
-  db.classList.add('export-mode');
-  const ds = db.style;
-  const sv = { position: ds.position, top: ds.top, left: ds.left,
-               margin: ds.margin, transform: ds.transform, zIndex: ds.zIndex };
-  ds.position = 'fixed'; ds.top = '0'; ds.left = '0';
-  ds.margin = '0'; ds.transform = 'none'; ds.zIndex = '99999';
-
-  await new Promise(r => setTimeout(r, 120));
-
+// ---------- ภาพสถานการณ์รายจังหวัด (เทมเพลตกราฟิกของ สคร.7 · 1080×1080) ----------
+// templates/<รหัสจังหวัด>-<ระดับ 0–4>.png — เทมเพลตเว้นช่อง "วันที่" และค่าฝุ่นไว้ ส่วนคำแนะนำตามระดับพิมพ์มาในภาพแล้ว
+// ตำแหน่งวัดจากเทมเพลตจริง (ทุกจังหวัดวางเหมือนกัน)
+const CARD = { value: { right: 672, base: 642, maxW: 320 }, unit: { x: 680, y: 560, w: 168, h: 84 }, date: { cx: 868, cy: 404, maxW: 270 } };
+async function provinceCard(pvName) {
+  const pv = PROV.find(p => p.name === pvName), v = S.todayRow?.[pvName];
+  if (v == null) throw new Error("ไม่มีค่าฝุ่นของจังหวัดนี้วันนี้");
+  const img = new Image(); img.src = `templates/${pv.code}-${lvOf(v)}.png`; await img.decode();
+  await Promise.all(["700 160px Anuphan", "700 36px Anuphan"].map(f => document.fonts.load(f)));
+  const c = document.createElement("canvas"); c.width = c.height = 1080;
+  const x = c.getContext("2d"); x.drawImage(img, 0, 0);
+  const at = (i, j) => x.getImageData(i, j, 1, 1).data;
+  // สีพื้นกล่องค่าฝุ่น → ตัวอักษรขาวหรือเข้มตามที่อ่านชัดกว่า (เทมเพลตใช้ขาวทุกสี แต่ขาวบนเหลืองอ่านยาก)
+  const bg = at(850, 600), U = CARD.unit, hex = "#" + [bg[0], bg[1], bg[2]].map(n => n.toString(16).padStart(2, "0")).join("");
+  const inkCss = textOn(hex) === "#fff" ? "#ffffff" : "#2b2100";
+  // เทมเพลตพิมพ์หน่วยเป็น "µm/m³" (ไมโครเมตร) — ทาทับแล้วเขียน µg/m³ (ไมโครกรัม) ที่ถูกต้อง
+  x.fillStyle = hex; x.fillRect(U.x, U.y, U.w, U.h);
+  x.fillStyle = inkCss; x.textAlign = "left"; x.textBaseline = "alphabetic"; x.font = "700 54px Anuphan"; x.fillText("µg/m³", U.x + 9, U.y + 70);
+  // ค่าฝุ่น — ตัวใหญ่ ชิดขวาก่อนหน่วย ย่อลงถ้ายาวเกินช่อง
+  const t = f1(v); let fs = 170;
+  do { x.font = `700 ${fs}px Anuphan`; } while (x.measureText(t).width > CARD.value.maxW && (fs -= 6) > 60);
+  x.textAlign = "right"; x.fillText(t, CARD.value.right, CARD.value.base);
+  // วันที่ในกรอบ "วันที่" — สีเดียวกับเส้นกรอบ
+  const fr = at(1015, 404); x.fillStyle = `rgb(${fr[0]},${fr[1]},${fr[2]})`;
+  const d = new Date(S.todayRow.date + "T00:00:00"), ds = `${d.getDate()} ${TH_MF[d.getMonth()]} ${d.getFullYear() + 543}`;
+  let dfs = 38; do { x.font = `700 ${dfs}px Anuphan`; } while (x.measureText(ds).width > CARD.date.maxW && (dfs -= 2) > 20);
+  x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(ds, CARD.date.cx, CARD.date.cy);
+  return c;
+}
+async function showProvinceCard(pvName, btn) {
+  const old = btn.innerHTML; btn.disabled = true; btn.textContent = "กำลังสร้างภาพ…";
   try {
-    const canvas = await html2canvas(db, {
-      useCORS:     true,
-      allowTaint:  true,
-      logging:     false,
-      scale:       2,
-      width:       794,
-      height:      1123,
-      scrollX:     0,
-      scrollY:     0,
-      windowWidth: 1200,
-      windowHeight:1300,
-    });
-    const d = new Date();
-    const filename = `PM25_ODPC7_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.png`;
-    const dataUrl  = canvas.toDataURL('image/png');
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-      // มือถือ: เปิดรูปใน tab ใหม่ → กด ค้างที่รูป → บันทึก
-      const w = window.open('', '_blank');
-      if (w) {
-        w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          <title>${filename}</title>
-          <style>body{margin:0;background:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px;}
-          img{max-width:100%;height:auto;display:block;box-shadow:0 4px 20px rgba(0,0,0,.5);}
-          p{color:#fff;font-size:13px;font-family:sans-serif;text-align:center;padding:0 16px;}</style></head>
-          <body><p>📥 กด ค้างที่รูป → "บันทึกภาพ" เพื่อดาวน์โหลด</p>
-          <img src="${dataUrl}" alt="${filename}"></body></html>`);
-        w.document.close();
-      } else {
-        alert('กรุณาอนุญาต Pop-up แล้วลองใหม่');
-      }
-    } else {
-      const a = document.createElement('a');
-      a.download = filename;
-      a.href = dataUrl;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  } catch (err) {
-    alert('Export error: ' + err.message);
-  } finally {
-    db.classList.remove('export-mode');
-    ds.position = sv.position; ds.top = sv.top; ds.left = sv.left;
-    ds.margin = sv.margin; ds.transform = sv.transform; ds.zIndex = sv.zIndex;
-    if (mapEl && _mapSaved) {
-      mapEl.innerHTML = '';
-      _mapSaved.forEach(n => mapEl.appendChild(n));
-      if (mapE) setTimeout(() => mapE.invalidateSize({ animate: false }), 100);
-    }
-    if (fabBtn) { fabBtn.textContent = '⋮'; fabBtn.disabled = false; }
-  }
+    const url = (await provinceCard(pvName)).toDataURL("image/png");
+    document.getElementById("mTitle").textContent = `ภาพสถานการณ์ฝุ่น จ.${pvName}`;
+    document.getElementById("mImg").src = url; document.getElementById("mImg").alt = `ภาพสถานการณ์ฝุ่น PM2.5 จังหวัด${pvName}`;
+    const a = document.getElementById("mDl"); a.href = url; a.download = `PM25-${pvName}-${S.todayRow?.date || "today"}.png`;
+    document.getElementById("mHint").textContent = `ขนาด 1080×1080 px สำหรับโพสต์ · ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จาก Air4Thai · บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ"`;
+    document.getElementById("modal").classList.add("on"); document.getElementById("mClose").focus();
+  } catch (err) { alert("สร้างภาพไม่สำเร็จ: " + err.message); }
+  finally { btn.disabled = false; btn.innerHTML = old; }
 }
-
-/* ── Boot ── */
-document.addEventListener('DOMContentLoaded', initDashboard);
-
-/* ════════════════════════════════════════════════════
-   AUTO-REFRESH — ดึงข้อมูลใหม่อัตโนมัติทุก 5 นาที
-════════════════════════════════════════════════════ */
-let _lastConfigStr = '';
-let _lastSheetTs   = 0;   // timestamp ของ sheet-pm25 ที่ดึงมาล่าสุด
-let _refreshing    = false;
-
-function setLive(state) {
-  const dot = document.getElementById('live-dot');
-  const txt = document.getElementById('live-txt');
-  if (!dot || !txt) return;
-  if (state === 'updating') {
-    dot.style.background = '#facc15'; dot.style.boxShadow = '0 0 4px #facc15';
-    txt.textContent = 'กำลังอัพเดท…';
-  } else if (state === 'live') {
-    dot.style.background = '#4ade80'; dot.style.boxShadow = '0 0 4px #4ade80';
-    txt.textContent = 'LIVE';
-  } else {
-    dot.style.background = '#f87171'; dot.style.boxShadow = '0 0 4px #f87171';
-    txt.textContent = 'ออฟไลน์';
-  }
-}
-
-async function autoRefresh() {
-  if (_refreshing) return;
-  _refreshing = true;
-  setLive('updating');
-  try {
-    // ตรวจ config เปลี่ยนไหม (หลังแก้ Admin)
-    const freshCfg    = await fetch('/api/config').then(r => r.json());
-    const freshCfgStr = JSON.stringify(freshCfg);
-    const cfgChanged  = freshCfgStr !== _lastConfigStr;
-    if (cfgChanged) {
-      _lastConfigStr = freshCfgStr;
-      DCFG = freshCfg;
-      applyTheme();
-      applyRecommendations();
-      updateClock();
-    }
-
-    // ตรวจว่า sheet data อัพเดทใหม่ไหม
-    const status = await fetch('/api/data-status').then(r => r.json());
-    const newTs  = status.sheet_pm25 || 0;
-    const dataChanged = newTs > _lastSheetTs;
-    if (dataChanged) _lastSheetTs = newTs;
-
-    if (cfgChanged || dataChanged) {
-      await Promise.all([initZoneB(), initZoneCD(), initZoneF()]);
-    }
-
-    setLive('live');
-  } catch (_) {
-    setLive('offline');
-  } finally {
-    _refreshing = false;
-  }
-}
-
-// โหลด config ครั้งแรกและ sync timestamp
-async function _initLiveStatus() {
-  try {
-    const status = await fetch('/api/data-status').then(r => r.json());
-    _lastSheetTs = status.sheet_pm25 || 0;
-  } catch (_) {}
-}
-
-document.addEventListener('DOMContentLoaded', _initLiveStatus);
-
-// Poll ทุก 5 นาที
-setInterval(autoRefresh, 5 * 60 * 1000);
-
-// ตรวจทันทีเมื่อ tab กลับมา focus
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') autoRefresh();
-});
+document.getElementById("mClose").addEventListener("click", () => document.getElementById("modal").classList.remove("on"));
+document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") e.target.classList.remove("on"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.getElementById("modal").classList.remove("on"); });
 </script>
 </body>
 </html>
