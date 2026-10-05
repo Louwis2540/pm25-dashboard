@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM2.5 เขตสุขภาพที่ 7 — Dashboard v2 (ต้นแบบ)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- html2canvas โหลดแบบ synchronous ตามบทเรียนเดิม (ห้าม async) -->
+<script src="/html2canvas.min.js"></script>
+<style>
+:root{
+  --bg:#f3f6f9; --surface:#ffffff; --subtle:#f7f9fb; --line:#e3e8ef; --line-strong:#cfd7e2;
+  --ink-1:#0f1b2d; --ink-2:#2f3b4e; --ink-3:#4f5b6e;
+  --brand:#0e2a47; --accent:#1c6ed6;
+  --aqi-1:#009ede; --aqi-2:#0e8a00; --aqi-3:#ffd500; --aqi-4:#ff8400; --aqi-5:#d10000;
+  /* หัวกระดาษตามระดับเฉลี่ยของเขต — ค่าเริ่มต้น = ดี (เขียนทับด้วย JS) */
+  --lv:#0e8a00; --lv-soft:#e8f5e4; --lv-tint:#f3faf1; --lv-ink:#0b5e00;
+  /* ซีรีส์จังหวัด (โหมดสว่าง) — ผ่าน validate_palette; สีฟ้า/เหลืองต่ำกว่า 3:1 → มีป้ายท้ายเส้น + ตารางเสมอ */
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --up:#c92a2a; --down:#2b8a3e;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink-1);font-family:"IBM Plex Sans Thai",sans-serif;font-size:14px;line-height:1.6}
+h1,h2,h3,.disp{font-family:"Anuphan",sans-serif;line-height:1.35}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer}
+.ico{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- header: ภาพหัวเดิม + แถบสีตามระดับเฉลี่ยของเขต (แบบอ่อน) ---------- */
+body{background:linear-gradient(180deg,var(--lv-soft) 0,var(--lv-tint) 380px,var(--bg) 900px)}
+.hdr{background:linear-gradient(180deg,var(--lv-soft),var(--lv-tint));border-bottom:4px solid var(--lv)}
+.hdr-banner{max-width:1280px;margin:0 auto;padding:14px 32px 0}
+.hdr-banner img{display:block;width:100%;max-width:794px;height:auto;border-radius:12px;border:1px solid color-mix(in srgb,var(--lv) 25%,#fff)}
+.hdr-in{max-width:1280px;margin:0 auto;padding:12px 32px 14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hdr-in .meta{margin-left:0;width:100%}
+.hdr-in .meta .btns{margin-left:auto;display:flex;gap:8px;align-items:center}
+select.size{font:inherit;border:1px solid var(--line-strong);border-radius:10px;padding:8px 10px;background:#fff;color:var(--ink-1)}
+
+/* ---------- Weather-Station: hero + การ์ดเล็ก + แผงพยากรณ์ ---------- */
+.ws{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.ws-left{display:flex;flex-direction:column;gap:16px;min-width:0}
+.glass{background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.9);border-radius:20px;box-shadow:0 8px 28px rgba(15,27,45,.07);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.wx-hero{display:grid;grid-template-columns:260px minmax(0,1fr) auto;gap:8px 20px;align-items:center;padding:20px 26px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#fff 0%,var(--lv-tint) 55%,var(--lv-soft) 100%)}
+.wx-hero .art{width:260px;height:190px;margin:-10px 0 -10px -10px}
+.wx-hero .loc{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-weight:500;font-size:13.5px}
+.wx-hero .big{font-family:"Anuphan";font-weight:600;font-size:96px;line-height:.95;letter-spacing:-.02em;margin:4px 0}
+.wx-hero .big small{font-size:20px;color:var(--ink-3);font-weight:500;letter-spacing:0;margin-left:6px}
+.wx-hero .cond{font-family:"Anuphan";font-weight:700;font-size:26px;color:var(--lv-ink)}
+.wx-hero .facts{display:flex;flex-direction:column;gap:10px;min-width:210px}
+.fact{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.fact .fi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+.fact b{display:block;font-size:15px;line-height:1.25}
+.fact span{font-size:12px;color:var(--ink-3);line-height:1.3}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tile{padding:14px 14px 12px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(15,27,45,.10)}
+.tile[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:-2px}
+.tile .th{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:.02em}
+.tile .th span{display:flex;align-items:center;gap:6px}
+.ring{position:relative;width:118px;height:118px;margin:6px auto 0}
+.ring svg{width:100%;height:100%}
+.ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .c b{font-family:"Anuphan";font-size:30px;font-weight:700;line-height:1}
+.ring .c span{font-size:11px;color:var(--ink-3)}
+.tile .ft{font-size:12px;text-align:center;margin-top:4px}
+.fc{padding:18px 18px 12px;position:sticky;top:12px}
+.fc h3{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.fc .sub{font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.fc-row{display:grid;grid-template-columns:56px 34px minmax(0,1fr) 38px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.fc-row:first-of-type{border-top:0}
+.fc-row .d{font-weight:600;font-size:13px;line-height:1.2}
+.fc-row .d small{display:block;font-weight:400;color:var(--ink-3);font-size:11px}
+.fc-row svg.mini{width:34px;height:26px}
+.rng{position:relative;height:6px;border-radius:3px;background:#edf1f5}
+.rng b{position:absolute;top:0;bottom:0;border-radius:3px}
+.rng em{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;background:#fff;border:2.5px solid var(--ink-1);transform:translateX(-6px)}
+.fc-row .avg{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.fc-row.now{background:var(--lv-tint);border-radius:12px;margin:0 -8px;padding:8px;border-top-color:transparent}
+.fc-scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);padding:4px 46px 0 98px}
+.logo{width:56px;height:56px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:12px;color:var(--brand);flex:none}
+.hdr h1{font-size:22px;font-weight:700}
+.hdr .sub{color:var(--ink-2);font-size:13px}
+.hdr .meta{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lv-chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--lv);color:var(--lv-ink);border-radius:999px;padding:4px 14px;font-weight:600}
+.lv-chip i{width:10px;height:10px;border-radius:50%;background:var(--lv)}
+.date{font-weight:600}
+.date small{display:block;font-weight:400;color:var(--ink-2);font-size:12px;line-height:1.3}
+/* ป้ายวันที่รายงาน — ต้องเห็นชัดว่าเป็นข้อมูลของวันไหน เวลาอะไร */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rep-date{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--lv);border-radius:14px;padding:6px 8px 6px 6px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.rep-date .cal{width:48px;border-radius:10px;overflow:hidden;text-align:center;border:1.5px solid var(--lv-ink);flex:none;background:#fff}
+.rep-date .cal i{display:block;font-style:normal;background:var(--lv-ink);color:#fff;font-size:12px;font-weight:700;line-height:18px}
+.rep-date .cal em{display:block;font-style:normal;font-family:"Anuphan";font-size:26px;font-weight:700;line-height:32px;color:var(--lv-ink)}
+.rep-date .txt small{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);line-height:1.3}
+.rep-date .txt b{display:block;font-family:"Anuphan";font-size:21px;font-weight:700;color:var(--lv-ink);line-height:1.25}
+.rep-date .t07{display:inline-flex;align-items:center;gap:6px;background:var(--lv-ink);color:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:15.5px;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 16px;border:1px solid var(--line-strong);background:#fff;color:var(--ink-1);font-weight:600}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:1280px;margin:0 auto;padding:24px 32px 40px;display:flex;flex-direction:column;gap:28px}
+
+/* ---------- หัวข้อ section: กรอบ + ไอคอน ---------- */
+.sec-h{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--sec,var(--brand));border-radius:12px;padding:10px 16px;margin-bottom:14px}
+.sec-h .badge{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--sec,var(--brand)) 12%,#fff);color:var(--sec,var(--brand));flex:none}
+.sec-h .badge .ico{width:22px;height:22px}
+.sec-h h2{font-size:19px;font-weight:700}
+.sec-h p{color:var(--ink-3);font-size:12.5px;line-height:1.4}
+.sec-h .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 1px 2px rgba(15,27,45,.04)}
+/* ข้อความรองอ่านง่าย: หนาขึ้น เข้มขึ้น */
+.wx-hero .loc,.fact span,.fc .sub,.fc-row .d small,.tile .ft,.ring .c span,.icd,.dz .lg,.legend,.crumb,.kv .label,.mini7 .c,.muted,.hot-row,.conf,.adv-row .a span{font-weight:600}
+.fact span,.fc .sub,.icd,.dz .lg,.legend{font-size:13px!important;color:var(--ink-2)!important}
+.fc-row .d small,.ring .c span{color:var(--ink-2)!important}
+/* การ์ดมีสีพื้นอ่อนตามสีของหัวข้อ (--sec) — ไม่ขาวโล่ง */
+section[style*="--sec"] .card,section[style*="--sec"] .glass{background:linear-gradient(160deg,color-mix(in srgb,var(--sec) 9%,#fff),color-mix(in srgb,var(--sec) 20%,#fff));border-color:color-mix(in srgb,var(--sec) 30%,#fff)}
+.sec-h{background:linear-gradient(90deg,color-mix(in srgb,var(--sec,var(--brand)) 88%,#000),color-mix(in srgb,var(--sec,var(--brand)) 70%,#fff))!important;border:0!important;border-left:6px solid color-mix(in srgb,var(--sec,var(--brand)) 60%,#000)!important;box-shadow:0 6px 18px color-mix(in srgb,var(--sec,var(--brand)) 25%,transparent)}
+.sec-h h2{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.sec-h p{color:#fff!important;font-size:14px!important;font-weight:600;opacity:.97}
+.sec-h .badge{background:#fff!important;box-shadow:0 2px 6px rgba(15,27,45,.08)}
+section .tile{background:linear-gradient(170deg,color-mix(in srgb,var(--tint,#fff) 45%,#fff),var(--tint,#fff))!important;border-color:color-mix(in srgb,var(--tc,#ccc) 30%,#fff)!important}
+section .dz.card{background:linear-gradient(165deg,color-mix(in srgb,var(--dsoft) 40%,#fff),var(--dsoft) 100%)!important;border-color:color-mix(in srgb,var(--dc) 25%,#fff)!important}
+.kv div,.fact{background:rgba(255,255,255,.7)!important}
+.muted{color:var(--ink-3)}
+.label{font-size:13px;color:var(--ink-2);font-weight:600}
+
+/* ---------- วันนี้ ---------- */
+.today{display:grid;grid-template-columns:330px repeat(4,minmax(0,1fr));gap:14px}
+.hero{padding:20px;background:linear-gradient(160deg,#fff,var(--lv-tint));border-color:color-mix(in srgb,var(--lv) 35%,var(--line))}
+.hero .big{font-family:"Anuphan";font-weight:700;font-size:64px;line-height:1;margin:6px 0 2px}
+.hero .big small{font-size:16px;color:var(--ink-3);font-weight:500;margin-left:4px}
+.hero .lvl{font-family:"Anuphan";font-weight:700;font-size:20px;color:var(--lv-ink)}
+.hero .facts{margin-top:14px;border-top:1px dashed var(--line-strong);padding-top:10px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.hero .facts div{display:flex;justify-content:space-between;gap:8px}
+.hero .facts b{font-weight:600}
+.pv{padding:16px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid var(--line);transition:border-color .15s,box-shadow .15s}
+.pv:hover{border-color:var(--line-strong);box-shadow:0 4px 14px rgba(15,27,45,.08)}
+.pv[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.pv .bar{height:5px;border-radius:3px}
+.pv .name{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:600}
+.pv .v{font-family:"Anuphan";font-size:38px;font-weight:700;line-height:1.1}
+.pv .v small{font-size:13px;color:var(--ink-3);font-weight:500}
+.delta{font-size:12.5px}
+.delta.up{color:var(--up)} .delta.down{color:var(--down)}
+.pv .go{margin-top:auto;font-size:12px;color:var(--accent);font-weight:600}
+
+/* ---------- เจาะลึก ---------- */
+.drill{display:grid;grid-template-columns:420px minmax(0,1fr);gap:14px}
+.drill .mapbox{padding:14px}
+.drill svg path.pv-shape{cursor:pointer;stroke:#fff;stroke-width:1.5;transition:opacity .15s}
+.drill svg path.pv-shape:hover{opacity:.82}
+.drill svg path.pv-shape.sel{stroke:var(--ink-1);stroke-width:2.5}
+.crumb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}
+.crumb button{background:none;border:0;color:var(--accent);font-weight:600;padding:2px 4px;border-radius:6px}
+.crumb button[disabled]{color:var(--ink-1);cursor:default}
+.crumb .sep{color:var(--ink-3)}
+.panel{padding:18px;display:flex;flex-direction:column;gap:14px}
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kv div{background:var(--subtle);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kv b{display:block;font-family:"Anuphan";font-size:22px}
+.pending{border:1.5px dashed var(--line-strong);border-radius:12px;padding:14px 16px;background:var(--subtle);font-size:13px;color:var(--ink-2)}
+.pending code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12px}
+.mini7{display:flex;align-items:flex-end;gap:6px;height:90px}
+.mini7 .c{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--ink-3)}
+.mini7 .c i{width:100%;border-radius:4px 4px 0 0;display:block}
+.mini7 .c b{font-size:11.5px;color:var(--ink-1)}
+
+/* ---------- แนวโน้ม + ตาราง ---------- */
+.trend{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+.chart-card{padding:16px 18px;position:relative}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:16px;height:3px;border-radius:2px}
+.chart-wrap{position:relative;margin-top:8px}
+.chart-wrap svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--line-strong);border-radius:10px;padding:8px 12px;font-size:12.5px;box-shadow:0 8px 24px rgba(15,27,45,.14);opacity:0;transition:opacity .12s;z-index:20;min-width:160px}
+.tip.on{opacity:1}
+.tip .t{color:var(--ink-3);margin-bottom:2px}
+.tip .r{display:flex;justify-content:space-between;gap:14px}
+.tip .r span{display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.tip .r i{width:10px;height:3px;border-radius:2px}
+table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:13px}
+.t7 th{font-weight:500;color:var(--ink-3);font-size:12px;padding:4px 6px;text-align:center}
+.t7 th:first-child,.t7 td:first-child{text-align:left}
+.t7 td{padding:6px;text-align:center;font-weight:600}
+.t7 td.cell{border-radius:6px}
+.t7 td.na{color:var(--ink-3);font-weight:400;font-size:11.5px;background:var(--subtle)}
+.t7 .today-col{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* ---------- Hotspot ---------- */
+.hot{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+#map{height:460px;border-radius:var(--r);border:1px solid var(--line);z-index:0}
+.hot-side{padding:16px;display:flex;flex-direction:column;gap:12px}
+.hot-total{font-family:"Anuphan";font-size:44px;font-weight:700;line-height:1}
+.hot-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}
+.hot-row b{font-variant-numeric:tabular-nums}
+.conf{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-2)}
+.conf span{display:flex;align-items:center;gap:8px}
+.conf i{width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.note-box{background:#fff8e6;border:1px solid #ffe0a3;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#7a5200}
+.leaflet-tooltip.hs-tip{font-family:"IBM Plex Sans Thai",sans-serif;font-size:12px;line-height:1.6;border-radius:10px;padding:8px 10px;border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(15,27,45,.16)}
+.hs-tip b.t{font-size:12.5px}
+.hs-tip hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+
+/* ---------- โรค ---------- */
+.dz-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.dz{padding:16px 18px;display:flex;flex-direction:column;gap:6px;position:relative}
+.dz-top{display:flex;align-items:center;gap:12px}
+.dz-icon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex:none}
+.dz-icon svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dz h3{font-size:16px;font-weight:700}
+.dz .icd{font-size:12px;color:var(--ink-3)}
+.dz .tot{margin-left:auto;text-align:right}
+.dz .tot b{font-family:"Anuphan";font-size:28px;font-weight:700;display:block;line-height:1.1}
+.dz svg.bars{width:100%;height:auto;display:block;margin-top:6px}
+.dz .lg{display:flex;gap:16px;font-size:12px;color:var(--ink-2)}
+.dz .lg span{display:flex;align-items:center;gap:6px}
+.dz .lg i{width:12px;height:12px;border-radius:3px}
+
+/* ---------- คำแนะนำ ---------- */
+.adv-now{display:grid;grid-template-columns:260px minmax(0,1fr) minmax(0,1fr);gap:0;overflow:hidden;border:2px solid var(--lv)}
+.adv-now .lvbox{background:linear-gradient(160deg,var(--lv),var(--lv-ink));color:#fff;padding:22px;display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:center;text-align:center;font-weight:600}
+.adv-now .lvbox .face{font-size:44px;line-height:1}
+.adv-now .lvbox b{font-family:"Anuphan";font-size:32px;font-weight:700;color:#fff}
+.adv-now .lvbox .face{font-size:56px!important}
+.adv-now .who{padding:20px 22px;display:flex;flex-direction:column;gap:8px;border-left:1px solid var(--line)}
+.adv-now .who h3{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:700;color:var(--lv-ink)}
+.adv-now .who h3 span{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--lv-soft);color:var(--lv-ink)}
+.dos{display:flex;flex-direction:column;gap:8px}
+.do{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid color-mix(in srgb,var(--lv) 30%,#fff);border-left:5px solid var(--lv);border-radius:12px;padding:10px 14px;font-size:18px;font-weight:600;line-height:1.45;color:var(--ink-1)}
+.do span{width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--lv-soft);color:var(--lv-ink)}
+.do .ico{width:22px;height:22px}
+.adv-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}
+.adv-row .a{padding:10px 12px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:12.5px;display:flex;flex-direction:column;gap:2px}
+.adv-row .a b{display:flex;align-items:center;gap:6px;font-size:13px}
+.adv-row .a b i{width:10px;height:10px;border-radius:50%}
+.adv-row .a.cur{border:2px solid var(--lv);background:var(--lv-tint)}
+.foot-note{font-size:12px;color:var(--ink-3);margin-top:8px}
+
+footer{max-width:1280px;margin:0 auto;padding:0 32px 32px;color:var(--ink-3);font-size:12.5px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* ---------- modal ดาวน์โหลด ---------- */
+.modal{position:fixed;inset:0;background:rgba(15,27,45,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal.on{display:flex}
+.modal .box{background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.modal .bar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.modal .bar h3{font-size:16px;margin-right:auto}
+.modal .img{overflow:auto;background:var(--bg);padding:16px;text-align:center}
+.modal .img img{max-width:100%;box-shadow:0 6px 24px rgba(0,0,0,.15)}
+.modal .hint{font-size:12px;color:var(--ink-3);padding:8px 16px}
+
+/* ================= INFOGRAPHIC (สำหรับ export เท่านั้น 1080×1528 ≈ A4) ================= */
+#ig-holder{position:absolute;left:-20000px;top:0}
+#ig{width:1080px;height:1528px;background:#fff;font-family:"IBM Plex Sans Thai",sans-serif;color:var(--ink-1);display:flex;flex-direction:column;overflow:hidden}
+#ig .ig-h{background:linear-gradient(180deg,var(--lv-soft),var(--lv-tint));border-bottom:8px solid var(--lv);padding:30px 44px 26px;display:flex;align-items:center;gap:20px}
+#ig .ig-h .logo{width:72px;height:72px;font-size:15px}
+#ig .ig-h h1{font-size:34px;font-weight:700;line-height:1.25}
+#ig .ig-h p{font-size:17px;color:var(--ink-2)}
+#ig .ig-body{padding:26px 44px 0;display:flex;flex-direction:column;gap:20px;flex:1}
+#ig .ig-sec{display:flex;align-items:center;gap:10px;font-family:"Anuphan";font-weight:700;font-size:21px;color:#fff;background:linear-gradient(90deg,var(--lv-ink),color-mix(in srgb,var(--lv) 75%,#fff));border-radius:12px;padding:6px 14px 6px 8px}
+#ig .ig-sec small{color:#fff!important;font-weight:600!important;font-size:16px!important}
+#ig .box h4 small,#ig .avg .k,#ig .dzl,#ig .scalev span,#ig .t7 th{font-weight:600;color:var(--ink-2)!important}
+#ig .box h4 small{font-size:15px!important}
+#ig .ig-sec span{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#fff;color:var(--lv-ink)}
+#ig .ig-sec .ico{width:20px;height:20px}
+#ig .row1{display:grid;grid-template-columns:480px 1fr;gap:18px}
+#ig .avg{border:3px solid var(--lv);border-radius:20px;padding:20px 24px;background:var(--lv-tint);display:flex;flex-direction:column;justify-content:center}
+#ig .avg .k{font-size:18px;color:var(--ink-2)}
+#ig .avg .v{font-family:"Anuphan";font-weight:700;font-size:84px;line-height:1}
+#ig.social .avg .v{font-size:110px}
+#ig .avg .v small{font-size:22px;color:var(--ink-3)}
+#ig .avg .l{font-family:"Anuphan";font-weight:700;font-size:30px;color:var(--lv-ink)}
+#ig .pvs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#ig .pvs div{border:1px solid var(--line);border-radius:16px;padding:12px 16px;display:flex;flex-direction:column}
+#ig .pvs .n{font-size:18px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+#ig .pvs .x{font-family:"Anuphan";font-size:46px;font-weight:700;line-height:1.1}
+#ig .pvs .x small{font-size:16px;color:var(--ink-3)}
+#ig .advice{border-radius:20px;border:3px solid var(--lv);overflow:hidden;display:grid;grid-template-columns:200px 1fr 1fr}
+#ig .advice .lv{background:var(--lv);color:#fff;padding:18px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px}
+#ig .advice .lv .f{font-size:56px;line-height:1}
+#ig .advice .lv b{font-family:"Anuphan";font-size:24px}
+#ig .advice .w{padding:20px 22px;font-size:21px;line-height:1.55}
+#ig .advice .w + .w{border-left:1px solid var(--line)}
+#ig .advice .w h4{font-family:"Anuphan";font-size:24px;margin-bottom:8px;color:var(--lv-ink);display:flex;align-items:center;gap:8px}
+#ig .advice .w{display:flex;flex-direction:column;gap:8px}
+#ig .advice .w h4{margin-bottom:2px}
+#ig .do{font-size:21px;padding:8px 12px}
+#ig:not(.social) .do{font-size:19px;padding:6px 10px}
+#ig .do span{width:38px;height:38px}
+#ig .advice .lv{background:linear-gradient(160deg,var(--lv),var(--lv-ink))!important}
+#ig .advice .lv b{font-size:30px!important}
+#ig .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+#ig .scale div{border-radius:12px;padding:10px 12px;font-size:15px;line-height:1.35;border:2px solid transparent}
+#ig .scale b{font-family:"Anuphan";font-size:18px;display:block}
+#ig .scale .cur{border-color:var(--ink-1);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+#ig:not(.social) .ig-body{gap:12px;padding-top:16px}
+#ig:not(.social) .avg .v{font-size:72px}
+#ig:not(.social) .pvs .x{font-size:38px}
+#ig:not(.social) .pvs div{padding:8px 14px}
+#ig:not(.social) .advice .w{font-size:19px;padding:14px 18px}
+#ig:not(.social) .advice .w h4{font-size:21px;margin-bottom:4px}
+#ig:not(.social) .advice .lv .f{font-size:46px}
+#ig:not(.social) .ig-date{padding:8px 44px;font-size:18px}
+#ig:not(.social) .ig-date .d b{font-size:24px}
+#ig:not(.social) .ig-date .d em{font-size:19px}
+#ig:not(.social) .t7 td{padding:4px 6px}
+#ig:not(.social) .scalev div{padding:4px 12px}
+#ig:not(.social) .ig-f{padding:12px 44px}
+/* ขั้นย่อ (data-dense) */
+#ig[data-dense="1"] .ig-body{gap:10px}
+#ig[data-dense="1"] .avg .wart{width:120px;height:88px}
+#ig[data-dense="1"].social .facts3{display:none}
+#ig[data-dense="2"] .ig-body,#ig[data-dense="3"] .ig-body{gap:8px;padding-top:12px}
+#ig[data-dense="2"] .do,#ig[data-dense="3"] .do{padding:4px 10px}
+#ig[data-dense="2"] .advice .w,#ig[data-dense="3"] .advice .w{padding:10px 14px;gap:6px}
+#ig[data-dense="2"] .dzl,#ig[data-dense="3"] .dzl{display:none}
+#ig[data-dense="2"] .t7 td,#ig[data-dense="3"] .t7 td{padding:2px 6px}
+#ig[data-dense="2"] .scalev div,#ig[data-dense="3"] .scalev div{padding:2px 10px}
+#ig[data-dense="2"].social .facts3,#ig[data-dense="3"].social .facts3{display:none}
+#ig[data-dense="3"] .avg .v{font-size:60px!important}
+#ig[data-dense="3"] .pvs .x,#ig[data-dense="3"] .pvrow .x{font-size:32px!important}
+#ig[data-dense="3"] .do{font-size:17px!important}
+#ig .row3{display:grid;grid-template-columns:1.45fr 1fr;gap:18px}
+#ig .dzg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#ig .dzg>div{border:1px solid var(--line);border-radius:18px;padding:10px 14px 4px}
+#ig .dh{display:flex;align-items:center;gap:10px}
+#ig .dh .dz-icon{width:40px;height:40px;border-radius:12px}
+#ig .dh .nm{font-family:Anuphan;font-weight:700;font-size:18px}
+#ig .dh .tt{margin-left:auto;text-align:right;line-height:1.15}
+#ig .dh .tt b{font-family:Anuphan;font-size:26px;display:block}
+#ig .dh .tt span{font-size:13px}
+#ig .up{color:var(--up)} #ig .down{color:var(--down)}
+#ig .dzl{display:flex;gap:18px;font-size:14px;color:var(--ink-2);margin-top:-8px}
+#ig .dzl span{display:flex;align-items:center;gap:6px}
+#ig .dzl i{width:14px;height:14px;border-radius:3px}
+#ig .scalev{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+#ig .scalev div{display:flex;justify-content:space-between;align-items:center;border-radius:10px;padding:6px 12px;font-size:15px;border:2px solid transparent}
+#ig .scalev .cur{border-color:var(--ink-1)}
+#ig .scalev b{font-family:Anuphan;font-size:16px}
+#ig .box{border:1px solid var(--line);border-radius:18px;padding:12px 16px}
+#ig .box h4{font-family:"Anuphan";font-size:19px;display:flex;justify-content:space-between;align-items:baseline}
+#ig .box h4 small{font-family:"IBM Plex Sans Thai";font-size:14px;color:var(--ink-3);font-weight:400}
+#ig .dzs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+#ig .dzs div{display:flex;align-items:center;gap:10px;background:var(--subtle);border-radius:12px;padding:10px}
+#ig .dzs .dz-icon{width:42px;height:42px}
+#ig .dzs b{font-family:"Anuphan";font-size:24px;display:block;line-height:1.1}
+#ig .dzs span{font-size:14px;color:var(--ink-2);line-height:1.3}
+#ig .t7 {font-size:15px}
+#ig.social{height:1350px}
+#ig .ig-banner{border-bottom:8px solid var(--lv);background:var(--lv-soft)}
+#ig .ig-banner img{display:block;width:100%;height:auto;aspect-ratio:794/100}
+#ig .ig-date{display:flex;justify-content:space-between;align-items:center;padding:12px 44px;background:linear-gradient(90deg,var(--lv-soft),var(--lv-tint));font-size:19px;font-weight:600}
+#ig .ig-date .d{display:flex;align-items:center;gap:12px}
+#ig .ig-date .d b{font-family:"Anuphan";font-size:27px;font-weight:700;color:var(--lv-ink)}
+#ig .ig-date .d em{font-style:normal;background:var(--lv-ink);color:#fff;border-radius:999px;padding:3px 16px;font-size:21px;font-weight:700;white-space:nowrap}
+#ig .avg{flex-direction:row;align-items:center;gap:6px;padding:12px 18px}
+#ig .avg .wart{flex:none}
+#ig .pvrow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+#ig .facts3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#ig .facts3 div{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:var(--subtle)}
+#ig .facts3 .fi{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:none}
+#ig .facts3 b{font-family:"Anuphan";font-size:24px;display:block;line-height:1.2}
+#ig .facts3 span.k{font-size:15px;color:var(--ink-2)}
+#ig.social .advice .w{font-size:23px}
+#ig.social .advice .w h4{font-size:26px}
+#ig .pvrow div{border:1px solid var(--line);border-radius:16px;padding:10px 14px;text-align:center}
+#ig .pvrow .n{font-size:18px;font-weight:600}
+#ig .pvrow .x{font-family:"Anuphan";font-size:44px;font-weight:700;line-height:1.3;display:block;margin-bottom:4px}
+#ig .ig-f{margin-top:auto;padding:16px 44px;background:var(--subtle);border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:14px;color:var(--ink-2);gap:20px}
+
+@media (max-width:1100px){
+  .ws{grid-template-columns:1fr}
+  .fc{position:static}
+  .wx-hero{grid-template-columns:200px minmax(0,1fr)}
+  .wx-hero .art{width:200px;height:146px}
+  .wx-hero .facts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .today{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hero{grid-column:1/-1}
+  .drill,.trend,.hot{grid-template-columns:1fr}
+  .adv-now{grid-template-columns:1fr}
+  .adv-now .who{border-left:0;border-top:1px solid var(--line)}
+  .adv-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:680px){
+  .wx-hero{grid-template-columns:1fr;text-align:center}
+  .wx-hero .art{margin:0 auto}
+  .wx-hero .loc{justify-content:center}
+  .wx-hero .big{font-size:72px}
+  .hdr-in .meta .btns{margin-left:0;flex-wrap:wrap}
+  .hdr-in,.wrap{padding-left:16px;padding-right:16px}
+  .hdr .meta{margin-left:0}
+  .today,.dz-grid{grid-template-columns:1fr}
+  .kv{grid-template-columns:1fr 1fr}
+  .adv-row{grid-template-columns:1fr 1fr}
+  #map{height:360px}
+}
+</style>
+</head>
+<body>
+
+<!-- ไอคอนใช้ซ้ำ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4"/><path d="M3.3 17a9 9 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.5"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"/></symbol>
+    <symbol id="i-steth" viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="11" r="2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5A5 5 0 0 1 21 19"/></symbol>
+    <symbol id="i-heartp" viewBox="0 0 24 24"><path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.7-7 10-7 10z"/><path d="M12 10v5M9.5 12.5h5"/></symbol>
+    <!-- ไอคอนการปฏิบัติตัว -->
+    <symbol id="a-mask" viewBox="0 0 24 24"><path d="M4 9c3-2 13-2 16 0v4c0 3-4 6-8 6s-8-3-8-6z"/><path d="M4 10H2.5a1.5 1.5 0 0 0 0 3H4M20 10h1.5a1.5 1.5 0 0 1 0 3H20"/><path d="M8 12h8M8.5 15h7"/></symbol>
+    <symbol id="a-run" viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="2"/><path d="M8 21l3-6 3 2v4"/><path d="M6 12l3-4h5l2 3 3 1"/><path d="M11 8l-1 5 4 2"/></symbol>
+    <symbol id="a-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></symbol>
+    <symbol id="a-doc" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M12 10.5v6M9 13.5h6"/></symbol>
+    <symbol id="a-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="a-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></symbol>
+    <symbol id="a-dust" viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h7"/></symbol>
+    <!-- ไอคอนกลุ่มโรค -->
+    <symbol id="d-lung" viewBox="0 0 24 24"><path d="M12 4v8"/><path d="M12 12c-1.5 0-2-1-3-1"/><path d="M12 12c1.5 0 2-1 3-1"/><path d="M9 7.5C7 6.5 3 9 3 15c0 3 1.5 4.5 3.5 4.5S10 18 10 15V9"/><path d="M15 7.5c2-1 6 1.5 6 7.5 0 3-1.5 4.5-3.5 4.5S14 18 14 15V9"/></symbol>
+    <symbol id="d-heart" viewBox="0 0 24 24"><path d="M12 20s-8-4.6-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.4 12 20 12 20z"/><path d="M4.5 12h4l1.5-3 2.5 6 1.5-3h5.5"/></symbol>
+    <symbol id="d-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M18 3l-1.5 2.5M12 2v2.5M6 3l1.5 2.5"/></symbol>
+    <symbol id="d-skin" viewBox="0 0 24 24"><path d="M7 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M10 9V4a1.5 1.5 0 0 1 3 0v5"/><path d="M13 9.5V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M16 9.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-5-2.7L4 14.5a1.6 1.6 0 0 1 2.6-1.8L8 14"/><circle cx="11.5" cy="16" r=".6"/><circle cx="14.5" cy="14" r=".6"/></symbol>
+  </defs>
+</svg>
+
+<header class="hdr">
+  <!-- ภาพหัวเดิม (header.png 794×100) — ถ้าโหลดไม่ได้ซ่อนไป แล้วใช้หัวข้อตัวอักษรแทน -->
+  <div class="hdr-banner"><img src="/header.png" alt="รายงานสถานการณ์ละอองฝุ่นขนาดเล็ก PM2.5 เขตสุขภาพที่ 7 · กรมควบคุมโรค" onerror="this.parentElement.style.display='none';document.getElementById('hdrText').hidden=false"></div>
+  <div class="hdr-in">
+    <div id="hdrText" hidden><h1>รายงานสถานการณ์ฝุ่นละออง PM2.5 เขตสุขภาพที่ 7</h1><div class="sub">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</div></div>
+    <div class="meta">
+      <span class="lv-chip" id="hdrChip"><i></i>กำลังโหลด…</span>
+      <div class="date" id="hdrDate">–</div>
+      <div class="btns">
+        <label class="sr-only" for="igSize">ขนาดรูป</label>
+        <select class="size" id="igSize">
+          <option value="a4">A4 · พิมพ์ติดบอร์ด</option>
+          <option value="social">1080×1350 · โพสต์ Facebook/LINE</option>
+        </select>
+        <button class="btn primary" id="btnIg"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลด Infographic</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 1) วันนี้ — สไตล์ Weather Station -->
+  <section style="--sec:var(--lv-ink)">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-gauge"/></svg></div>
+      <div><h2>สถานการณ์ฝุ่นวันนี้</h2><p id="todaySub">ค่า PM2.5 รายจังหวัด · µg/m³</p></div></div>
+    <div class="ws">
+      <div class="ws-left">
+        <div class="glass wx-hero" id="hero"></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <aside class="glass fc" id="forecast" aria-label="ค่าย้อนหลัง 7 วัน"></aside>
+    </div>
+  </section>
+
+  <!-- 2) เจาะลึก (เฉพาะหน้าเว็บ) -->
+  <section style="--sec:#1c6ed6">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-layers"/></svg></div>
+      <div><h2>เจาะลึกรายพื้นที่</h2><p>คลิกจังหวัดบนแผนที่หรือการ์ด เพื่อดูรายละเอียด → อำเภอ → ตำบล</p></div></div>
+    <div class="drill">
+      <div class="card mapbox"><svg id="drillMap" viewBox="0 0 400 290" role="img" aria-label="แผนที่ 4 จังหวัด คลิกเพื่อเลือก"></svg>
+        <div class="legend" style="justify-content:center;margin-top:6px" id="aqiLegend"></div></div>
+      <div class="card panel" id="drillPanel"></div>
+    </div>
+  </section>
+
+  <!-- 3) แนวโน้ม -->
+  <section style="--sec:#7048e8">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-chart"/></svg></div>
+      <div><h2>แนวโน้มค่าฝุ่น</h2><p>ค่าเฉลี่ยรายสัปดาห์ และค่าย้อนหลัง 7 วัน</p></div></div>
+    <div class="trend">
+      <div class="card chart-card">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div class="label" id="trendSub"></div><div class="legend" id="legend"></div></div>
+        <div class="chart-wrap" id="cw"><svg id="chart" viewBox="0 0 760 300" role="img" aria-label="กราฟเส้นค่าเฉลี่ยรายสัปดาห์ 4 จังหวัด"></svg><div class="tip" id="tip"></div></div>
+      </div>
+      <div class="card chart-card"><div class="label">ค่าย้อนหลัง 7 วัน · µg/m³</div><table class="t7 num" id="t7"></table></div>
+    </div>
+  </section>
+
+  <!-- 4) Hotspot -->
+  <section style="--sec:#e8590c">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-fire"/></svg></div>
+      <div><h2>จุดความร้อน (Hotspot) 4 จังหวัด</h2><p>ดาวเทียม VIIRS ผ่าน GISTDA · ย้อนหลัง 24 ชม. · ชี้ที่จุดเพื่อดูรายละเอียด</p></div></div>
+    <div class="hot">
+      <div id="map"></div>
+      <div class="card hot-side" id="hotSide"></div>
+    </div>
+  </section>
+
+  <!-- 5) โรค -->
+  <section style="--sec:#c2255c">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-steth"/></svg></div>
+      <div><h2>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น</h2><p id="dzSub">ผู้ป่วยรายเดือน เทียบปี 2568 กับ 2569</p></div></div>
+    <div class="dz-grid" id="dz"></div>
+  </section>
+
+  <!-- 6) คำแนะนำ -->
+  <section style="--sec:var(--lv-ink)">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-shield"/></svg></div>
+      <div><h2>คำแนะนำการปฏิบัติตัววันนี้</h2><p>ตามระดับคุณภาพอากาศเฉลี่ยของเขตสุขภาพที่ 7</p></div></div>
+    <div class="card adv-now" id="advNow"></div>
+    <div class="adv-row" id="advRow"></div>
+    <div class="foot-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
+  </section>
+</main>
+<footer><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span>กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม สคร.7 ขอนแก่น · Dev: วัฒนพงษ์ พลแสน</span></footer>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="box">
+    <div class="bar"><h3 id="mTitle">Infographic พร้อมดาวน์โหลด</h3><a class="btn primary" id="mDl" download><svg class="ico"><use href="#i-down"/></svg>บันทึกรูป</a><button class="btn" id="mClose">ปิด</button></div>
+    <div class="hint" id="mHint"></div>
+    <div class="img"><img id="mImg" alt="Infographic สถานการณ์ PM2.5 เขตสุขภาพที่ 7"></div>
+  </div>
+</div>
+
+<div id="ig-holder"><div id="ig"></div></div>
+
+<script>
+/* ===================================================================
+   ต้นแบบ Dashboard v2 — ดึงข้อมูลสดจาก API เดียวกับหน้าเว็บจริง
+   เปิดผ่าน server (http://localhost:3000/design-preview/dashboard-v2.html)
+   ถ้าเปิดเป็นไฟล์ตรงๆ จะดึงจาก Render แทน
+=================================================================== */
+const API = location.protocol === "file:" ? "https://pm25-dashboard-ex8l.onrender.com" : "";
+const PROV = [
+  { name: "ขอนแก่น",   code: 40, color: "#2a78d6" },
+  { name: "มหาสารคาม", code: 44, color: "#eb6834" },
+  { name: "ร้อยเอ็ด",   code: 45, color: "#1baf7a" },
+  { name: "กาฬสินธุ์",  code: 46, color: "#eda100" },
+];
+// ระดับ AQI ไทย + สีหัวกระดาษแบบอ่อน + คำแนะนำ (ข้อความเดียวกับรายงาน LINE OA)
+const LV = [
+  { max: 15,  name: "ดีมาก", range: "0 – 15", c: "#009ede", soft: "#e2f3fb", tint: "#f2fafd", ink: "#00618c", face: "😊",
+    pub: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"], risk: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"] },
+  { max: 25,  name: "ดี", range: "16 – 25", c: "#0e8a00", soft: "#e6f4e2", tint: "#f4faf2", ink: "#0b5e00", face: "🙂",
+    pub: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"], risk: ["ควรเฝ้าระวังสุขภาพ", "ถ้ามีอาการเบื้องต้น ควรลดระยะเวลาทำกิจกรรมกลางแจ้ง"] },
+  { max: 37.5,name: "ปานกลาง", range: "26 – 37.5", c: "#e0b800", soft: "#fff6cc", tint: "#fffbe8", ink: "#7a5c00", face: "😐",
+    pub: ["เลี่ยงออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"],
+    risk: ["ลดเวลาออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้งเมื่ออยู่กลางแจ้ง", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"] },
+  { max: 75,  name: "เริ่มมีผลต่อสุขภาพ", range: "37.6 – 75", c: "#ff8400", soft: "#ffead3", tint: "#fff6ec", ink: "#8a4300", face: "😷",
+    pub: ["ลดเวลาออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้งเมื่ออยู่กลางแจ้ง", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"],
+    risk: ["จำกัดเวลาออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้ง อยู่ในห้องปลอดฝุ่น", "ลดกิจกรรมที่ก่อฝุ่นในบ้าน", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"] },
+  { max: 1e9, name: "มีผลต่อสุขภาพ", range: "มากกว่า 75", c: "#d10000", soft: "#fde0e0", tint: "#fef3f3", ink: "#9b0000", face: "🚨",
+    pub: ["งดออกกำลังกายกลางแจ้ง / งานที่ใช้แรงมาก", "สวมหน้ากากทุกครั้งเมื่ออยู่กลางแจ้ง", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"],
+    risk: ["งดกิจกรรมกลางแจ้ง อยู่ในห้องปลอดฝุ่น", "ลดกิจกรรมที่ก่อฝุ่นในบ้าน", "หากมีอาการผิดปกติ ให้รีบไปพบแพทย์"] },
+];
+const DZ = [
+  { key: "ทางเดินหายใจ", label: "ระบบทางเดินหายใจ", icd: "J44, J45 และกลุ่มที่เกี่ยวข้อง", icon: "d-lung",  c: "#1c6ed6", soft: "#e7f0fc" },
+  { key: "หัวใจ",        label: "ระบบหัวใจและหลอดเลือด", icd: "I20–I25", icon: "d-heart", c: "#d6336c", soft: "#fce8ef" },
+  { key: "ตาอักเสบ",     label: "เยื่อบุตาอักเสบ", icd: "H10", icon: "d-eye",   c: "#0c8599", soft: "#e3f5f8" },
+  { key: "ผิวหนัง",      label: "ผิวหนังอักเสบ", icd: "L30.9, L50", icon: "d-skin",  c: "#e8590c", soft: "#fdeee5" },
+];
+const TH_M = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const TH_DS = ["อา.","จ.","อ.","พ.","พฤ.","ศ.","ส."];
+const TH_D = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+const TH_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+// ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. ณ 07:00 (ดู plan07Row_ ใน tools/line_report.gs)
+const REPORT_TIME = "07.00 น.";
+const r1 = x => Math.round(x * 10 + 1e-9) / 10;          // ปัดแบบปกติ (21.35 → 21.4)
+const f1 = x => r1(x).toFixed(1);
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const lvOf = v => LV.findIndex(l => v <= l.max);
+const thDate = iso => { const d = new Date(iso + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]}`; };
+const thFull = iso => { const d = new Date(iso + "T00:00:00"); return `วัน${TH_D[d.getDay()]}ที่ ${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; };
+const thLong = iso => { const d = new Date(iso + "T00:00:00"); return `วัน${TH_D[d.getDay()]}ที่ ${d.getDate()} ${TH_MF[d.getMonth()]} ${d.getFullYear() + 543}`; };
+const clockSvg = s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3.5 2"/></svg>`;
+const getJSON = p => fetch(API + p).then(r => r.ok ? r.json() : null).catch(() => null);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+const S = {};   // state กลาง
+
+(async function init() {
+  const [pm, dz, hs, geo] = await Promise.all([getJSON("/api/sheet-pm25"), getJSON("/api/sheet-disease"), getJSON("/api/hotspot"), getJSON("/api/provinces-geojson")]);
+  S.pm = pm; S.dz = dz; S.geo = geo;
+  // ---- วันนี้ / เมื่อวาน จาก last7 (แถวล่าสุดที่มีค่า) ----
+  const rows = (pm?.last7 || []).filter(r => PROV.some(p => r[p.name] != null));
+  S.todayRow = rows.at(-1); S.prevRow = rows.at(-2);
+  S.last7 = pm?.last7 || [];
+  const vals = PROV.map(p => S.todayRow?.[p.name]).filter(v => v != null);
+  S.avg = vals.length ? r1(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  const pv = PROV.map(p => S.prevRow?.[p.name]).filter(v => v != null);
+  S.prevAvg = pv.length ? r1(pv.reduce((a, b) => a + b, 0) / pv.length) : null;
+  S.lv = S.avg == null ? 1 : lvOf(S.avg);
+  // ---- hotspot: กรองเฉพาะ 4 จังหวัด ----
+  const names = new Set(PROV.map(p => p.name));
+  S.hsToday = (hs?.geojson?.features || []).filter(f => names.has(f.properties.changwat));
+  S.hsOk = !!hs?.ok;
+
+  applyTheme(); renderHeader(); renderToday(); renderDrill(PROV[0].name); renderTrend(); renderT7(); renderHotspot(S.hsToday, false); renderDisease(); renderAdvice();
+  // #ig-preview = แสดงหน้า infographic ทับด้านบน ใช้ตรวจเลย์เอาต์ (headless screenshot)
+  const lvO = /lv=(\d)/.exec(location.hash); if (lvO) { S.lv = +lvO[1]; applyTheme(); renderAdvice(); }
+  if (location.hash.startsWith("#ig-preview")) { fitInfographic(location.hash.includes("social") ? "social" : "a4"); document.getElementById("ig-holder").style.cssText = "position:absolute;left:0;top:0;z-index:5000"; }
+})();
+
+// ---------- ธีมหัวกระดาษตามระดับเฉลี่ย ----------
+function applyTheme() {
+  const L = LV[S.lv], st = document.documentElement.style;
+  st.setProperty("--lv", L.c); st.setProperty("--lv-soft", L.soft); st.setProperty("--lv-tint", L.tint); st.setProperty("--lv-ink", L.ink);
+}
+function renderHeader() {
+  const L = LV[S.lv];
+  document.getElementById("hdrChip").innerHTML = `<i></i>ภาพรวมเขต: ${L.name}${S.avg != null ? ` · ${f1(S.avg)} µg/m³` : ""}`;
+  if (S.todayRow) {
+    const d = new Date(S.todayRow.date + "T00:00:00");
+    document.getElementById("hdrDate").innerHTML =
+      `<div class="rep-date"><span class="cal"><i>${TH_M[d.getMonth()]}</i><em>${d.getDate()}</em></span>` +
+      `<span class="txt"><small>รายงานข้อมูลประจำ</small><b>${thLong(S.todayRow.date)}</b></span>` +
+      `<span class="t07">${clockSvg(16)} ณ เวลา ${REPORT_TIME}</span></div>`;
+  } else {
+    document.getElementById("hdrDate").textContent = "ไม่มีข้อมูล";
+  }
+  document.getElementById("todaySub").textContent = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · µg/m³ · เทียบกับวันก่อนหน้า` + (S.prevRow ? ` (${thDate(S.prevRow.date)})` : "");
+}
+
+// ---------- ภาพท้องฟ้า 3D ตามระดับฝุ่น (วาดเอง ไม่ใช้ภาพจากต้นแบบ) ----------
+let ART_N = 0;
+function weatherArt(lv, w = 260, h = 190) {
+  const u = "a" + (++ART_N);
+  const cloud = (x, y, s, fill, op = 1) => `<g transform="translate(${x} ${y}) scale(${s})" opacity="${op}">
+      <ellipse cx="0" cy="58" rx="92" ry="10" fill="#0f1b2d" opacity=".08"/>
+      <path d="M-78 40a30 30 0 0 1 14-56 42 42 0 0 1 78-14 34 34 0 0 1 58 22 26 26 0 0 1 6 48z" fill="url(#${fill})"/>
+      <path d="M-60 6a22 22 0 0 1 22-10" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity=".7"/></g>`;
+  const sun = (x, y, r, op = 1) => `<g opacity="${op}"><circle cx="${x}" cy="${y}" r="${r * 1.6}" fill="url(#${u}g)"/><circle cx="${x}" cy="${y}" r="${r}" fill="url(#${u}s)"/>
+      <ellipse cx="${x - r * .35}" cy="${y - r * .4}" rx="${r * .35}" ry="${r * .22}" fill="#fff" opacity=".55"/></g>`;
+  const dots = (n, c, seed) => Array.from({ length: n }, (_, i) => { const a = (i * 97 + seed) % 360, rr = 30 + (i * 37 % 70);
+      return `<circle cx="${130 + Math.cos(a) * rr * 1.4}" cy="${100 + Math.sin(a) * rr * .7}" r="${2 + (i % 3)}" fill="${c}" opacity=".55"/>`; }).join("");
+  const haze = op => [0, 1, 2].map(i => `<rect x="${40 + i * 18}" y="${132 + i * 14}" width="${170 - i * 30}" height="6" rx="3" fill="#b9b2a6" opacity="${op}"/>`).join("");
+  const body = [
+    sun(150, 82, 52) + cloud(92, 118, .55, u + "w"),
+    sun(168, 70, 44) + cloud(120, 108, .85, u + "w"),
+    sun(170, 66, 40, .55) + cloud(118, 110, .9, u + "w") + haze(.45),
+    sun(176, 60, 34, .3) + cloud(128, 106, 1, u + "m") + dots(14, "#8c7d6b", 11) + haze(.6),
+    cloud(128, 104, 1.05, u + "d") + dots(22, "#7a1f1f", 5) + haze(.75),
+  ][lv];
+  return `<svg class="wart" viewBox="0 0 260 190" width="${w}" height="${h}" aria-hidden="true"><defs>
+    <radialGradient id="${u}s" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff7c2"/><stop offset=".45" stop-color="#ffcf3a"/><stop offset="1" stop-color="#ff8a1f"/></radialGradient>
+    <radialGradient id="${u}g"><stop offset=".55" stop-color="#ffd25a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd25a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${u}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6e0ec"/></linearGradient>
+    <linearGradient id="${u}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece5da"/><stop offset="1" stop-color="#a8998a"/></linearGradient>
+    <linearGradient id="${u}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9aea6"/><stop offset="1" stop-color="#5e524c"/></linearGradient>
+  </defs>${body}</svg>`;
+}
+
+// ---------- วงแหวนวัดค่า (แบบการ์ด Humidity ของ Weather Station) ----------
+function ring(v, size = 118) {
+  const R = 48, C = 2 * Math.PI * R, l = v != null ? LV[lvOf(v)] : null, p = v != null ? Math.min(v, 100) / 100 : 0;
+  return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 118 118"><circle cx="59" cy="59" r="${R}" fill="none" stroke="#edf1f5" stroke-width="10"/>
+    <circle cx="59" cy="59" r="${R}" fill="none" stroke="${l ? l.c : "#ccd4de"}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * p).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 59 59)"/></svg>
+    <div class="c"><b class="num">${v != null ? f1(v) : "–"}</b><span>µg/m³</span></div></div>`;
+}
+
+// ---------- วันนี้: hero + การ์ดจังหวัด + แผงย้อนหลัง ----------
+function renderToday() {
+  const L = LV[S.lv], d = S.prevAvg != null ? r1(S.avg - S.prevAvg) : null;
+  const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
+  const maxP = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)[0];
+  document.getElementById("hero").innerHTML = `
+    <div class="art">${weatherArt(S.lv)}</div>
+    <div>
+      <div class="loc"><svg class="ico" style="width:16px;height:16px"><use href="#i-pin"/></svg>ค่าเฉลี่ย 4 จังหวัด เขตสุขภาพที่ 7</div>
+      <div class="big num">${S.avg != null ? f1(S.avg) : "–"}<small>µg/m³</small></div>
+      <div class="cond">คุณภาพอากาศ${L.name}</div>
+      ${d != null ? `<div class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : d < 0 ? "▼" : "●"} ${Math.abs(d).toFixed(1)} จากวันก่อนหน้า (${f1(S.prevAvg)})</div>` : ""}
+    </div>
+    <div class="facts">
+      <div class="fact"><span class="fi" style="background:#e7f0fc;color:#1c6ed6"><svg class="ico"><use href="#i-shield"/></svg></span><div><span>เกณฑ์เปิด PHEOC</span><b>${pheoc ? "มีจังหวัดถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></div></div>
+      <div class="fact"><span class="fi" style="background:#fdeee5;color:#e8590c"><svg class="ico"><use href="#i-fire"/></svg></span><div><span>จุดความร้อน 24 ชม.</span><b>${S.hsOk ? S.hsToday.length + " จุด" : "ดึงข้อมูลไม่ได้"}</b></div></div>
+      ${maxP ? `<div class="fact"><span class="fi" style="background:${LV[lvOf(maxP.v)].soft};color:${LV[lvOf(maxP.v)].ink}"><svg class="ico"><use href="#i-pin"/></svg></span><div><span>สูงสุดวันนี้</span><b>${maxP.p.name} ${f1(maxP.v)}</b></div></div>` : ""}
+    </div>`;
+  document.getElementById("tiles").innerHTML = PROV.map(p => {
+    const v = S.todayRow?.[p.name], pr = S.prevRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, dd = v != null && pr != null ? r1(v - pr) : null;
+    return `<button class="glass tile" data-pv="${p.name}" aria-pressed="false" style="--tint:${l ? l.soft : "#f3f6f9"};--tc:${l ? l.c : "#ccd4de"}">
+      <span class="th"><span><svg class="ico" style="width:15px;height:15px"><use href="#i-pin"/></svg>${p.name}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink}">${l.name}</span>` : ""}</span>
+      ${ring(v)}
+      <span class="ft delta ${dd > 0 ? "up" : "down"}">${dd != null ? `${dd > 0 ? "▲" : dd < 0 ? "▼" : "●"} ${Math.abs(dd).toFixed(1)} จากวันก่อนหน้า` : "ไม่มีค่าวันก่อนหน้า"}</span></button>`; }).join("");
+  document.querySelectorAll(".tile[data-pv]").forEach(b => b.addEventListener("click", () => { renderDrill(b.dataset.pv); document.getElementById("drillPanel").scrollIntoView({ behavior: "smooth", block: "center" }); }));
+  renderForecast();
+}
+// แผงย้อนหลัง 7 วัน — แบบรายการ "12-hour forecast" ของ Weather Station
+function renderForecast() {
+  const SC = 50, days = S.last7;
+  const rows = days.map((d, i) => {
+    const vs = PROV.map(p => d[p.name]).filter(x => x != null), now = i === days.length - 1;
+    const dt = new Date(d.date + "T00:00:00"), lab = `${dt.getDate()} ${TH_M[dt.getMonth()]}`, sub = now ? "วันนี้" : TH_DS[dt.getDay()];
+    if (!vs.length) return `<div class="fc-row"><div class="d">${lab}<small>${sub}</small></div><span></span><span class="muted" style="font-size:12px">ไม่มีข้อมูล</span><span class="avg muted">–</span></div>`;
+    const mn = Math.min(...vs), mx = Math.max(...vs), av = r1(vs.reduce((a, b) => a + b, 0) / vs.length), l = LV[lvOf(av)];
+    return `<div class="fc-row ${now ? "now" : ""}"><div class="d">${lab}<small>${sub}</small></div>${weatherArt(lvOf(av), 34, 26).replace('class="wart"', 'class="mini"')}
+      <div class="rng" title="ต่ำสุด ${f1(mn)} · สูงสุด ${f1(mx)}"><b style="left:${mn / SC * 100}%;width:${Math.max(2, (mx - mn) / SC * 100)}%;background:linear-gradient(90deg,${LV[lvOf(mn)].c},${LV[lvOf(mx)].c})"></b><em style="left:${Math.min(av, SC) / SC * 100}%"></em></div>
+      <span class="avg" style="color:${l.ink}">${f1(av)}</span></div>`; }).join("");
+  document.getElementById("forecast").innerHTML = `<h3><svg class="ico"><use href="#i-chart"/></svg>ย้อนหลัง 7 วัน</h3><div class="sub">แถบ = ต่ำสุด–สูงสุดของ 4 จังหวัด · จุด = ค่าเฉลี่ย</div>${rows}<div class="fc-scale num"><span>0</span><span>25</span><span>50</span></div>`;
+}
+const countBy = feats => feats.reduce((a, f) => (a[f.properties.changwat] = (a[f.properties.changwat] || 0) + 1, a), {});
+
+// ---------- แผนที่ SVG (ใช้ทั้งเจาะลึกและ infographic) ----------
+function projector(geo, W, H, pad = 8) {
+  const rings = f => f.geometry.type === "Polygon" ? f.geometry.coordinates : f.geometry.coordinates.flat();
+  let a = [1e9, 1e9, -1e9, -1e9];
+  for (const f of geo.features) for (const r of rings(f)) for (const [x, y] of r) { a[0] = Math.min(a[0], x); a[1] = Math.min(a[1], y); a[2] = Math.max(a[2], x); a[3] = Math.max(a[3], y); }
+  const k = Math.cos((a[1] + a[3]) / 2 * Math.PI / 180), s = Math.min((W - 2 * pad) / ((a[2] - a[0]) * k), (H - 2 * pad) / (a[3] - a[1]));
+  const ox = (W - (a[2] - a[0]) * k * s) / 2, oy = (H - (a[3] - a[1]) * s) / 2;
+  const P = ([x, y]) => [ox + (x - a[0]) * k * s, oy + (a[3] - y) * s];
+  const path = f => rings(f).map(r => "M" + r.map(p => P(p).map(n => n.toFixed(1)).join(" ")).join("L") + "Z").join("");
+  const centroid = f => { let sx = 0, sy = 0, n = 0; for (const r of rings(f)) for (const p of r) { const q = P(p); sx += q[0]; sy += q[1]; n++; } return [sx / n, sy / n]; };
+  return { P, path, centroid };
+}
+const LABEL_NUDGE = { "ขอนแก่น": [10, 30] };   // centroid ของขอนแก่นตกขอบตะวันตก — ขยับเข้ากลางพื้นที่
+
+function renderDrill(pvName, level = "province") {
+  S.sel = pvName;
+  document.querySelectorAll(".tile[data-pv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.pv === pvName));
+  // แผนที่
+  const svg = document.getElementById("drillMap");
+  if (S.geo?.features?.length) {
+    const pj = projector(S.geo, 400, 290);
+    svg.innerHTML = S.geo.features.map(f => {
+      const n = f.properties.name_th, v = S.todayRow?.[n], l = v != null ? LV[lvOf(v)] : null;
+      const [cx, cy] = pj.centroid(f), [dx, dy] = LABEL_NUDGE[n] || [0, 0];
+      return `<path class="pv-shape ${n === pvName ? "sel" : ""}" data-pv="${n}" d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" tabindex="0" role="button" aria-label="${n} ${v != null ? f1(v) : ""}"></path>
+        <g pointer-events="none" text-anchor="middle" font-family="IBM Plex Sans Thai"><text x="${cx + dx}" y="${cy + dy - 4}" fill="#fff" font-size="12" font-weight="600">${n}</text>
+        <text x="${cx + dx}" y="${cy + dy + 16}" fill="#fff" font-size="19" font-weight="700">${v != null ? f1(v) : "–"}</text></g>`;
+    }).join("");
+    svg.querySelectorAll(".pv-shape").forEach(p => { p.addEventListener("click", () => renderDrill(p.dataset.pv)); p.addEventListener("keydown", e => { if (e.key === "Enter") renderDrill(p.dataset.pv); }); });
+  }
+  document.getElementById("aqiLegend").innerHTML = LV.map(l => `<span><i style="background:${l.c};height:10px;width:10px;border-radius:2px"></i>${l.name}</span>`).join("");
+
+  // แผงรายละเอียด
+  const v = S.todayRow?.[pvName], l = v != null ? LV[lvOf(v)] : null;
+  const days = S.last7, mx = Math.max(40, ...days.map(d => d[pvName] ?? 0));
+  const hsN = countBy(S.hsToday)[pvName] || 0;
+  const crumb = `<nav class="crumb" aria-label="ระดับพื้นที่"><button data-l="region">เขตสุขภาพที่ 7</button><span class="sep">›</span>
+    <button ${level === "province" ? "disabled" : ""} data-l="province">จ.${pvName}</button><span class="sep">›</span>
+    <button ${level === "district" ? "disabled" : ""} data-l="district">อำเภอ</button><span class="sep">›</span><button disabled style="color:var(--ink-3)">ตำบล</button></nav>`;
+  const panel = document.getElementById("drillPanel");
+  panel.innerHTML = crumb + `
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="font-size:22px">จังหวัด${pvName}</h3>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink}">${l.face} ${l.name}</span>` : ""}</div>
+    <div class="kv num">
+      <div><span class="label">ค่าวันนี้</span><b>${v != null ? f1(v) : "–"}</b></div>
+      <div><span class="label">สูงสุด 7 วัน</span><b>${f1(Math.max(...days.map(d => d[pvName] ?? -1)))}</b></div>
+      <div><span class="label">เฉลี่ย 7 วัน</span><b>${(() => { const a = days.map(d => d[pvName]).filter(x => x != null); return a.length ? f1(a.reduce((x, y) => x + y, 0) / a.length) : "–"; })()}</b></div>
+      <div><span class="label">จุดความร้อน 24 ชม.</span><b>${hsN}</b></div>
+    </div>
+    <div><div class="label" style="margin-bottom:6px">7 วันย้อนหลัง · µg/m³</div><div class="mini7">${days.map(d => {
+      const x = d[pvName]; const ll = x != null ? LV[lvOf(x)] : null;
+      return `<div class="c"><b class="num">${x != null ? f1(x) : "–"}</b><i style="height:${x != null ? Math.max(3, x / mx * 60) : 2}px;background:${ll ? ll.c : "var(--line)"}"></i>${thDate(d.date)}</div>`; }).join("")}</div></div>
+    ${level === "district" ? districtPending(pvName) : `<button class="btn" id="toDistrict" style="align-self:flex-start"><svg class="ico"><use href="#i-layers"/></svg>ดูรายอำเภอใน จ.${pvName}</button>`}`;
+  panel.querySelectorAll(".crumb button[data-l]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.l === "province") renderDrill(pvName); else if (b.dataset.l === "district") renderDrill(pvName, "district"); else document.getElementById("today").scrollIntoView({ behavior: "smooth" }); }));
+  panel.querySelector("#toDistrict")?.addEventListener("click", () => renderDrill(pvName, "district"));
+}
+// จุดเสียบข้อมูลรายอำเภอ/ตำบล — เมื่อมี API แล้วแทนที่ฟังก์ชันนี้ด้วยการ fetch จริง
+function districtPending(pv) {
+  const code = PROV.find(p => p.name === pv).code;
+  const hsAmp = countByKey(S.hsToday.filter(f => f.properties.changwat === pv), "ap_en");
+  return `<div class="pending"><b>ยังไม่ได้เชื่อมข้อมูลค่าฝุ่นรายอำเภอ / ตำบล</b><br>
+    เมื่อพร้อม ให้ API ตอบรูปแบบนี้แล้วหน้าเว็บจะแสดงตาราง + แผนที่ระดับอำเภอให้อัตโนมัติ:<br>
+    <code>GET /api/pm25/districts?pv=${code}</code> → <code>[{ "code":"4001", "name":"เมืองขอนแก่น", "pm25":21.3, "date":"2026-10-02" }, …]</code><br>
+    <code>GET /api/pm25/subdistricts?amp=4001</code> → รูปแบบเดียวกัน (รหัสตำบล 6 หลัก)<br>
+    ${Object.keys(hsAmp).length ? `<br>จุดความร้อนวันนี้รายอำเภอ: ${Object.entries(hsAmp).map(([k, n]) => `${esc(k)} ${n}`).join(" · ")}` : ""}</div>`;
+}
+const countByKey = (feats, k) => feats.reduce((a, f) => (a[f.properties[k]] = (a[f.properties[k]] || 0) + 1, a), {});
+
+// ---------- แนวโน้มรายสัปดาห์ (crosshair + tooltip) ----------
+function weekly() {
+  const all = S.pm?.allData || {}, dates = Object.keys(all).sort();
+  if (!dates.length) return [];
+  const t0 = new Date(dates[0]); const wk = [];
+  for (const d of dates) {
+    const i = Math.floor((new Date(d) - t0) / 864e5 / 7);
+    (wk[i] ||= { s: d, e: d, v: PROV.map(() => []) }).e = d;
+    PROV.forEach((p, k) => { const x = all[d]?.[p.name]; if (x != null && x > 0) wk[i].v[k].push(x); });
+  }
+  return wk.filter(Boolean).map(w => ({ s: w.s, e: w.e, v: w.v.map(a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null) }));
+}
+function renderTrend() {
+  const W = weekly(), svg = document.getElementById("chart");
+  if (!W.length) { svg.outerHTML = `<p class="muted">ไม่มีข้อมูล</p>`; return; }
+  document.getElementById("trendSub").textContent = `ค่าเฉลี่ยรายสัปดาห์ ${thDate(W[0].s)} – ${thDate(W.at(-1).e)} · µg/m³`;
+  document.getElementById("legend").innerHTML = PROV.map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
+  const VW = 760, VH = 300, L = 34, R = 84, T = 12, B = 30, pw = VW - L - R, ph = VH - T - B, n = W.length;
+  const top = Math.max(80, Math.ceil(Math.max(...W.flatMap(w => w.v.filter(x => x != null))) / 20) * 20);
+  const X = i => L + i / (n - 1) * pw, Y = v => T + ph - v / top * ph;
+  let g = "";
+  for (let t = 0; t <= top; t += 20) g += `<line x1="${L}" x2="${L + pw}" y1="${Y(t)}" y2="${Y(t)}" stroke="#e6eaf0"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end" font-size="11" fill="#7b889b">${t}</text>`;
+  for (const [v, lab, c] of [[37.5, "37.5 มาตรฐาน", "#d9480f"], [75, "75 มีผลต่อสุขภาพ", "#c92a2a"]])
+    g += `<line x1="${L}" x2="${L + pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="5 4" stroke-width="1.2"/><text x="${L + 4}" y="${Y(v) - 5}" font-size="11" fill="${c}">${lab}</text>`;
+  let lm = -1; W.forEach((w, i) => { const m = new Date(w.s).getMonth(); if (m !== lm) { lm = m; g += `<text x="${X(i)}" y="${VH - 8}" text-anchor="middle" font-size="11" fill="#7b889b">${TH_M[m]}</text>`; } });
+  const last = W.at(-1), ends = PROV.map((p, k) => ({ k, y: Y(last.v[k] ?? 0) })).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+  PROV.forEach((p, k) => {
+    let d = "", pen = false; W.forEach((w, i) => { if (w.v[k] == null) { pen = false; return; } d += (pen ? "L" : "M") + X(i).toFixed(1) + " " + Y(w.v[k]).toFixed(1); pen = true; });
+    g += `<path d="${d}" fill="none" stroke="${p.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const e = ends.find(o => o.k === k);
+    g += `<text x="${X(n - 1) + 8}" y="${e.y + 4}" font-size="11.5" fill="#46546a">${p.name}</text>`;
+  });
+  g += `<line id="xh" y1="${T}" y2="${T + ph}" stroke="#46546a" stroke-width="1" opacity="0"/><g id="dots"></g><rect id="hit" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="transparent"/>`;
+  svg.innerHTML = g;
+  const tip = document.getElementById("tip"), xh = svg.querySelector("#xh"), dots = svg.querySelector("#dots"), hit = svg.querySelector("#hit");
+  hit.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * VW;
+    const i = Math.max(0, Math.min(n - 1, Math.round((sx - L) / pw * (n - 1)))), w = W[i];
+    xh.setAttribute("x1", X(i)); xh.setAttribute("x2", X(i)); xh.setAttribute("opacity", .5);
+    dots.innerHTML = PROV.map((p, k) => w.v[k] == null ? "" : `<circle cx="${X(i)}" cy="${Y(w.v[k])}" r="5" fill="${p.color}" stroke="#fff" stroke-width="2"/>`).join("");
+    tip.innerHTML = `<div class="t">${thDate(w.s)} – ${thDate(w.e)}</div>` + PROV.map((p, k) => ({ p, v: w.v[k] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)
+      .map(o => `<div class="r"><span><i style="background:${o.p.color}"></i>${o.p.name}</span><b class="num">${f1(o.v)}</b></div>`).join("");
+    const px = X(i) / VW * r.width; tip.style.left = (px > r.width * .6 ? px - tip.offsetWidth - 12 : px + 12) + "px"; tip.style.top = "6px"; tip.classList.add("on");
+  });
+  hit.addEventListener("pointerleave", () => { tip.classList.remove("on"); xh.setAttribute("opacity", 0); dots.innerHTML = ""; });
+}
+function t7Html(compact) {
+  const days = S.last7;
+  // หัวคอลัมน์แบบสั้น 26/9 ไม่ให้ตัดบรรทัด · ช่องไม่มีข้อมูลใช้ "–" + title
+  const short = iso => { const d = new Date(iso + "T00:00:00"); return `${d.getDate()}/${d.getMonth() + 1}`; };
+  let h = `<tr><th>จังหวัด</th>${days.map((d, i) => `<th style="white-space:nowrap">${i === days.length - 1 ? "วันนี้" : short(d.date)}</th>`).join("")}</tr>`;
+  for (const p of PROV) h += `<tr><td style="white-space:nowrap">${p.name}</td>${days.map((d, i) => {
+    const x = d[p.name], l = x != null ? LV[lvOf(x)] : null, today = i === days.length - 1;
+    return x == null ? `<td class="na" title="ไม่มีข้อมูล">–</td>` : `<td class="cell ${today ? "today-col" : ""}" style="background:${l.soft};color:${l.ink}">${f1(x)}</td>`; }).join("")}</tr>`;
+  return h;
+}
+function renderT7() { document.getElementById("t7").innerHTML = t7Html(false); }
+
+// ---------- Hotspot: Leaflet + tooltip เมื่อชี้ ----------
+let MAP, HS_LAYER;
+const CONF = { high: ["สูง", "#e8192c"], nominal: ["ปานกลาง", "#f07d00"], low: ["ต่ำ", "#f5ce00"] };
+function renderHotspot(feats, isSample) {
+  if (!MAP) {
+    MAP = L.map("map", { attributionControl: true, scrollWheelZoom: false }).setView([16.2, 103.4], 8);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, crossOrigin: true, attribution: "© OpenStreetMap" }).addTo(MAP);
+    if (S.geo?.features?.length) {
+      const b = L.geoJSON(S.geo, { style: { color: "#0e2a47", weight: 2, fillColor: "#1c6ed6", fillOpacity: .04 }, interactive: false }).addTo(MAP);
+      MAP.fitBounds(b.getBounds(), { padding: [12, 12] });
+      S.geo.features.forEach(f => L.marker(b.getLayers().find(l => l.feature === f).getBounds().getCenter(), {
+        icon: L.divIcon({ className: "", html: `<div style="font:600 12px 'IBM Plex Sans Thai';color:#0e2a47;text-shadow:0 0 3px #fff,0 0 3px #fff;white-space:nowrap;transform:translate(-50%,-50%)">${f.properties.name_th}</div>` }), interactive: false }).addTo(MAP));
+    }
+  }
+  if (HS_LAYER) HS_LAYER.remove();
+  HS_LAYER = L.layerGroup().addTo(MAP);
+  for (const f of feats) {
+    const [lng, lat] = f.geometry.coordinates, p = f.properties, [cn, cc] = CONF[p.confidence] || [p.confidence, "#999"];
+    const r = Math.min(5 + (p.frp || 0) * .35, 13);
+    const t = p.th_time ? `${String(p.th_time).padStart(4, "0").slice(0, 2)}:${String(p.th_time).padStart(4, "0").slice(2)} น.` : "–";
+    L.circleMarker([lat, lng], { radius: r, fillColor: cc, color: "#fff", weight: 1, fillOpacity: .9 })
+      .bindTooltip(`<b class="t">🔥 จุดความร้อน</b><br><b>จังหวัด:</b> ${esc(p.changwat)}<br><b>อำเภอ:</b> ${esc(p.ap_en || "–")}<br><b>ตำบล:</b> ${esc(p.tb_en || "–")}<br><b>การใช้ที่ดิน:</b> ${esc(p.lu_hp_name || p.lu_name || "–")}<hr><b>วันที่:</b> ${esc((p.acq_date || "").slice(0, 10))}<br><b>เวลา (ไทย):</b> ${t}<br><b>ความเชื่อมั่น:</b> ${cn}<br><b>FRP:</b> ${p.frp ?? "–"} MW`,
+        { className: "hs-tip", direction: "top", offset: [0, -r], sticky: false })
+      .addTo(HS_LAYER);
+  }
+  const by = countBy(feats);
+  document.getElementById("hotSide").innerHTML = `
+    <div class="label">${isSample ? "ข้อมูลตัวอย่าง 7 พ.ค. 2569" : "รวม 4 จังหวัด · 24 ชม."}</div>
+    <div class="hot-total num">${feats.length} <span style="font-size:18px;color:var(--ink-3)">จุด</span></div>
+    <div>${PROV.map(p => `<div class="hot-row"><span>${p.name}</span><b>${by[p.name] || 0}</b></div>`).join("")}</div>
+    <div class="conf"><div class="label">ความเชื่อมั่น (สี) · ขนาดจุดตามความร้อน (FRP)</div>${Object.values(CONF).map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}</div>
+    ${!S.hsOk ? `<div class="note-box">ดึงข้อมูล GISTDA ไม่สำเร็จ</div>` : ""}
+    ${!isSample && feats.length === 0 ? `<div class="note-box">วันนี้ไม่พบจุดความร้อนในพื้นที่ 4 จังหวัด<br><button class="btn" id="hsSample" style="margin-top:8px;padding:6px 12px">ดูตัวอย่างจากข้อมูลจริง 7 พ.ค. 2569</button></div>` : ""}
+    ${isSample ? `<div class="note-box">กำลังแสดงข้อมูลย้อนหลัง (ไม่ใช่วันนี้)<br><button class="btn" id="hsToday" style="margin-top:8px;padding:6px 12px">กลับไปข้อมูลวันนี้</button></div>` : ""}`;
+  document.getElementById("hsSample")?.addEventListener("click", async () => {
+    const j = await fetch("hotspot-sample-2026-05-07.json").then(r => r.json());
+    const names = new Set(PROV.map(p => p.name)); renderHotspot(j.features.filter(f => names.has(f.properties.changwat)), true); });
+  document.getElementById("hsToday")?.addEventListener("click", () => renderHotspot(S.hsToday, false));
+}
+
+// ---------- โรค: แท่งรายเดือน 2568 (เทา) vs 2569 (สีกลุ่มโรค) ----------
+function monthly(rows, key, upToWk, yearCE) {
+  const m = Array(12).fill(0), has = Array(12).fill(false);
+  for (const r of rows || []) {
+    const wk = +r.wk; if (!wk || wk > upToWk) continue;
+    const k = Object.keys(r).find(x => x.includes(key)); const v = +String(r[k] ?? "").replace(/,/g, "");
+    if (!k || isNaN(v)) continue;
+    const mo = new Date(yearCE, 0, 1 + (wk - 1) * 7 + 3).getMonth(); m[mo] += v; has[mo] = true;
+  }
+  return m.map((v, i) => has[i] ? v : null);
+}
+function renderDisease() {
+  const dz = S.dz; if (!dz) { document.getElementById("dz").innerHTML = `<p class="muted">ดึงข้อมูลโรคไม่ได้</p>`; return; }
+  const wkMax = dz.meta?.reportWeek || Math.max(...(dz[2026] || []).map(r => +r.wk)) - 1;
+  S.wkMax = wkMax;
+  document.getElementById("dzSub").textContent = `ผู้ป่วยรายเดือน · ปี 2569 สะสมสัปดาห์ที่ 1–${wkMax} เทียบช่วงเดียวกันปี 2568 · ข้อมูล HDC`;
+  S.dzTot = []; S.dzData = [];
+  document.getElementById("dz").innerHTML = DZ.map((d, di) => {
+    const a = monthly(dz[2025], d.key, 53, 2025), b = monthly(dz[2026], d.key, wkMax, 2026);
+    const t26 = b.reduce((s, x) => s + (x || 0), 0), t25 = monthly(dz[2025], d.key, wkMax, 2025).reduce((s, x) => s + (x || 0), 0);
+    const pct = t25 ? (t26 - t25) / t25 * 100 : 0; S.dzTot.push({ ...d, t26, pct }); S.dzData.push({ d, a, b, t26, t25, pct });
+    const W = 560, H = 190, g = dzBars(d, a, b, W, H, 10.5);
+    return `<article class="card dz" style="--dsoft:${d.soft};--dc:${d.c}">
+      <div class="dz-top"><div class="dz-icon" style="background:${d.soft};color:${d.c}"><svg><use href="#${d.icon}"/></svg></div>
+        <div><h3>${d.label}</h3><div class="icd">${d.icd}</div></div>
+        <div class="tot"><b class="num">${fmt(t26)}</b><span class="delta ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}% จากปี 2568 (${fmt(t25)})</span></div></div>
+      <svg class="bars" viewBox="0 0 ${W} ${H}" role="img" aria-label="ผู้ป่วยรายเดือน ${d.label} ปี 2568 และ 2569">${g}</svg>
+      <div class="lg"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:${d.c}"></i>ปี 2569 (ถึงสัปดาห์ที่ ${wkMax})</span></div>
+      <div class="tip"></div></article>`; }).join("");
+  // tooltip ต่อแท่ง
+  document.querySelectorAll(".dz").forEach(card => {
+    const tip = card.querySelector(".tip");
+    card.querySelectorAll(".hb").forEach(rc => {
+      rc.addEventListener("pointerenter", () => { tip.textContent = rc.dataset.t; tip.classList.add("on"); });
+      rc.addEventListener("pointermove", e => { const r = card.getBoundingClientRect(); tip.style.left = (e.clientX - r.left + 12) + "px"; tip.style.top = (e.clientY - r.top - 34) + "px"; });
+      rc.addEventListener("pointerleave", () => tip.classList.remove("on"));
+    });
+  });
+}
+// แท่งรายเดือน: 2568 เทา / 2569 สีกลุ่มโรค — ใช้ทั้งหน้าเว็บและ infographic
+function dzBars(d, a, b, W, H, fs) {
+  const L = fs * 3.8, B = fs * 2.3, T = 8, pw = W - L - 8, ph = H - T - B, slot = pw / 12, bw = Math.min(fs * 1.6, slot / 2 - 3);
+  const mx = Math.max(...a, ...b.map(x => x || 0)) * 1.1, step = niceStep(mx);
+  let g = "";
+  for (let t = 0; t <= mx; t += step) g += `<line x1="${L}" x2="${W - 8}" y1="${T + ph - t / mx * ph}" y2="${T + ph - t / mx * ph}" stroke="rgba(15,27,45,.09)"/><text x="${L - 6}" y="${T + ph - t / mx * ph + fs * .38}" text-anchor="end" font-size="${fs}" fill="#5f6c80">${t >= 1000 ? (t / 1000) + "k" : t}</text>`;
+  for (let i = 0; i < 12; i++) {
+    const x0 = L + i * slot + slot / 2;
+    if (a[i] != null) { const h = a[i] / mx * ph; g += `<rect class="hb" x="${x0 - bw - 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="#b4bfcd" data-t="${TH_M[i]} 2568: ${fmt(a[i])} ราย"/>`; }
+    if (b[i] != null) { const h = b[i] / mx * ph; g += `<rect class="hb" x="${x0 + 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="${d.c}" data-t="${TH_M[i]} 2569: ${fmt(b[i])} ราย"/>`; }
+    g += `<text x="${x0}" y="${H - fs * .5}" text-anchor="middle" font-size="${fs}" fill="#5f6c80">${TH_M[i]}</text>`;
+  }
+  return g;
+}
+const niceStep = mx => { const raw = mx / 4, p = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 2.5, 5, 10].map(s => s * p).find(s => s >= raw); };
+
+// ---------- คำแนะนำ ----------
+const actIcon = t => /หน้ากาก/.test(t) ? "a-mask" : /แพทย์/.test(t) ? "a-doc" : /ห้องปลอดฝุ่น|อาคาร|ปิดประตู/.test(t) ? "a-home" : /ก่อฝุ่น/.test(t) ? "a-dust" : /เฝ้าระวัง/.test(t) ? "a-eye" : /ออกกำลังกาย|กิจกรรม|ใช้แรง/.test(t) && !/ตามปกติ/.test(t) ? "a-run" : "a-ok";
+function renderAdvice() {
+  const L = LV[S.lv];
+  document.getElementById("advNow").innerHTML = `
+    <div class="lvbox"><span class="face">${L.face}</span><span>วันนี้คุณภาพอากาศ</span><b>${L.name}</b><span class="num">PM2.5 ${L.range} µg/m³</span></div>
+    <div class="who"><h3><span><svg class="ico"><use href="#i-people"/></svg></span>ประชาชนทั่วไป</h3><div class="dos">${L.pub.map(x => `<div class="do"><span><svg class="ico"><use href="#${actIcon(x)}"/></svg></span>${x}</div>`).join("")}</div></div>
+    <div class="who"><h3><span><svg class="ico"><use href="#i-heartp"/></svg></span>กลุ่มเสี่ยง*</h3><div class="dos">${L.risk.map(x => `<div class="do"><span><svg class="ico"><use href="#${actIcon(x)}"/></svg></span>${x}</div>`).join("")}</div></div>`;
+  document.getElementById("advRow").innerHTML = LV.map((l, i) => `<div class="a ${i === S.lv ? "cur" : ""}"><b><i style="background:${l.c}"></i>${l.name}${i === S.lv ? " · วันนี้" : ""}</b><span class="muted num">${l.range} µg/m³</span><span>${l.pub[0]}</span></div>`).join("");
+}
+
+// ================= INFOGRAPHIC =================
+// html2canvas วาด <use href="#…"> ที่ชี้ไปนอก svg ไม่ได้ → ฝังเนื้อ symbol ลงไปตรงๆ
+const inl = (id, size, style = "") => { const s = document.getElementById(id);
+  return `<svg width="${size}" height="${size}" viewBox="${s.getAttribute("viewBox")}" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;${style}">${s.innerHTML}</svg>`; };
+// ถ้าเนื้อหาล้นหน้า (เช่นระดับที่มีคำแนะนำหลายข้อ) ย่อส่วนประกอบรองทีละขั้น — คำแนะนำยังใหญ่เสมอ
+function fitInfographic(size) {
+  const ig = document.getElementById("ig");
+  for (let d = 0; d <= 3; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) return d; }
+  return 3;
+}
+function buildInfographic(size = "a4", dense = 0) {
+  const L = LV[S.lv], ig = document.getElementById("ig");
+  ig.className = size; ig.dataset.dense = dense;
+  const CH = [96, 80, 66, 56][dense];
+  const avgBox = `<div class="avg">${weatherArt(S.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k">ค่าเฉลี่ย 4 จังหวัด</span><span class="v num">${f1(S.avg)}<small> µg/m³</small></span><span class="l">คุณภาพอากาศ${L.name}</span></div></div>`;
+  const head = `<div class="ig-banner"><img src="/header.png" alt="" width="794" height="100"></div><div class="ig-date"><span class="d">${S.todayRow ? `<b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${L.face} ภาพรวมเขต: ${L.name}</span></div>`;
+  const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้</div>
+    <div class="advice"><div class="lv"><span class="f">${L.face}</span><b>${L.name}</b><span>${L.range} µg/m³</span></div>
+      <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
+      <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
+  const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === S.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === S.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
+  const foot = `<div class="ig-f"><span>แหล่งข้อมูล: Air4Thai · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
+  const maxP = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)[0];
+  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC</span><b>${PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
+    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม.</span><b>${S.hsToday.length} จุด</b></span></div>
+    <div><span class="fi" style="background:var(--lv-soft);color:var(--lv-ink)">${inl("i-pin", 26)}</span><span><span class="k">สูงสุดวันนี้</span><b>${maxP ? maxP.p.name + " " + f1(maxP.v) : "–"}</b></span></div></div>`;
+  if (size === "social") {
+    ig.innerHTML = head + `<div class="ig-body">${avgBox}
+      <div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null;
+        return `<div style="border-top:6px solid ${l ? l.c : "#ccc"}"><span class="n">${p.name}</span><span class="x num">${v != null ? f1(v) : "–"}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</div>`; }).join("")}</div>
+      ${facts3}${adviceBox}${scaleBox}<div style="font-size:15px;color:var(--ink-3)">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคทางเดินหายใจ โรคหัวใจและหลอดเลือด</div></div>` + foot;
+    return;
+  }
+  let mapSvg = "";
+  if (S.geo?.features?.length) {
+    const pj = projector(S.geo, 470, 330, 6);
+    mapSvg = S.geo.features.map(f => { const n = f.properties.name_th, v = S.todayRow?.[n], l = v != null ? LV[lvOf(v)] : null, [cx, cy] = pj.centroid(f), [dx, dy] = LABEL_NUDGE[n] || [0, 0];
+      return `<path d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" stroke="#fff" stroke-width="2"/><text x="${cx + dx * 1.15}" y="${cy + dy * 1.15}" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" font-family="IBM Plex Sans Thai">${n}</text>`; }).join("")
+      + S.hsToday.map(f => { const [x, y] = pj.P(f.geometry.coordinates); return `<circle cx="${x}" cy="${y}" r="5" fill="${(CONF[f.properties.confidence] || [0, "#e8192c"])[1]}" stroke="#fff" stroke-width="1.5"/>`; }).join("");
+  }
+  ig.innerHTML = head + `
+  <div class="ig-body">
+    <div class="row1">
+      ${avgBox}
+      <div class="pvs">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null;
+        return `<div style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n">${p.name}${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</span><span class="x num">${v != null ? f1(v) : "–"}<small> µg/m³</small></span></div>`; }).join("")}</div>
+    </div>
+    ${adviceBox}
+    <div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น<small style="font-family:IBM Plex Sans Thai;font-weight:400;font-size:15px;color:var(--ink-3);margin-left:auto">ผู้ป่วยรายเดือน · ปี 2569 ถึงสัปดาห์ที่ ${S.wkMax} · HDC</small></div>
+    <div class="dzg">${(S.dzData || []).map(o => `<div style="background:linear-gradient(165deg,#fff 15%,${o.d.soft});border-color:color-mix(in srgb,${o.d.c} 25%,#fff)">
+      <div class="dh"><span class="dz-icon" style="background:#fff;color:${o.d.c}">${inl(o.d.icon, 24)}</span><span class="nm">${o.d.label}</span><span class="tt"><b class="num">${fmt(o.t26)}</b><span class="${o.pct > 0 ? "up" : "down"}">${o.pct > 0 ? "▲" : "▼"} ${Math.abs(o.pct).toFixed(1)}% จากปี 2568</span></span></div>
+      <svg viewBox="0 0 470 ${CH}" width="100%">${dzBars(o.d, o.a, o.b, 470, CH, 11)}</svg></div>`).join("")}</div>
+    <div class="dzl"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:#46546a"></i>ปี 2569 (สีตามกลุ่มโรค)</span></div>
+    <div class="row3">
+      <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าย้อนหลัง 7 วัน<small>µg/m³ · จุดความร้อน 24 ชม. ${S.hsToday.length} จุด</small></h4><table class="t7 num">${t7Html(true)}</table></div>
+      <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>ระดับคุณภาพอากาศ<small>µg/m³</small></h4><div class="scalev">${LV.map((l, i) => `<div class="${i === S.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === S.lv ? " · วันนี้" : ""}</b><span class="num">${l.range}</span></div>`).join("")}</div></div>
+    </div>
+    <div style="font-size:15px;color:var(--ink-3)">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
+  </div>
+  <div class="ig-f"><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
+}
+document.getElementById("btnIg").addEventListener("click", async e => {
+  const btn = e.currentTarget, old = btn.innerHTML; btn.disabled = true; btn.textContent = "กำลังสร้างรูป…";
+  try {
+    const size = document.getElementById("igSize").value;
+    await document.fonts.ready; fitInfographic(size);
+    if (typeof html2canvas !== "function") throw new Error("ไม่พบ html2canvas — เปิดหน้านี้ผ่าน server (localhost:3000)");
+    const canvas = await html2canvas(document.getElementById("ig"), { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#ffffff" });
+    const url = canvas.toDataURL("image/png");
+    document.getElementById("mImg").src = url;
+    const a = document.getElementById("mDl"); a.href = url; a.download = `PM25-เขต7-${S.todayRow?.date || "today"}-${size}.png`;
+    document.getElementById("mHint").textContent = `บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" · ขนาด ${canvas.width}×${canvas.height} px ` + (size === "social" ? "(สัดส่วน 4:5 สำหรับโพสต์ Facebook/LINE)" : "(สัดส่วน A4 สำหรับพิมพ์ติดบอร์ด)");
+    document.getElementById("modal").classList.add("on"); document.getElementById("mClose").focus();
+  } catch (err) { alert("สร้าง Infographic ไม่สำเร็จ: " + err.message); }
+  finally { btn.disabled = false; btn.innerHTML = old; }
+});
+document.getElementById("mClose").addEventListener("click", () => document.getElementById("modal").classList.remove("on"));
+document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") e.target.classList.remove("on"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.getElementById("modal").classList.remove("on"); });
+</script>
+</body>
+</html>
