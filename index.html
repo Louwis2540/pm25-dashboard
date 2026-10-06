@@ -213,6 +213,27 @@ section .dz.card{background:linear-gradient(165deg,color-mix(in srgb,var(--dsoft
 .crumb button[disabled]{color:var(--ink-1);cursor:default}
 .crumb .sep{color:var(--ink-3)}
 .panel{padding:18px;display:flex;flex-direction:column;gap:14px}
+/* แผงรายจังหวัด: หัว + วงแหวนค่าวันนี้ + การ์ดสถิติ 6 ใบมีไอคอน */
+.pv-top{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap}
+.pv-top h3{font-family:"Anuphan";font-size:26px;font-weight:700}
+.pv-src{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.pv-hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 22px;align-items:center;background:linear-gradient(135deg,#fff 30%,var(--ps));border:2px solid var(--pc);border-radius:18px;padding:14px 20px}
+.pv-hero .ring{margin:0}
+.pv-hero .ring .c b{font-size:42px}
+.pv-k{display:block;font-family:"Anuphan";font-size:17px;font-weight:700;color:var(--ink-1)}
+.pv-lv{display:inline-flex;align-items:center;gap:8px;font-family:"Anuphan";font-size:22px;font-weight:700;color:var(--pk);background:#fff;border:2px solid var(--pc);border-radius:999px;padding:3px 16px 3px 10px;margin:6px 0 4px}
+.pv-lv span{font-size:22px}
+.pv-adv{display:flex;gap:8px;align-items:flex-start;margin:8px 0 0;font-size:14.5px;font-weight:600;color:var(--ink-1);line-height:1.5}
+.pv-adv .ico{width:20px;height:20px;color:var(--pk);flex:none;margin-top:2px}
+.st-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.st{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(15,27,45,.04)}
+.st .si{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex:none}
+.st .si .ico{width:24px;height:24px}
+.st .sl{display:block;font-size:13px;font-weight:700;color:var(--ink-2);line-height:1.3}
+.st b{display:block;font-family:"Anuphan";font-size:30px;font-weight:700;line-height:1.15;color:var(--ink-1)}
+.st b em{font-style:normal;font-family:"IBM Plex Sans Thai";font-size:13px;font-weight:600;color:var(--ink-2);margin-left:5px}
+.st small{display:block;font-size:12px;font-weight:600;color:var(--ink-2);line-height:1.35}
+.pv-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
 .kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .kv div{background:var(--subtle);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .kv b{display:block;font-family:"Anuphan";font-size:22px}
@@ -487,6 +508,7 @@ table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:13px
   .today{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hero{grid-column:1/-1}
   .drill,.trend,.hot{grid-template-columns:minmax(0,1fr)}
+  .st-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .adv-now{grid-template-columns:1fr}
   .adv-now .who{border-left:0;border-top:1px solid var(--line)}
   .adv-row{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -509,6 +531,11 @@ table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:13px
   .hdr .meta{margin-left:0}
   .today,.dz-grid{grid-template-columns:minmax(0,1fr)}
   .kv{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pv-hero{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;padding:14px}
+  .pv-adv{text-align:left}
+  .st-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .st{flex-direction:column;align-items:flex-start;gap:8px;padding:12px}
+  .st b{font-size:24px}
   .adv-row{grid-template-columns:repeat(2,minmax(0,1fr))}
   #map{height:360px}
   /* ตาราง 7 วันบนมือถือ: ช่องแคบลงให้ 8 คอลัมน์พอดีจอ (ถ้ายังไม่พอ เลื่อนในกล่องได้) */
@@ -927,26 +954,43 @@ function renderDrill(pvName, level = "province", amp = null) {
   document.getElementById("aqiLegend").innerHTML = LV.map(l => `<span><i style="background:${l.c};height:10px;width:10px;border-radius:2px"></i>${l.name}</span>`).join("");
   if (level !== "province") return renderArea(pvName, level, amp);
 
-  // แผงรายละเอียด
-  const v = S.todayRow?.[pvName], l = v != null ? LV[lvOf(v)] : null;
-  const days = S.last7, mx = Math.max(40, ...days.map(d => d[pvName] ?? 0));
+  // แผงรายละเอียดจังหวัด — ค่าสถานี Air4Thai (เฉลี่ย 24 ชม. ณ 07.00 น.)
+  const v = S.todayRow?.[pvName], l = v != null ? LV[lvOf(v)] : LV[0], pr = S.prevRow?.[pvName];
+  const dd = v != null && pr != null ? r1(v - pr) : null;
+  const all = S.pm?.allData || {}, series = Object.keys(all).sort().map(d => ({ d, x: all[d]?.[pvName] })).filter(o => o.x != null && o.x > 0);
+  const lastD = S.todayRow?.date || series.at(-1)?.d || "";
+  const w7 = series.filter(o => o.d > addD(lastD, -7) && o.d <= lastD);
+  const [sf, st] = dustSeasonOf(lastD), sea = series.filter(o => o.d >= sf && o.d <= st);
+  const maxOf = a => a.length ? a.reduce((m, o) => o.x > m.x ? o : m) : null, avgOf = a => a.length ? a.reduce((t, o) => t + o.x, 0) / a.length : null;
+  const m7 = maxOf(w7), a7 = avgOf(w7), mS = maxOf(sea), stdv = TREND_TH[0][0], over = sea.filter(o => o.x > stdv).length;
   const hsN = countBy(S.hsToday)[pvName] || 0;
-  const crumb = `<nav class="crumb" aria-label="ระดับพื้นที่"><button data-l="region">เขตสุขภาพที่ 7</button><span class="sep">›</span>
-    <button ${level === "province" ? "disabled" : ""} data-l="province">จ.${pvName}</button><span class="sep">›</span>
-    <button ${level === "district" ? "disabled" : ""} data-l="district">อำเภอ</button><span class="sep">›</span><button disabled style="color:var(--ink-3)">ตำบล</button></nav>`;
+  const seaLab = `${String(+sf.slice(0, 4) + 543).slice(2)}/${String(+st.slice(0, 4) + 543).slice(2)}`;   // เช่น 68/69 (พ.ย.–พ.ค.)
+  const lvTxt = x => x == null ? "" : `style="color:${LV[lvOf(x)].ink}"`;
+  const stat = (ic, bg, fg, label, val, sub = "") => `<div class="st"><span class="si" style="background:${bg};color:${fg}"><svg class="ico"><use href="#${ic}"/></svg></span>
+    <div><span class="sl">${label}</span>${val}${sub ? `<small>${sub}</small>` : ""}</div></div>`;
+  const num = (x, unit = "µg/m³") => x == null ? `<b class="num">–</b>` : `<b class="num" ${lvTxt(x)}>${f1(x)}<em>${unit}</em></b>`;
+  const crumb = drillCrumb(pvName, level, null);
   const panel = document.getElementById("drillPanel");
   panel.innerHTML = crumb + `
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="font-size:22px">จังหวัด${pvName}</h3>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink}">${l.face} ${l.name}</span>` : ""}</div>
-    <div class="kv num">
-      <div><span class="label">ค่าวันนี้</span><b>${v != null ? f1(v) : "–"}</b></div>
-      <div><span class="label">สูงสุด 7 วัน</span><b>${f1(Math.max(...days.map(d => d[pvName] ?? -1)))}</b></div>
-      <div><span class="label">เฉลี่ย 7 วัน</span><b>${(() => { const a = days.map(d => d[pvName]).filter(x => x != null); return a.length ? f1(a.reduce((x, y) => x + y, 0) / a.length) : "–"; })()}</b></div>
-      <div><span class="label">จุดความร้อน 24 ชม.</span><b>${hsN}</b></div>
+    <div class="pv-top"><h3>จังหวัด${pvName}</h3><span class="pv-src">สถานีตรวจวัด Air4Thai · เฉลี่ย 24 ชม. ณ ${REPORT_TIME}</span></div>
+    <div class="pv-hero" style="--pc:${l.c};--ps:${l.soft};--pk:${l.ink};--tk:${l.ink}">
+      ${ring(v, 150)}
+      <div class="pv-h">
+        <span class="pv-k">ค่าฝุ่น PM2.5 วันนี้</span>
+        <div class="pv-lv"><span aria-hidden="true">${l.face}</span>คุณภาพอากาศ${l.name}</div>
+        ${dd != null ? `<div class="delta ${dd > 0 ? "up" : "down"}">${dd > 0 ? "▲" : dd < 0 ? "▼" : "●"} ${Math.abs(dd).toFixed(1)} จากเมื่อวาน (${f1(pr)})</div>` : ""}
+        <p class="pv-adv"><svg class="ico"><use href="#i-shield"/></svg><span>${l.summary || l.pub[0]}</span></p>
+      </div>
     </div>
-    <div><div class="label" style="margin-bottom:6px">7 วันย้อนหลัง · µg/m³</div><div class="mini7">${days.map(d => {
-      const x = d[pvName]; const ll = x != null ? LV[lvOf(x)] : null;
-      return `<div class="c"><b class="num">${x != null ? f1(x) : "–"}</b><i style="height:${x != null ? Math.max(3, x / mx * 60) : 2}px;background:${ll ? ll.c : "var(--line)"}"></i>${thDate(d.date)}</div>`; }).join("")}</div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="st-grid">
+      ${stat("i-up", "#fdeee5", "#c2410c", "สูงสุด 7 วัน", num(m7?.x), m7 ? thDate(m7.d) : "")}
+      ${stat("i-chart", "#ede7fe", "#6d28d9", "เฉลี่ย 7 วัน", num(a7), `${w7.length} วันที่มีข้อมูล`)}
+      ${stat("i-fire", "#fde8e8", "#b91c1c", "จุดความร้อน 24 ชม.", `<b class="num">${hsN}<em>จุด</em></b>`, "ดาวเทียม VIIRS · GISTDA")}
+      ${stat("i-gauge", "#fff4d6", "#a16207", `สูงสุดฤดูฝุ่น ${seaLab}`, num(mS?.x), mS ? `${thDate(mS.d)} ${String(+mS.d.slice(0, 4) + 543).slice(2)}` : "")}
+      ${stat("i-cal", "#ffe4e4", "#b00000", `วันเกิน ${stdv} ในฤดูฝุ่น`, `<b class="num" ${over ? 'style="color:#b00000"' : ""}>${over}<em>วัน</em></b>`, `จาก ${sea.length} วันที่มีข้อมูล`)}
+      ${stat("i-pin", "#e3f2fd", "#1565c0", "เทียบเขตสุขภาพที่ 7", num(S.avg), v != null && S.avg != null ? (v > S.avg ? `สูงกว่าค่าเฉลี่ยเขต ${f1(v - S.avg)}` : v < S.avg ? `ต่ำกว่าค่าเฉลี่ยเขต ${f1(S.avg - v)}` : "เท่าค่าเฉลี่ยเขต") : "ค่าเฉลี่ย 4 จังหวัดวันนี้")}
+    </div>
+    <div class="pv-btns">
       <button class="btn" id="toDistrict"><svg class="ico"><use href="#i-layers"/></svg>ดูรายอำเภอใน จ.${pvName}</button>
       ${v != null ? `<button class="btn primary" id="pvCard"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลดภาพสถานการณ์ จ.${pvName}</button>` : ""}
     </div>`;
@@ -1069,7 +1113,7 @@ function weekly() {
 }
 // ---------- กราฟแนวโน้ม: รายวัน/รายสัปดาห์ · เลือกช่วงเวลา · ซูม/เลื่อน ----------
 // TR.view = [ตั้งแต่, ถึง] (ISO) เมื่อผู้ใช้ซูม/เลื่อนเอง · null = ใช้ช่วงจากปุ่ม TR.range
-const TR = { mode: "day", range: "90", view: null };
+const TR = { mode: "day", range: "season", view: null };   // ค่าเริ่มต้น = ฤดูฝุ่น พ.ย.–พ.ค. (ข้ามปี)
 const addD = (iso, n) => new Date(Date.parse(iso + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const dDiff = (a, b) => (Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 864e5;
 function dailySeries() {
@@ -1092,6 +1136,8 @@ function trendWindow(first, last) {
   return [w[0] < first ? first : w[0], w[1] > last ? last : w[1]];
 }
 function trendButtons() {
+  const D = dailySeries();
+  if (D.length) { const [a, b] = dustSeasonOf(D.at(-1).s); document.querySelector('#trBar [data-range="season"]').textContent = `ฤดูฝุ่น ${String(+a.slice(0, 4) + 543).slice(2)}/${String(+b.slice(0, 4) + 543).slice(2)}`; }
   document.querySelectorAll("#trBar [data-mode]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === TR.mode));
   document.querySelectorAll("#trBar [data-range]").forEach(b => b.setAttribute("aria-pressed", !TR.view && b.dataset.range === TR.range));
   document.querySelector('#trBar [data-z="reset"]').disabled = !TR.view;
@@ -1106,9 +1152,11 @@ function renderTrend() {
   let P = src.filter(r => r.e >= from && r.s <= to);
   if (P.length < 2) P = src.slice(-2);   // กันช่วงแคบเกิน (เช่น รายสัปดาห์ 7 วัน)
   trendButtons();
-  const span = Math.max(1, dDiff(P[0].s, P.at(-1).s));
+  const season = !TR.view && TR.range === "season";
+  const dom = season ? dustSeasonOf(last) : [P[0].s, P.at(-1).s];
+  const span = Math.max(1, dDiff(dom[0], dom[1]));
   document.getElementById("trendSub").textContent =
-    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 07.00 น.)" : "ค่าเฉลี่ยรายสัปดาห์"} · ${thDate(P[0].s)} ${+P[0].s.slice(0, 4) + 543} – ${thDate(P.at(-1).e)} ${+P.at(-1).e.slice(0, 4) + 543} · µg/m³`;
+    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 07.00 น.)" : "ค่าเฉลี่ยรายสัปดาห์"} · ${season ? "ฤดูฝุ่น " : ""}${thDate(dom[0])} ${+dom[0].slice(0, 4) + 543} – ${thDate(dom[1])} ${+dom[1].slice(0, 4) + 543} · µg/m³`;
   document.getElementById("legend").innerHTML = PROV.map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
 
   // วาดตามความกว้างจริงของกล่อง (1 หน่วย ≈ 1 px) — มือถือตัวอักษรไม่ถูกย่อจนอ่านไม่ออก
@@ -1117,7 +1165,7 @@ function renderTrend() {
   const VH = sm ? 300 : 400, L = sm ? 54 : 70, R = sm ? 42 : 150, T = 30, B = 40, pw = VW - L - R, ph = VH - T - B;
   const EF = sm ? 11.5 : 13.5;
   svg.setAttribute("viewBox", `0 0 ${VW} ${VH}`);
-  const t0 = Date.parse(P[0].s), t1 = Date.parse(P.at(-1).s), X = iso => L + (t1 > t0 ? (Date.parse(iso) - t0) / (t1 - t0) : .5) * pw;
+  const t0 = Date.parse(dom[0]), t1 = Date.parse(dom[1]), X = iso => L + (t1 > t0 ? (Date.parse(iso) - t0) / (t1 - t0) : .5) * pw;
   const vmax = Math.max(...P.flatMap(r => r.v.filter(x => x != null)), 0);
   const step = vmax > 60 ? 20 : 10, top = Math.max(40, Math.ceil((vmax + 2) / step) * step);
   const Y = v => T + ph - Math.min(v, top) / top * ph;
@@ -1132,15 +1180,19 @@ function renderTrend() {
   for (const [v, lab, c] of TREND_TH) if (v <= top)
     g += `<line x1="${L}" x2="${L + pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="6 4" stroke-width="1.6"/>
       <text x="${L + pw - 6}" y="${Y(v) - 7}" text-anchor="end" font-size="13" font-weight="700" fill="${c}" stroke="#fff" stroke-width="4" paint-order="stroke">${lab}</text>`;
+  if (dom[0] < first) { const xe = X(first);
+    g += `<rect x="${L}" y="${T}" width="${xe - L}" height="${ph}" fill="#e9edf2" opacity=".85"/>
+      <text x="${(L + xe) / 2}" y="${T + ph / 2}" text-anchor="middle" font-size="${sm ? 11.5 : 13.5}" font-weight="700" fill="#5b6b7f">ยังไม่มีข้อมูล</text>
+      <text x="${(L + xe) / 2}" y="${T + ph / 2 + 18}" text-anchor="middle" font-size="${sm ? 10.5 : 12}" font-weight="600" fill="#7b889b">เริ่มเก็บ ${thDate(first)} ${+first.slice(0, 4) + 543}</text>`; }
   // แกน x ปรับตามความยาวช่วง: สั้น = รายวัน "6 ต.ค." · ยาว = ต้นเดือน "ต.ค. 69"
   const ticks = [];
   if (span <= 75) {
     const k = [1, 2, 3, 7, 14].find(k => pw / (span / k) >= 62) || 14;
-    for (let d = P[0].s; d <= P.at(-1).s; d = addD(d, k)) ticks.push([d, thDate(d)]);
+    for (let d = dom[0]; d <= dom[1]; d = addD(d, k)) ticks.push([d, thDate(d)]);
   } else {
     let lx = -1e9;
-    for (let d = P[0].s.slice(0, 8) + "01"; d <= P.at(-1).s; d = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 1)).toISOString().slice(0, 10)) {
-      if (d < P[0].s || X(d) - lx < 46) continue;
+    for (let d = dom[0].slice(0, 8) + "01"; d <= dom[1]; d = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 1)).toISOString().slice(0, 10)) {
+      if (d < dom[0] || X(d) - lx < 46) continue;
       lx = X(d); ticks.push([d, `${TH_M[+d.slice(5, 7) - 1]} ${String(+d.slice(0, 4) + 543).slice(2)}`]);
     }
   }
@@ -1173,7 +1225,7 @@ function renderTrend() {
   const tip = document.getElementById("tip"), xh = svg.querySelector("#xh"), dots = svg.querySelector("#dots"), hit = svg.querySelector("#hit"), sel = svg.querySelector("#sel");
   const toSvgX = ev => { const r = svg.getBoundingClientRect(); return (ev.clientX - r.left) / r.width * VW; };
   const nearest = sx => { let bi = 0, bd = 1e9; P.forEach((r, i) => { const dd = Math.abs(X(r.s) - sx); if (dd < bd) { bd = dd; bi = i; } }); return bi; };
-  const dateAt = sx => new Date(t0 + Math.max(0, Math.min(1, (sx - L) / pw)) * (t1 - t0)).toISOString().slice(0, 10);
+  const dateAt = sx => { const d = new Date(t0 + Math.max(0, Math.min(1, (sx - L) / pw)) * (t1 - t0)).toISOString().slice(0, 10); return d < first ? first : d > last ? last : d; };
   let drag = null;
   hit.addEventListener("pointermove", ev => {
     const sx = toSvgX(ev);
