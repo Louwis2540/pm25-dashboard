@@ -776,6 +776,9 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
 .pv-sk{height:230px;border-radius:16px;background:linear-gradient(100deg,rgba(226,232,240,.85) 30%,rgba(247,249,252,.95) 50%,rgba(226,232,240,.85) 70%);background-size:220% 100%;animation:skMove 1.5s ease-in-out infinite}
 .pv-fail .icd{color:#8a1414}
 @media (prefers-reduced-motion:reduce){.pv-sk{animation:none}}
+
+/* tooltip กราฟโรค: กว้างตามข้อความ ไม่ถูกบีบเมื่ออยู่ใกล้ขอบขวา */
+.dz .tip{width:max-content;max-width:min(300px,calc(100% - 16px))}
 </style>
 <link rel="stylesheet" href="/ui-look.css?v=1">
 </head>
@@ -1867,7 +1870,12 @@ function renderDisease() {
     const tip = card.querySelector(".tip");
     card.querySelectorAll(".hb").forEach(rc => {
       rc.addEventListener("pointerenter", () => { tip.textContent = rc.dataset.t; tip.classList.add("on"); });
-      rc.addEventListener("pointermove", e => { const r = card.getBoundingClientRect(); tip.style.left = (e.clientX - r.left + 12) + "px"; tip.style.top = (e.clientY - r.top - 34) + "px"; });
+      rc.addEventListener("pointermove", e => {   // ชิดขอบขวา → สลับไปซ้ายเมาส์ · ไม่ล้นขอบการ์ด
+        const r = card.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, tw = tip.offsetWidth, th = tip.offsetHeight;
+        let L = x + 14; if (L + tw > r.width - 8) L = x - tw - 14;
+        let T = y - 34; if (T + th > r.height - 8) T = r.height - th - 8;
+        tip.style.left = Math.max(8, L) + "px"; tip.style.top = Math.max(8, T) + "px";
+      });
       rc.addEventListener("pointerleave", () => tip.classList.remove("on"));
     });
   });
