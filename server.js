@@ -524,16 +524,10 @@ async function diseasePvFromMoph(beYear) {
   if (!got) return { rows: [], missing };
   const acc = {}; let maxDateCom = '';
   for (const pv of provinces) {
-    const a = acc[pv.name] = {};
-    for (const row of got.get(pv.pv_idn) || []) {
-      const key = PV_KEY[MOPH_DIAG_GROUP[row.diag_main]];
-      if (!key) continue;
-      if (row.date_com && String(row.date_com) > maxDateCom) maxDateCom = String(row.date_com);
-      for (let w = 1; w <= 53; w++) {
-        const v = row['w_' + String(w).padStart(2, '0') + '_m'];
-        if (typeof v === 'number' && v > 0) { (a[w] ||= {})[key] = (a[w][key] || 0) + v; }
-      }
-    }
+    const agg = got.get(pv.pv_idn), a = acc[pv.name] = {};
+    if (agg.dateCom > maxDateCom) maxDateCom = agg.dateCom;
+    for (const [w, cats] of Object.entries(agg.wk))
+      for (const [cat, v] of Object.entries(cats)) { const key = PV_KEY[cat]; if (key) (a[w] ||= {})[key] = (a[w][key] || 0) + v; }
   }
   return { rows: pvRowsFrom(acc), dateCom: maxDateCom, missing: [] };
 }
@@ -757,8 +751,10 @@ const MOPH_DIAG_GROUP = {
 const MOPH_CATS = ['ทางเดินหายใจ', 'หัวใจ', 'ตาอักเสบ', 'ผิวหนัง'];
 
 // MOPH แบ่งหน้า: ไม่ส่ง limit จะได้แค่ 1000 แถวแรก (ขอนแก่นมี ~1,085 แถว/ปี → ตกหล่น)
-const MOPH_PAGE_SIZE = 5000;
-const MOPH_MAX_PAGES = 20;             // กันลูปไม่รู้จบถ้า total ที่ MOPH ส่งมาเพี้ยน
+// หน้าละ 1,000 แถว: แถวหนึ่งมี ~220 คอลัมน์ → หน้าใหญ่ (5,000) + ตาราง s_pm25_2 ทำหน่วยความจำเกิน 256 MB
+// บน Render (ต.ค. 2569 เซิร์ฟเวอร์ล่ม heap out of memory) → หน้าเล็กลง และย่อเป็นยอดรวมทันทีทีละหน้า
+const MOPH_PAGE_SIZE = 1000;
+const MOPH_MAX_PAGES = 200;            // กันลูปไม่รู้จบถ้า total ที่ MOPH ส่งมาเพี้ยน (เกินนี้ = ล้มทั้งจังหวัด ไม่ตัดเงียบ)
 const MOPH_MAX_RETRY = 3;              // จำนวนครั้งที่ลองใหม่เมื่อโดน 429 / 5xx
 const MOPH_GAP_MS    = 300;            // เว้นจังหวะระหว่างคำขอ ไม่ยิงรัวใส่ MOPH
 
@@ -791,10 +787,27 @@ async function mophPost(payload) {
   return last;
 }
 
-// ดึงข้อมูลดิบของจังหวัดเดียวให้ครบทุกหน้า
+// ย่อแถวดิบเป็นยอดรวมรายสัปดาห์ × กลุ่มโรค แล้วทิ้งแถวดิบทันที (ไม่เก็บทั้งก้อนไว้ในหน่วยความจำ)
+//   agg.wk[w][หมวดโรค] = ผลรวม w_NN_m (_m = จำนวนที่เข้ารับบริการ ตัดซ้ำรายคน/สัปดาห์)
+function mophAggRows(agg, rows) {
+  for (const row of rows) {
+    const cat = MOPH_DIAG_GROUP[row.diag_main];
+    if (!cat) continue;
+    if (row.date_com && String(row.date_com) > agg.dateCom) agg.dateCom = String(row.date_com);
+    for (let w = 1; w <= 53; w++) {
+      const v = row['w_' + String(w).padStart(2, '0') + '_m'];
+      if (typeof v === 'number' && v > 0) {
+        const o = agg.wk[w] || (agg.wk[w] = {});
+        o[cat] = (o[cat] || 0) + v;
+      }
+    }
+  }
+}
+
+// ดึงจังหวัดเดียวให้ครบทุกหน้า แล้วคืนเป็นยอดรวม { wk, dateCom, rows }
 // รูปแบบตอบกลับ: { data: [...], total, limit, offset } — รองรับ array เปล่าๆ เผื่อ API เปลี่ยนกลับ
-async function fetchMophRows(beYear, pvIdn, table = 's_pm25_1_in_week') {
-  const rows = [];
+async function fetchMophAgg(beYear, pvIdn, table = 's_pm25_1_in_week') {
+  const agg = { wk: {}, dateCom: '', rows: 0 };
 
   for (let page = 0; page < MOPH_MAX_PAGES; page++) {
     if (page > 0) await sleep(MOPH_GAP_MS);
@@ -812,16 +825,15 @@ async function fetchMophRows(beYear, pvIdn, table = 's_pm25_1_in_week') {
 
     const body  = await r.json();
     const chunk = Array.isArray(body) ? body : (body?.data || []);
-    rows.push(...chunk);
-
     const total = Array.isArray(body) ? chunk.length : Number(body?.total) || 0;
-    if (chunk.length < MOPH_PAGE_SIZE || rows.length >= total) break;
+    mophAggRows(agg, chunk);
+    agg.rows += chunk.length;
+    if (chunk.length < MOPH_PAGE_SIZE || agg.rows >= total) return agg;
   }
-
-  return rows;
+  throw new Error(`ข้อมูลเกิน ${MOPH_MAX_PAGES} หน้า (จังหวัด ${pvIdn}) — ไม่ใช้ข้อมูลที่ไม่ครบ`);
 }
 
-// ดึงข้อมูลดิบทุกจังหวัดในเขตจากตารางที่กำหนด — ต้องครบทุกจังหวัด ไม่งั้นคืน null (+ รายชื่อที่ขาด)
+// ดึงยอดรวมทุกจังหวัดในเขตจากตารางที่กำหนด — ต้องครบทุกจังหวัด ไม่งั้นคืน null (+ รายชื่อที่ขาด)
 // ดึงทีละจังหวัด (sequential) เลี่ยงการยิงพร้อมกันจนโดน rate-limit ฝั่ง MOPH
 // ต.ค. 2569 พบว่า จ.ขอนแก่น (จังหวัดแรก) ถูกข้ามเงียบๆ ยอดทั้งเขตบนเว็บจึงต่ำกว่าจริงราว 40%
 // → จังหวัดที่พลาดให้ลองซ้ำอีกรอบ ถ้ายังไม่ได้ก็ไม่ใช้ข้อมูลรอบนี้
@@ -833,9 +845,9 @@ async function fetchMophAllProvinces(beYear, table) {
       if (got.has(pv.pv_idn)) continue;
       if (got.size || Object.keys(errs).length) await sleep(round ? 3000 : MOPH_GAP_MS);
       try {
-        const rows = await fetchMophRows(beYear, pv.pv_idn, table);
-        if (!rows.length) throw new Error('ได้ 0 แถว');
-        got.set(pv.pv_idn, rows);
+        const agg = await fetchMophAgg(beYear, pv.pv_idn, table);
+        if (!agg.rows) throw new Error('ได้ 0 แถว');
+        got.set(pv.pv_idn, agg);
         delete errs[pv.name];
       } catch (e) {
         errs[pv.name] = e.message;
@@ -867,18 +879,11 @@ async function fetchMophDisease(beYear) {
     return out;                        // ว่าง = ให้ buildDiseaseData ใช้ชีตหรือข้อมูลชุดเดิมที่ครบแทน
   }
 
-  for (const rows of got.values()) {
-    for (const row of rows) {
-      const cat = MOPH_DIAG_GROUP[row.diag_main];
-      if (!cat) continue;
-      if (row.date_com && String(row.date_com) > maxDateCom) maxDateCom = String(row.date_com);
-      for (let w = 1; w <= 53; w++) {
-        const v = row['w_' + String(w).padStart(2, '0') + '_m']; // _m = จำนวนที่เข้ารับบริการ
-        if (typeof v === 'number' && v > 0) {
-          if (!acc[w]) acc[w] = {};
-          acc[w][cat] = (acc[w][cat] || 0) + v;
-        }
-      }
+  for (const agg of got.values()) {
+    if (agg.dateCom > maxDateCom) maxDateCom = agg.dateCom;
+    for (const [w, cats] of Object.entries(agg.wk)) {
+      if (!acc[w]) acc[w] = {};
+      for (const [cat, v] of Object.entries(cats)) acc[w][cat] = (acc[w][cat] || 0) + v;
     }
   }
 
