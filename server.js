@@ -465,6 +465,11 @@ async function buildDiseaseData() {
   const useSheet = !moph2569.length ||
     (sheet2569.length && sheetAge !== null && (mophAge === null || sheetAge < mophAge));
 
+  // ทั้ง MOPH (ไม่ครบจังหวัด) และชีตใช้ไม่ได้ แต่มีชุดเดิมที่ครบอยู่แล้ว → คงชุดเดิมไว้ ไม่เอาค่าว่างไปทับ
+  if (!moph2569.length && !sheet2569.length && _lastGood.has('sheet-disease')) {
+    throw new Error('MOPH ไม่ครบจังหวัด (' + (moph2569.missing || []).join(', ') + ') และอ่านชีตไม่ได้ — ใช้ข้อมูลชุดเดิม');
+  }
+
   let year2026 = useSheet ? sheet2569 : moph2569;
   let source   = useSheet ? 'sheet' : 'moph';
   let ttl      = useSheet ? 60 * 60 * 1000       // ชีตใหม่กว่า → 1 ชม. (Apps Script เติมวันละครั้ง)
@@ -482,6 +487,7 @@ async function buildDiseaseData() {
     2026: year2026,
     meta: {
       source,                                    // 'moph' | 'sheet' = แหล่งที่อัพเดทใหม่กว่า
+      mophMissing: moph2569.missing || [],       // จังหวัดที่ดึงจาก MOPH ไม่ได้รอบนี้ (ว่าง = ครบ 4 จังหวัด)
       // จุดตัดของ LINE คำนวณจากข้อมูลชีต → ใช้ได้เฉพาะตอนแสดงข้อมูลชีต
       reportWeek: useSheet ? reportWeek : null,
       dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
@@ -659,12 +665,20 @@ const MOPH_GAP_MS    = 300;            // เว้นจังหวะระ�
 async function mophPost(payload) {
   let last;
   for (let attempt = 0; attempt < MOPH_MAX_RETRY; attempt++) {
-    last = await fetch(MOPH_DISEASE_API, {
-      method:  'POST',
-      headers: MOPH_HEADERS,
-      body:    JSON.stringify(payload),
-      signal:  AbortSignal.timeout(30000),
-    });
+    try {
+      last = await fetch(MOPH_DISEASE_API, {
+        method:  'POST',
+        headers: MOPH_HEADERS,
+        body:    JSON.stringify(payload),
+        signal:  AbortSignal.timeout(60000),   // ขอนแก่นข้อมูลใหญ่สุด (~1,100 แถว × 220 คอลัมน์)
+      });
+    } catch (e) {
+      // เชื่อมต่อไม่ได้ / หมดเวลา → ลองใหม่ (เดิมหลุดออกไปทั้งจังหวัด แล้วถูกข้ามเงียบๆ)
+      if (attempt === MOPH_MAX_RETRY - 1) throw e;
+      console.warn(`MOPH เชื่อมต่อไม่สำเร็จ (${e.message}) — ลองใหม่`);
+      await sleep(2000 * 2 ** attempt);
+      continue;
+    }
     if (last.ok || (last.status !== 429 && last.status < 500)) return last;
 
     // เคารพ Retry-After ถ้า MOPH บอกมา ไม่งั้นถอยเป็นขั้น 2s → 4s → 8s (สูงสุด 30s)
@@ -692,7 +706,8 @@ async function fetchMophRows(beYear, pvIdn) {
       limit:     MOPH_PAGE_SIZE,
       offset:    page * MOPH_PAGE_SIZE,
     });
-    if (!r.ok) break;                  // MOPH ตอบ 201 เมื่อสำเร็จ; อื่นๆ เอาเท่าที่ได้มา
+    // MOPH ตอบ 201 เมื่อสำเร็จ · อย่างอื่น = ล้มทั้งจังหวัด (ห้ามคืนข้อมูลครึ่งๆ กลางๆ)
+    if (!r.ok) throw new Error(`HTTP ${r.status} (จังหวัด ${pvIdn} หน้า ${page + 1})`);
 
     const body  = await r.json();
     const chunk = Array.isArray(body) ? body : (body?.data || []);
@@ -713,14 +728,33 @@ async function fetchMophDisease(beYear) {
   let maxDateCom = '';
 
   // ดึงทีละจังหวัด (sequential) เลี่ยงการยิงพร้อมกันจนโดน rate-limit ฝั่ง MOPH
-  for (const [i, pv] of provinces.entries()) {
-    if (i > 0) await sleep(MOPH_GAP_MS);
+  // ยอดรวมเขตต้องครบทุกจังหวัด — ต.ค. 2569 พบว่า จ.ขอนแก่น (จังหวัดแรก) ถูกข้ามเงียบๆ
+  // ยอดทั้งเขตบนเว็บจึงต่ำกว่าจริงราว 40% → จังหวัดที่พลาดให้ลองซ้ำอีกรอบ ถ้ายังไม่ได้ก็ไม่ใช้ข้อมูลรอบนี้
+  const got = new Map(), errs = {};
+  for (let round = 0; round < 2; round++) {
+    for (const pv of provinces) {
+      if (got.has(pv.pv_idn)) continue;
+      if (got.size || Object.keys(errs).length) await sleep(round ? 3000 : MOPH_GAP_MS);
+      try {
+        const rows = await fetchMophRows(beYear, pv.pv_idn);
+        if (!rows.length) throw new Error('ได้ 0 แถว');
+        got.set(pv.pv_idn, rows);
+        delete errs[pv.name];
+      } catch (e) {
+        errs[pv.name] = e.message;
+      }
+    }
+    if (got.size === provinces.length) break;
+  }
+  if (got.size < provinces.length) {
+    const why = Object.entries(errs).map(([n, m]) => `${n}: ${m}`).join(' · ');
+    console.warn(`MOPH ดึงได้ไม่ครบ ${got.size}/${provinces.length} จังหวัด (${why}) — ไม่ใช้ข้อมูลรอบนี้`);
+    const out = [];
+    out.missing = Object.keys(errs);
+    return out;                        // ว่าง = ให้ buildDiseaseData ใช้ชีตหรือข้อมูลชุดเดิมที่ครบแทน
+  }
 
-    let rows;
-    try {
-      rows = await fetchMophRows(beYear, pv.pv_idn);
-    } catch (_) { continue; }          // จังหวัดใดพลาด ข้ามไป ไม่ทำให้ทั้งเขตล่ม
-
+  for (const rows of got.values()) {
     for (const row of rows) {
       const cat = MOPH_DIAG_GROUP[row.diag_main];
       if (!cat) continue;
