@@ -501,6 +501,107 @@ async function buildDiseaseData() {
 }
 
 /* ══════════════════════════════════════════
+   ผู้ป่วยรายจังหวัด (โซน E2) — s_pm25_2_in_week
+   ตัวตั้ง = ผู้ป่วยที่อยู่อาศัยจริงในจังหวัด (TYPEAREA 1 และ 3) ตัดซ้ำรายคน/สัปดาห์ (w_NN_m)
+   ตัวหาร = ประชากร Type 1+3 กลางปี (config.population) → คิดอัตราต่อแสนได้ถูกคู่
+   แหล่งสำรอง = แท็บ "latest" ในชีต (ตัวเก็บภาพข้อมูล moph_snapshot_to_sheet.gs ทุกวัน 07:00)
+══════════════════════════════════════════ */
+const PV_KEY = { 'ทางเดินหายใจ': 'resp', 'หัวใจ': 'heart', 'ตาอักเสบ': 'eye', 'ผิวหนัง': 'skin' };
+
+// รวมเป็นแถว { wk, pv, resp, heart, eye, skin } — สัปดาห์ที่ไม่มีผู้ป่วยในกลุ่มนั้นใส่ 0 (ไม่ใช่ว่าง)
+function pvRowsFrom(acc) {
+  const rows = [];
+  for (const [pv, wks] of Object.entries(acc)) {
+    const maxWk = Math.max(0, ...Object.keys(wks).map(Number));
+    for (let w = 1; w <= maxWk; w++) rows.push({ wk: w, pv, resp: 0, heart: 0, eye: 0, skin: 0, ...(wks[w] || {}) });
+  }
+  return rows;
+}
+
+async function diseasePvFromMoph(beYear) {
+  const { provinces } = readConfig();
+  const { got, missing } = await fetchMophAllProvinces(beYear, 's_pm25_2_in_week');
+  if (!got) return { rows: [], missing };
+  const acc = {}; let maxDateCom = '';
+  for (const pv of provinces) {
+    const a = acc[pv.name] = {};
+    for (const row of got.get(pv.pv_idn) || []) {
+      const key = PV_KEY[MOPH_DIAG_GROUP[row.diag_main]];
+      if (!key) continue;
+      if (row.date_com && String(row.date_com) > maxDateCom) maxDateCom = String(row.date_com);
+      for (let w = 1; w <= 53; w++) {
+        const v = row['w_' + String(w).padStart(2, '0') + '_m'];
+        if (typeof v === 'number' && v > 0) { (a[w] ||= {})[key] = (a[w][key] || 0) + v; }
+      }
+    }
+  }
+  return { rows: pvRowsFrom(acc), dateCom: maxDateCom, missing: [] };
+}
+
+// แหล่งสำรอง: แท็บ latest (snapshot_at, date_com, b_year, table, pv_code, pv_name, wk, group, m, ...)
+async function diseasePvFromSheet(beYear) {
+  const { api, provinces } = readConfig();
+  const csv = await fetchCSV([`https://docs.google.com/spreadsheets/d/${api.sheet_id}/gviz/tq?tqx=out:csv&sheet=latest`]);
+  if (!csv) return { rows: [] };
+  const lines = csv.split('\n').filter(l => l.trim());
+  const head  = csvLine(lines[0] || '').map(c => c.replace(/"/g, ''));
+  const ix    = n => head.indexOf(n);
+  const [iT, iY, iP, iW, iG, iM, iD] = ['table', 'b_year', 'pv_name', 'wk', 'group', 'm', 'date_com'].map(ix);
+  if ([iT, iY, iP, iW, iG, iM].some(i => i < 0)) return { rows: [] };
+  const names = new Set(provinces.map(p => p.name));
+  const acc = {}; let maxDateCom = '';
+  for (const line of lines.slice(1)) {
+    const c = csvLine(line).map(x => x.replace(/"/g, ''));
+    if (c[iT] !== 's_pm25_2_in_week' || String(c[iY]) !== String(beYear) || !names.has(c[iP])) continue;
+    const key = PV_KEY[c[iG]], w = Number(c[iW]), v = Number(c[iM]);
+    if (!key || !w || !(v >= 0)) continue;
+    const a = acc[c[iP]] ||= {};
+    (a[w] ||= {})[key] = (a[w][key] || 0) + v;
+    const dc = String(c[iD] || '').replace(/\D/g, '');
+    if (dc > maxDateCom) maxDateCom = dc;
+  }
+  if (Object.keys(acc).length < provinces.length) return { rows: [] };   // ชีตต้องครบทุกจังหวัดเช่นกัน
+  return { rows: pvRowsFrom(acc), dateCom: maxDateCom };
+}
+
+async function buildDiseasePv() {
+  const { population, api } = readConfig();
+  const beYear = String(population?.year_be || 2569);
+  let src = await diseasePvFromMoph(beYear), source = 'moph';
+  const missing = src.missing || [];
+  if (!src.rows.length) { src = await diseasePvFromSheet(beYear); source = 'sheet'; }
+  if (!src.rows.length) throw new Error('MOPH ไม่ครบจังหวัด (' + missing.join(', ') + ') และอ่านแท็บ latest ไม่ได้');
+
+  const dataDate = dateComToDmy(src.dateCom || '');
+  const staleDays = Number(api.disease_stale_days) || 10;
+  const age = diseaseDataAge(dataDate ? [{ 'อัพเดท': dataDate }] : []);
+  const data = {
+    ok: true, mock: false,
+    pop: population.midyear, popNote: population.label, popMethod: population.method,
+    rows: src.rows,
+    meta: { source, mophMissing: missing, dataDate, ageDays: age.ageDays, staleDays,
+            stale: age.ageDays !== null && age.ageDays > staleDays },
+  };
+  setCached('disease-pv', data, source === 'moph' ? 6 * 60 * 60 * 1000 : 30 * 60 * 1000);
+  return data;
+}
+
+app.get('/api/disease-pv', async (req, res) => {
+  const cached = getCached('disease-pv');
+  if (cached) return res.json(cached);
+  const stale = _lastGood.get('disease-pv');          // มีชุดเดิม → ตอบทันที แล้วรีเฟรชเบื้องหลัง
+  if (stale) {
+    singleFlight('disease-pv', buildDiseasePv).catch(e => console.warn('รีเฟรชข้อมูลรายจังหวัดไม่สำเร็จ:', e.message));
+    return res.json(stale);
+  }
+  try {
+    res.json(await singleFlight('disease-pv', buildDiseasePv));
+  } catch (e) {
+    res.status(502).json({ ok: false, message: 'ดึงข้อมูลผู้ป่วยรายจังหวัดไม่สำเร็จ: ' + e.message });
+  }
+});
+
+/* ══════════════════════════════════════════
    PROVINCE GeoJSON
 ══════════════════════════════════════════ */
 const GEOJSON_URL = 'https://raw.githubusercontent.com/apisit/thailand.json/master/thailand.json';
@@ -692,14 +793,14 @@ async function mophPost(payload) {
 
 // ดึงข้อมูลดิบของจังหวัดเดียวให้ครบทุกหน้า
 // รูปแบบตอบกลับ: { data: [...], total, limit, offset } — รองรับ array เปล่าๆ เผื่อ API เปลี่ยนกลับ
-async function fetchMophRows(beYear, pvIdn) {
+async function fetchMophRows(beYear, pvIdn, table = 's_pm25_1_in_week') {
   const rows = [];
 
   for (let page = 0; page < MOPH_MAX_PAGES; page++) {
     if (page > 0) await sleep(MOPH_GAP_MS);
 
     const r = await mophPost({
-      tableName: 's_pm25_1_in_week',
+      tableName: table,
       year:      String(beYear),
       province:  String(pvIdn),
       type:      'json',
@@ -720,23 +821,19 @@ async function fetchMophRows(beYear, pvIdn) {
   return rows;
 }
 
-// ดึง+รวมยอดผู้ป่วยรายสัปดาห์ทุกจังหวัดในเขต สำหรับปี พ.ศ. ที่กำหนด
-// คืนค่ารูปแบบเดียวกับ parseDiseaseData: [{ wk, <หมวดโรค>, อัพเดท }]
-async function fetchMophDisease(beYear) {
+// ดึงข้อมูลดิบทุกจังหวัดในเขตจากตารางที่กำหนด — ต้องครบทุกจังหวัด ไม่งั้นคืน null (+ รายชื่อที่ขาด)
+// ดึงทีละจังหวัด (sequential) เลี่ยงการยิงพร้อมกันจนโดน rate-limit ฝั่ง MOPH
+// ต.ค. 2569 พบว่า จ.ขอนแก่น (จังหวัดแรก) ถูกข้ามเงียบๆ ยอดทั้งเขตบนเว็บจึงต่ำกว่าจริงราว 40%
+// → จังหวัดที่พลาดให้ลองซ้ำอีกรอบ ถ้ายังไม่ได้ก็ไม่ใช้ข้อมูลรอบนี้
+async function fetchMophAllProvinces(beYear, table) {
   const { provinces } = readConfig();
-  const acc  = {};   // acc[wk][cat] = ยอดรวม (w_NN_m)
-  let maxDateCom = '';
-
-  // ดึงทีละจังหวัด (sequential) เลี่ยงการยิงพร้อมกันจนโดน rate-limit ฝั่ง MOPH
-  // ยอดรวมเขตต้องครบทุกจังหวัด — ต.ค. 2569 พบว่า จ.ขอนแก่น (จังหวัดแรก) ถูกข้ามเงียบๆ
-  // ยอดทั้งเขตบนเว็บจึงต่ำกว่าจริงราว 40% → จังหวัดที่พลาดให้ลองซ้ำอีกรอบ ถ้ายังไม่ได้ก็ไม่ใช้ข้อมูลรอบนี้
   const got = new Map(), errs = {};
   for (let round = 0; round < 2; round++) {
     for (const pv of provinces) {
       if (got.has(pv.pv_idn)) continue;
       if (got.size || Object.keys(errs).length) await sleep(round ? 3000 : MOPH_GAP_MS);
       try {
-        const rows = await fetchMophRows(beYear, pv.pv_idn);
+        const rows = await fetchMophRows(beYear, pv.pv_idn, table);
         if (!rows.length) throw new Error('ได้ 0 แถว');
         got.set(pv.pv_idn, rows);
         delete errs[pv.name];
@@ -748,9 +845,25 @@ async function fetchMophDisease(beYear) {
   }
   if (got.size < provinces.length) {
     const why = Object.entries(errs).map(([n, m]) => `${n}: ${m}`).join(' · ');
-    console.warn(`MOPH ดึงได้ไม่ครบ ${got.size}/${provinces.length} จังหวัด (${why}) — ไม่ใช้ข้อมูลรอบนี้`);
+    console.warn(`MOPH ${table} ดึงได้ไม่ครบ ${got.size}/${provinces.length} จังหวัด (${why}) — ไม่ใช้ข้อมูลรอบนี้`);
+    return { got: null, missing: Object.keys(errs) };
+  }
+  return { got, missing: [] };
+}
+
+// date_com = YYYYMMDDHHMM → D/M/YYYY (ค.ศ.) ให้ frontend +543 เอง
+const dateComToDmy = dc => /^\d{12}/.test(dc) ? `${+dc.slice(6, 8)}/${+dc.slice(4, 6)}/${dc.slice(0, 4)}` : '';
+
+// ดึง+รวมยอดผู้ป่วยรายสัปดาห์ทุกจังหวัดในเขต สำหรับปี พ.ศ. ที่กำหนด (s_pm25_1 = ทุกคนที่มารับบริการในเขต)
+// คืนค่ารูปแบบเดียวกับ parseDiseaseData: [{ wk, <หมวดโรค>, อัพเดท }]
+async function fetchMophDisease(beYear) {
+  const acc  = {};   // acc[wk][cat] = ยอดรวม (w_NN_m)
+  let maxDateCom = '';
+
+  const { got, missing } = await fetchMophAllProvinces(beYear, 's_pm25_1_in_week');
+  if (!got) {
     const out = [];
-    out.missing = Object.keys(errs);
+    out.missing = missing;
     return out;                        // ว่าง = ให้ buildDiseaseData ใช้ชีตหรือข้อมูลชุดเดิมที่ครบแทน
   }
 
@@ -769,10 +882,7 @@ async function fetchMophDisease(beYear) {
     }
   }
 
-  // date_com = YYYYMMDDHHMM → DD/MM/YYYY (ค.ศ.) ให้ frontend +543 เอง
-  const upd = /^\d{12}/.test(maxDateCom)
-    ? `${+maxDateCom.slice(6, 8)}/${+maxDateCom.slice(4, 6)}/${maxDateCom.slice(0, 4)}`
-    : '';
+  const upd = dateComToDmy(maxDateCom);
 
   const out = [];
   for (let w = 1; w <= 53; w++) {
@@ -864,7 +974,7 @@ app.listen(PORT, () => {
   setInterval(warmSheetCache, 5 * 60 * 1000);
 
   // โซน F — อุ่น cache ไว้ก่อนผู้ใช้เข้ามา แล้วรีเฟรชทุก 3 ชม. (cache อยู่ได้ 6 ชม.)
-  // เท่ากับยิง MOPH วันละ ~8 รอบ (32 คำขอ) ไม่ว่าจะมีคนเปิดแดชบอร์ดกี่คน
+  // เท่ากับยิง MOPH วันละ ~8 รอบ (2 ตาราง × 4 จังหวัด = 8 คำขอ/รอบ) ไม่ว่าจะมีคนเปิดแดชบอร์ดกี่คน
   warmDiseaseCache();
   setInterval(warmDiseaseCache, 3 * 60 * 60 * 1000);
 
@@ -887,5 +997,12 @@ async function warmDiseaseCache() {
     console.log(`[${new Date().toLocaleTimeString('th-TH')}] ✅ ข้อมูลโรคอัพเดทแล้ว (${d.meta.source}, ${d.meta.dataDate || 'ไม่ทราบวันที่'})`);
   } catch (e) {
     console.warn('อุ่น cache ข้อมูลโรคไม่สำเร็จ:', e.message);
+  }
+  // รายจังหวัด (E2) ต่อท้าย ไม่ยิงพร้อมกัน — MOPH เห็นเราทีละคำขอเสมอ
+  try {
+    const d = await singleFlight('disease-pv', buildDiseasePv);
+    console.log(`[${new Date().toLocaleTimeString('th-TH')}] ✅ ผู้ป่วยรายจังหวัดอัพเดทแล้ว (${d.meta.source}, ${d.meta.dataDate || 'ไม่ทราบวันที่'})`);
+  } catch (e) {
+    console.warn('อุ่น cache ผู้ป่วยรายจังหวัดไม่สำเร็จ:', e.message);
   }
 }
