@@ -324,7 +324,8 @@ table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:13px
 .dz .tot{margin-left:auto;text-align:right}
 .dz .tot b{font-family:"Anuphan";font-size:28px;font-weight:700;display:block;line-height:1.1}
 .dz svg.bars{width:100%;height:auto;display:block;margin-top:6px}
-.dz .lg{display:flex;gap:16px;font-size:12px;color:var(--ink-2)}
+.dz .lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--ink-2)}
+.dz .lg .lg-n{flex-basis:100%;color:var(--ink-3)}
 .dz .lg span{display:flex;align-items:center;gap:6px}
 .dz .lg i{width:12px;height:12px;border-radius:3px}
 
@@ -704,6 +705,7 @@ table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:13px
     <div class="ft-col">
       <h4>เกี่ยวกับข้อมูล</h4>
       <p>ค่าฝุ่นรายจังหวัดเป็นค่าเฉลี่ย 24 ชั่วโมง ณ เวลา 07.00 น. ของแต่ละวัน</p>
+      <p>ข้อมูลรายสัปดาห์ (ทั้งค่าฝุ่นและผู้ป่วย) นับตามสัปดาห์ระบาดวิทยาของกรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค.</p>
       <p>ค่ารายอำเภอ/ตำบลและการคาดการณ์เป็นค่าประมาณจากดาวเทียม อาจต่างจากค่าสถานีตรวจวัด</p>
       <p>ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยงด้านสุขภาพ</p>
     </div>
@@ -763,6 +765,14 @@ const DZ = [
 const TH_M = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const TH_DS = ["อา.","จ.","อ.","พ.","พฤ.","ศ.","ส."];
 const TH_D = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+// ---------- สัปดาห์ระบาดวิทยา (กรมควบคุมโรค · HDC): อาทิตย์–เสาร์ · สัปดาห์ที่ 1 = 1 ม.ค. ถึงเสาร์แรกของปี ----------
+// ตรวจแล้วตรงกับประกาศ ddc.moph.go.th ปี 2569 ครบสัปดาห์ที่ 1–41 และตัวอย่างในแบบรายงาน HDC (1 ม.ค. วันพุธ → สัปดาห์ที่ 1 = 1–4 ม.ค.)
+function epiStart(y, wk) { const j = new Date(y, 0, 1), off = (7 - j.getDay()) % 7 || 7; return wk === 1 ? j : new Date(y, 0, 1 + off + (wk - 2) * 7); }
+function epiEnd(y, wk) { const s = epiStart(y, wk), e = new Date(y, s.getMonth(), s.getDate() + 6 - s.getDay()); return e.getFullYear() > y ? new Date(y, 11, 31) : e; }
+function epiMonth(y, wk) { const s = epiStart(y, wk), e = epiEnd(y, wk); return new Date((s.getTime() + e.getTime()) / 2).getMonth(); }   // เดือนที่สัปดาห์นั้นมีวันอยู่มากกว่า
+function epiWeekOf(d) { const y = d.getFullYear(), s2 = epiStart(y, 2); return d < s2 ? 1 : 2 + Math.floor(Math.round((d - s2) / 864e5) / 7); }
+const epiRange = (y, w0, w1) => { const a = epiStart(y, w0), b = epiEnd(y, w1 ?? w0); return `${a.getDate()} ${TH_M[a.getMonth()]}–${b.getDate()} ${TH_M[b.getMonth()]}`; };
+const epiWeeksOfMonth = (y, mo, upTo = 53) => { const w = []; for (let k = 1; k <= upTo; k++) { if (epiStart(y, k).getFullYear() !== y) break; if (epiMonth(y, k) === mo) w.push(k); } return w; };
 const TH_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 // ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. ณ 07:00 (ดู plan07Row_ ใน tools/line_report.gs)
 const REPORT_TIME = "07.00 น.";
@@ -1100,17 +1110,20 @@ function inFeature(pt, f) {
 }
 
 // ---------- แนวโน้มรายสัปดาห์ (crosshair + tooltip) ----------
+// รวมตามสัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์ · ตัดรอบที่ 1 ม.ค.) ให้ตรงกับสัปดาห์ของข้อมูลผู้ป่วย HDC
 function weekly() {
   const all = S.pm?.allData || {}, dates = Object.keys(all).sort();
   if (!dates.length) return [];
-  const t0 = new Date(dates[0]); const wk = [];
+  const wk = new Map();
   for (const d of dates) {
-    const i = Math.floor((new Date(d) - t0) / 864e5 / 7);
-    (wk[i] ||= { s: d, e: d, v: PROV.map(() => []) }).e = d;
-    PROV.forEach((p, k) => { const x = all[d]?.[p.name]; if (x != null && x > 0) wk[i].v[k].push(x); });
+    const dt = new Date(d + "T00:00:00"), y = dt.getFullYear(), w = epiWeekOf(dt), key = y * 100 + w;
+    if (!wk.has(key)) wk.set(key, { s: d, e: d, y, w, v: PROV.map(() => []) });
+    const o = wk.get(key); o.e = d;
+    PROV.forEach((p, k) => { const x = all[d]?.[p.name]; if (x != null && x > 0) o.v[k].push(x); });
   }
-  return wk.filter(Boolean).map(w => ({ s: w.s, e: w.e, v: w.v.map(a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null) }));
+  return [...wk.values()].map(o => ({ s: o.s, e: o.e, y: o.y, w: o.w, v: o.v.map(a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null) }));
 }
+
 // ---------- กราฟแนวโน้ม: รายวัน/รายสัปดาห์ · เลือกช่วงเวลา · ซูม/เลื่อน ----------
 // TR.view = [ตั้งแต่, ถึง] (ISO) เมื่อผู้ใช้ซูม/เลื่อนเอง · null = ใช้ช่วงจากปุ่ม TR.range
 const TR = { mode: "day", range: "season", view: null };   // ค่าเริ่มต้น = ฤดูฝุ่น พ.ย.–พ.ค. (ข้ามปี)
@@ -1156,7 +1169,7 @@ function renderTrend() {
   const dom = season ? dustSeasonOf(last) : [P[0].s, P.at(-1).s];
   const span = Math.max(1, dDiff(dom[0], dom[1]));
   document.getElementById("trendSub").textContent =
-    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 07.00 น.)" : "ค่าเฉลี่ยรายสัปดาห์"} · ${season ? "ฤดูฝุ่น " : ""}${thDate(dom[0])} ${+dom[0].slice(0, 4) + 543} – ${thDate(dom[1])} ${+dom[1].slice(0, 4) + 543} · µg/m³`;
+    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 07.00 น.)" : "ค่าเฉลี่ยรายสัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์)"} · ${season ? "ฤดูฝุ่น " : ""}${thDate(dom[0])} ${+dom[0].slice(0, 4) + 543} – ${thDate(dom[1])} ${+dom[1].slice(0, 4) + 543} · µg/m³`;
   document.getElementById("legend").innerHTML = PROV.map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
 
   // วาดตามความกว้างจริงของกล่อง (1 หน่วย ≈ 1 px) — มือถือตัวอักษรไม่ถูกย่อจนอ่านไม่ออก
@@ -1233,7 +1246,7 @@ function renderTrend() {
     const i = nearest(sx), r = P[i], x = X(r.s);
     xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.setAttribute("opacity", .5);
     dots.innerHTML = PROV.map((p, k) => r.v[k] == null ? "" : `<circle cx="${x}" cy="${Y(r.v[k])}" r="5.5" fill="${p.color}" stroke="#fff" stroke-width="2"/>`).join("");
-    const when = day ? `วัน${TH_D[new Date(r.s + "T00:00:00").getDay()]}ที่ ${thDate(r.s)} ${+r.s.slice(0, 4) + 543}` : `${thDate(r.s)} – ${thDate(r.e)}`;
+    const when = day ? `วัน${TH_D[new Date(r.s + "T00:00:00").getDay()]}ที่ ${thDate(r.s)} ${+r.s.slice(0, 4) + 543}` : `สัปดาห์ระบาดวิทยาที่ ${r.w}/${r.y + 543} · ${thDate(r.s)} – ${thDate(r.e)}`;
     tip.innerHTML = `<div class="t">${when}</div>` + PROV.map((p, k) => ({ p, v: r.v[k] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)
       .map(o => `<div class="r"><span><i style="background:${o.p.color}"></i>${o.p.name}</span><b class="num" style="color:${LV[lvOf(o.v)].ink}">${f1(o.v)}</b></div>`).join("");
     const rr = svg.getBoundingClientRect(), px = x / VW * rr.width;
@@ -1367,7 +1380,7 @@ function monthly(rows, key, upToWk, yearCE) {
     const wk = +r.wk; if (!wk || wk > upToWk) continue;
     const k = Object.keys(r).find(x => x.includes(key)); const v = +String(r[k] ?? "").replace(/,/g, "");
     if (!k || isNaN(v)) continue;
-    const mo = new Date(yearCE, 0, 1 + (wk - 1) * 7 + 3).getMonth(); m[mo] += v; has[mo] = true;
+    const mo = epiMonth(yearCE, wk); m[mo] += v; has[mo] = true;   // เดือนที่สัปดาห์ระบาดวิทยานั้นมีวันอยู่มากกว่า
   }
   return m.map((v, i) => has[i] ? v : null);
 }
@@ -1375,7 +1388,7 @@ function renderDisease() {
   const dz = S.dz; if (!dz) { document.getElementById("dz").innerHTML = `<p class="muted">ดึงข้อมูลโรคไม่ได้</p>`; return; }
   const wkMax = dz.meta?.reportWeek || Math.max(...(dz[2026] || []).map(r => +r.wk)) - 1;
   S.wkMax = wkMax;
-  document.getElementById("dzSub").textContent = `ผู้ป่วยรายเดือน · ปี 2569 สะสมสัปดาห์ที่ 1–${wkMax} เทียบช่วงเดียวกันปี 2568 · ข้อมูล HDC`;
+  document.getElementById("dzSub").textContent = `ผู้ป่วยรายเดือน · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)}) เทียบสัปดาห์เดียวกันปี 2568 · ข้อมูล HDC`;
   S.dzTot = []; S.dzData = [];
   document.getElementById("dz").innerHTML = DZ.map((d, di) => {
     const a = monthly(dz[2025], d.key, 53, 2025), b = monthly(dz[2026], d.key, wkMax, 2026);
@@ -1387,7 +1400,7 @@ function renderDisease() {
         <div><h3>${d.label}</h3><div class="icd">${d.icd}</div></div>
         <div class="tot"><b class="num">${fmt(t26)}</b><span class="delta ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}% จากปี 2568 (${fmt(t25)})</span></div></div>
       <svg class="bars" viewBox="0 0 ${W} ${H}" role="img" aria-label="ผู้ป่วยรายเดือน ${d.label} ปี 2568 และ 2569">${g}</svg>
-      <div class="lg"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:${d.c}"></i>ปี 2569 (ถึงสัปดาห์ที่ ${wkMax})</span></div>
+      <div class="lg"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:${d.c}"></i>ปี 2569 (สัปดาห์ระบาดวิทยาที่ 1–${wkMax})</span><span class="lg-n">แต่ละสัปดาห์นับเข้าเดือนที่มีวันอยู่มากกว่า · ชี้ที่แท่งเพื่อดูสัปดาห์ที่รวม</span></div>
       <div class="tip"></div></article>`; }).join("");
   // tooltip ต่อแท่ง
   document.querySelectorAll(".dz").forEach(card => {
@@ -1400,6 +1413,10 @@ function renderDisease() {
   });
 }
 // แท่งรายเดือน: 2568 เทา / 2569 สีกลุ่มโรค — ใช้ทั้งหน้าเว็บและ infographic
+function dzWkNote(y, mo, upTo) {   // "สัปดาห์ระบาดวิทยาที่ a–b (n สัปดาห์ · วันที่)"
+  const w = epiWeeksOfMonth(y, mo, upTo); if (!w.length) return "";
+  return `สัปดาห์ระบาดวิทยาที่ ${w[0]}${w.length > 1 ? "–" + w.at(-1) : ""} (${w.length} สัปดาห์ · ${epiRange(y, w[0], w.at(-1))})`;
+}
 function dzBars(d, a, b, W, H, fs) {
   const L = fs * 3.8, B = fs * 2.3, T = 8, pw = W - L - 8, ph = H - T - B, slot = pw / 12, bw = Math.min(fs * 1.6, slot / 2 - 3);
   const mx = Math.max(...a, ...b.map(x => x || 0)) * 1.1, step = niceStep(mx);
@@ -1407,8 +1424,8 @@ function dzBars(d, a, b, W, H, fs) {
   for (let t = 0; t <= mx; t += step) g += `<line x1="${L}" x2="${W - 8}" y1="${T + ph - t / mx * ph}" y2="${T + ph - t / mx * ph}" stroke="rgba(15,27,45,.09)"/><text x="${L - 6}" y="${T + ph - t / mx * ph + fs * .38}" text-anchor="end" font-size="${fs}" fill="#5f6c80">${t >= 1000 ? (t / 1000) + "k" : t}</text>`;
   for (let i = 0; i < 12; i++) {
     const x0 = L + i * slot + slot / 2;
-    if (a[i] != null) { const h = a[i] / mx * ph; g += `<rect class="hb" x="${x0 - bw - 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="#b4bfcd" data-t="${TH_M[i]} 2568: ${fmt(a[i])} ราย"/>`; }
-    if (b[i] != null) { const h = b[i] / mx * ph; g += `<rect class="hb" x="${x0 + 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="${d.c}" data-t="${TH_M[i]} 2569: ${fmt(b[i])} ราย"/>`; }
+    if (a[i] != null) { const h = a[i] / mx * ph; g += `<rect class="hb" x="${x0 - bw - 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="#b4bfcd" data-t="${TH_M[i]} 2568: ${fmt(a[i])} ราย · ${dzWkNote(2025, i, 53)}"/>`; }
+    if (b[i] != null) { const h = b[i] / mx * ph; g += `<rect class="hb" x="${x0 + 1}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="${d.c}" data-t="${TH_M[i]} 2569: ${fmt(b[i])} ราย · ${dzWkNote(2026, i, S.wkMax || 53)}"/>`; }
     g += `<text x="${x0}" y="${H - fs * .5}" text-anchor="middle" font-size="${fs}" fill="#5f6c80">${TH_M[i]}</text>`;
   }
   return g;
@@ -1474,7 +1491,7 @@ function buildInfographic(size = "a4", dense = 0) {
         return `<div style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n">${p.name}${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM2.5</em>${v != null ? f1(v) : "–"}<small> µg/m³</small></span></div>`; }).join("")}</div>
     </div>
     ${adviceBox}
-    <div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น<small style="font-family:IBM Plex Sans Thai;font-weight:400;font-size:15px;color:var(--ink-3);margin-left:auto">ผู้ป่วยรายเดือน · ปี 2569 ถึงสัปดาห์ที่ ${S.wkMax} · HDC</small></div>
+    <div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น<small style="font-family:IBM Plex Sans Thai;font-weight:400;font-size:15px;color:var(--ink-3);margin-left:auto">ผู้ป่วยรายเดือน · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${S.wkMax} (${epiRange(2026, 1, S.wkMax)}) · HDC</small></div>
     <div class="dzg">${(S.dzData || []).map(o => `<div style="background:linear-gradient(165deg,#fff 15%,${o.d.soft});border-color:color-mix(in srgb,${o.d.c} 25%,#fff)">
       <div class="dh"><span class="dz-icon" style="background:#fff;color:${o.d.c}">${inl(o.d.icon, 24)}</span><span class="nm">${o.d.label}</span><span class="tt"><b class="num">${fmt(o.t26)}</b><span class="${o.pct > 0 ? "up" : "down"}">${o.pct > 0 ? "▲" : "▼"} ${Math.abs(o.pct).toFixed(1)}% จากปี 2568</span></span></div>
       <svg viewBox="0 0 470 ${CH}" width="100%">${dzBars(o.d, o.a, o.b, 470, CH, 11)}</svg></div>`).join("")}</div>
