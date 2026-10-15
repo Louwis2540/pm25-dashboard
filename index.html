@@ -588,8 +588,8 @@ table.t7{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:calc
 </svg>
 
 <header class="hdr">
-  <!-- ภาพหัว header-v2.webp (2000×250, สัดส่วน 8:1) — ถ้าโหลดไม่ได้ซ่อนไป แล้วใช้หัวข้อตัวอักษรแทน -->
-  <div class="hdr-banner"><img src="/header-v2.webp" width="2000" height="250" alt="รายงานสถานการณ์ละอองฝุ่นขนาดเล็ก PM2.5 เขตสุขภาพที่ 7 · กรมควบคุมโรค" onerror="this.parentElement.style.display='none';document.getElementById('hdrText').hidden=false"></div>
+  <!-- ภาพหัว header-v3.webp (2400×300, สัดส่วน 8:1) — ถ้าโหลดไม่ได้ซ่อนไป แล้วใช้หัวข้อตัวอักษรแทน -->
+  <div class="hdr-banner"><img src="/header-v3.webp" width="2400" height="300" alt="รายงานสถานการณ์ละอองฝุ่นขนาดเล็ก PM2.5 เขตสุขภาพที่ 7 · กรมควบคุมโรค" onerror="this.parentElement.style.display='none';document.getElementById('hdrText').hidden=false"></div>
   <div class="hdr-in">
     <div id="hdrText" hidden><h1>รายงานสถานการณ์ฝุ่นละออง PM2.5 เขตสุขภาพที่ 7</h1><div class="sub">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</div></div>
     <div class="meta">
@@ -1474,7 +1474,7 @@ function buildInfographic(size = "a4", dense = 0) {
   ig.className = size; ig.dataset.dense = dense;
   const CH = [96, 80, 66, 56][dense];
   const avgBox = `<div class="avg">${weatherArt(S.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k"><b class="pm-tag">ค่าฝุ่น PM2.5</b>เฉลี่ย 4 จังหวัด</span><span class="v num">${f1(S.avg)}<small> µg/m³</small></span><span class="l">คุณภาพอากาศ${L.name}</span></div></div>`;
-  const head = `<div class="ig-banner"><img src="/header-v2.webp" alt="" width="2000" height="250"></div><div class="ig-date"><span class="d">${S.todayRow ? `<b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${L.face} ภาพรวมเขต: ${L.name}</span></div>`;
+  const head = `<div class="ig-banner"><img src="/header-v3.webp" alt="" width="2400" height="300"></div><div class="ig-date"><span class="d">${S.todayRow ? `<b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${L.face} ภาพรวมเขต: ${L.name}</span></div>`;
   const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้</div>
     <div class="advice"><div class="lv"><span class="f">${L.face}</span><b>${L.name}</b><span>${L.range} µg/m³</span></div>
       <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
