@@ -504,7 +504,10 @@ async function buildDiseaseData() {
    ผู้ป่วยรายจังหวัด (โซน E2) — s_pm25_2_in_week
    ตัวตั้ง = ผู้ป่วยที่อยู่อาศัยจริงในจังหวัด (TYPEAREA 1 และ 3) ตัดซ้ำรายคน/สัปดาห์ (w_NN_m)
    ตัวหาร = ประชากร Type 1+3 กลางปี (config.population) → คิดอัตราต่อแสนได้ถูกคู่
-   แหล่งสำรอง = แท็บ "latest" ในชีต (ตัวเก็บภาพข้อมูล moph_snapshot_to_sheet.gs ทุกวัน 07:00)
+   แหล่งหลัก  = แท็บ "latest" ในชีต — ตัวเก็บภาพข้อมูล (moph_snapshot_to_sheet.gs ทุกวัน 07:00)
+                ดึงจาก MOPH แล้วรวมเป็นจังหวัด × สัปดาห์ × กลุ่มโรค ไว้แล้ว (~600 แถว อ่านเร็ว)
+   แหล่งสำรอง = MOPH ตรง — ตารางนี้ใหญ่มาก (ขอนแก่น ~12,000 แถว × 218 คอลัมน์ ≈ 37 MB)
+                จาก Render ใช้เวลานานหลายนาที จึงใช้เฉพาะเมื่อชีตไม่ครบทุกจังหวัด
 ══════════════════════════════════════════ */
 const PV_KEY = { 'ทางเดินหายใจ': 'resp', 'หัวใจ': 'heart', 'ตาอักเสบ': 'eye', 'ผิวหนัง': 'skin' };
 
@@ -532,7 +535,22 @@ async function diseasePvFromMoph(beYear) {
   return { rows: pvRowsFrom(acc), dateCom: maxDateCom, missing: [] };
 }
 
-// แหล่งสำรอง: แท็บ latest (snapshot_at, date_com, b_year, table, pv_code, pv_name, wk, group, m, ...)
+// date_com จากชีต → YYYYMMDDHHMM · ชีตอาจแปลงข้อความเป็นวันที่แล้วส่งออกตามรูปแบบภาษา
+// รับ: 202610090618 · 2026-10-09 06:18[:00] · 9/10/2026 6:18[:00] (ไทย: วัน/เดือน/ปี) · ปี พ.ศ.
+function sheetDateCom(v) {
+  const s = String(v || '').trim(), p2 = n => String(n).padStart(2, '0');
+  let m;
+  if ((m = s.match(/^(\d{12})/))) return m[1];
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/)) ||
+      (m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/))) {
+    let [y, mo, d] = s.includes('/') ? [+m[3], +m[2], +m[1]] : [+m[1], +m[2], +m[3]];
+    if (y > 2400) y -= 543;
+    return `${y}${p2(mo)}${p2(d)}${p2(m[4] || 0)}${p2(m[5] || 0)}`;
+  }
+  return '';
+}
+
+// แหล่งหลัก: แท็บ latest (snapshot_at, date_com, b_year, table, pv_code, pv_name, wk, group, m, ...)
 async function diseasePvFromSheet(beYear) {
   const { api, provinces } = readConfig();
   const csv = await fetchCSV([`https://docs.google.com/spreadsheets/d/${api.sheet_id}/gviz/tq?tqx=out:csv&sheet=latest`]);
@@ -547,11 +565,11 @@ async function diseasePvFromSheet(beYear) {
   for (const line of lines.slice(1)) {
     const c = csvLine(line).map(x => x.replace(/"/g, ''));
     if (c[iT] !== 's_pm25_2_in_week' || String(c[iY]) !== String(beYear) || !names.has(c[iP])) continue;
-    const key = PV_KEY[c[iG]], w = Number(c[iW]), v = Number(c[iM]);
+    const key = PV_KEY[c[iG]], w = Number(c[iW]), v = Number(String(c[iM]).replace(/,/g, ''));
     if (!key || !w || !(v >= 0)) continue;
     const a = acc[c[iP]] ||= {};
     (a[w] ||= {})[key] = (a[w][key] || 0) + v;
-    const dc = String(c[iD] || '').replace(/\D/g, '');
+    const dc = sheetDateCom(c[iD]);
     if (dc > maxDateCom) maxDateCom = dc;
   }
   if (Object.keys(acc).length < provinces.length) return { rows: [] };   // ชีตต้องครบทุกจังหวัดเช่นกัน
@@ -561,10 +579,13 @@ async function diseasePvFromSheet(beYear) {
 async function buildDiseasePv() {
   const { population, api } = readConfig();
   const beYear = String(population?.year_be || 2569);
-  let src = await diseasePvFromMoph(beYear), source = 'moph';
-  const missing = src.missing || [];
-  if (!src.rows.length) { src = await diseasePvFromSheet(beYear); source = 'sheet'; }
-  if (!src.rows.length) throw new Error('MOPH ไม่ครบจังหวัด (' + missing.join(', ') + ') และอ่านแท็บ latest ไม่ได้');
+  let src = await diseasePvFromSheet(beYear).catch(e => (console.warn('อ่านแท็บ latest ไม่ได้:', e.message), { rows: [] }));
+  let source = 'sheet', missing = [];
+  if (!src.rows.length) {
+    console.warn('แท็บ latest ไม่ครบทุกจังหวัด — ดึงจาก MOPH ตรง (อาจใช้เวลาหลายนาที)');
+    src = await diseasePvFromMoph(beYear); source = 'moph'; missing = src.missing || [];
+  }
+  if (!src.rows.length) throw new Error('แท็บ latest ไม่ครบ และ MOPH ไม่ครบจังหวัด (' + missing.join(', ') + ')');
 
   const dataDate = dateComToDmy(src.dateCom || '');
   const staleDays = Number(api.disease_stale_days) || 10;
@@ -576,7 +597,7 @@ async function buildDiseasePv() {
     meta: { source, mophMissing: missing, dataDate, ageDays: age.ageDays, staleDays,
             stale: age.ageDays !== null && age.ageDays > staleDays },
   };
-  setCached('disease-pv', data, source === 'moph' ? 6 * 60 * 60 * 1000 : 30 * 60 * 1000);
+  setCached('disease-pv', data, 60 * 60 * 1000);   // 1 ชม. — ชีตอัปเดตวันละครั้ง อ่านซ้ำได้ถูก ๆ
   return data;
 }
 
