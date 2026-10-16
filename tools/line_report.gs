@@ -332,7 +332,7 @@ function testReportDryRun() {
   // เช็ค PHEOC ได้จริงใน dry run — ตอนนี้มันแค่อ่าน API ไม่เขียนชีต
   // ส่วน recordHistory ยังข้ามอยู่ เพราะอันนั้นเขียนข้อมูลจริง
   Logger.log('── เกณฑ์ PHEOC (ค่า 07:00 ถึง ' + PHEOC_THRESHOLD + ' ติดกัน 2 วัน) ──');
-  const pheocStatus = { provinces: checkPheoc07_() };
+  const pheocStatus = { provinces: checkPheoc07_(true) };
   Logger.log('  สรุป : ' + (pheocStatus.provinces.length
     ? '⚠️ เข้าเกณฑ์ ' + pheocStatus.provinces.join(', ')
     : '🟢 ไม่มีจังหวัดเข้าเกณฑ์'));
@@ -725,9 +725,9 @@ function record07Rows_(hist) {
  * วันไหนไม่มีค่า 07:00 ถือว่า "ไม่เข้าเกณฑ์" โดยตั้งใจ — ไม่เดาแทนข้อมูลที่ขาด
  * เพราะการประกาศเปิด PHEOC ผิดพลาดมีต้นทุนสูงกว่าการไม่ประกาศ
  */
-function checkPheoc07_() {
+function checkPheoc07_(dryRun) {
   const hist = fetch07Values_(2);
-  record07Rows_(hist);
+  if (!dryRun) record07Rows_(hist);   // dry run ไม่เขียนชีต
   const today = new Date();
   const d1 = Utilities.formatDate(today, 'GMT+7', 'yyyy-MM-dd');                        // วันนี้
   const d0 = Utilities.formatDate(new Date(today.getTime() - 86400000), 'GMT+7', 'yyyy-MM-dd'); // เมื่อวาน
