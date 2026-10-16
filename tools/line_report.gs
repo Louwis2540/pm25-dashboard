@@ -17,6 +17,11 @@
  *   5. PHEOC ใช้ค่า 07:00 จาก Air4Thai history ถึง 75.1 ติดกัน 2 วัน
  *      (เดิมเทียบแถวสุดท้ายในชีต = ค่า ณ เวลาที่รัน ซึ่งเป็นบ่าย ไม่ใช่เช้า)
  *   6. เขียนทับแถวของวันนี้แทนการ appendRow ซ้ำทุกรอบ
+ *
+ * แก้เพิ่ม (05/10/2026):
+ *   7. ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. ณ 07:00 เท่านั้น — รอบ 15:00
+ *      ไม่เขียนทับค่าเช้าอีก (ดู plan07Row_) และ testReportDryRun แสดงว่า
+ *      จะเขียนอะไรลงชีต
  */
 
 // ── ค่าที่ไม่เป็นความลับ ───────────────────────────────────────────────
@@ -335,6 +340,20 @@ function testReportDryRun() {
   airData.forEach(p => Logger.log('  ' + p.name + ' : ' + (p.pm25 === null ? '(ไม่มีข้อมูล)' : p.pm25) + '  เวลา ' + p.time));
   Logger.log('  เฉลี่ย 4 จังหวัด : ' + (avgPM === null ? '(คำนวณไม่ได้)' : avgPM.toFixed(1)));
 
+  // แถวของวันนี้ในชีต PM25_History ถ้ารันจริงจะเป็นอะไร — แค่อ่านชีต ไม่เขียน
+  Logger.log('── ชีต PM25_History (ถ้ารันจริง) ──');
+  try {
+    const todayDateStr = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd");
+    const sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("PM25_History");
+    const rows = sh && sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues() : [];
+    const row = rows.filter(r => normDate_(r[0]) === todayDateStr).pop();
+    const existing = row ? row.slice(1) : ["", "", "", ""];
+    Logger.log('  แถววันนี้ตอนนี้ : ' + (row ? existing.join(' | ') : '(ยังไม่มี)'));
+    plan07Row_(airData, todayDateStr, existing).log.forEach(s => Logger.log('  ' + s));
+  } catch (e) {
+    Logger.log('  ❌ อ่านชีตไม่ได้: ' + e.message);
+  }
+
   Logger.log('── ข้อมูลกลุ่มโรค ──');
   if (!healthData) {
     Logger.log('  ❌ อ่านไม่ได้');
@@ -475,7 +494,7 @@ function getAirDataStrict() {
 
   return TARGET_STATIONS.map(target => {
     const station = stationsData.find(s => String(s.stationID).trim().toLowerCase() === String(target.id).trim().toLowerCase());
-    let pmValue = null, timeStr = "07.00";
+    let pmValue = null, timeStr = "07.00", dateStr = "";
 
     if (station) {
       let updateData = station.LastUpdate || station.AQILast;
@@ -487,9 +506,13 @@ function getAirDataStrict() {
         if (updateData.time) {
           timeStr = updateData.time;
         }
+        // วันที่ของค่า ('yyyy-MM-dd') — ใช้กันไม่ให้ค่าค้างของเมื่อวานถูกบันทึกเป็นของวันนี้
+        if (updateData.date) {
+          dateStr = String(updateData.date).trim();
+        }
       }
     }
-    return { name: target.name, pm25: pmValue, time: timeStr };
+    return { name: target.name, pm25: pmValue, time: timeStr, date: dateStr };
   });
 }
 
@@ -583,10 +606,6 @@ function recordHistoryAndCheckPHEOC(airData) {
 
     const todayDateStr = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd");
 
-    // เว้นว่างเมื่อไม่มีข้อมูล — ของเดิมใช้ `|| 0` ทำให้ "สถานีล่ม" ถูกบันทึกเป็น
-    // 0 µg/m³ แล้วหน้าเว็บ (Zone B/D) เอาไปแสดงเป็นค่าจริง
-    const vals = airData.map(p => (p.pm25 === null || isNaN(p.pm25)) ? "" : p.pm25);
-
     const lastRow = sheet.getLastRow();
     const all = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 5).getValues() : [];
 
@@ -595,13 +614,17 @@ function recordHistoryAndCheckPHEOC(airData) {
     // ค่า ณ เวลาที่สคริปต์รัน (บ่าย 3) ไม่ใช่ค่าเช้า
     pheocProvinces = checkPheoc07_();
 
-    // ── เขียนทับแถวของวันนี้ถ้ามีอยู่แล้ว ────────────────────────────
+    // ── อัปเดตแถวของวันนี้ (มีแถวเดียวต่อวัน) ───────────────────────
     // ของเดิม appendRow ทุกรอบ → ในชีตมีวันซ้ำ 106 วัน (บางวัน 5 แถว)
     let todayRowIdx = -1;
     for (let i = all.length - 1; i >= 0; i--) {
       if (normDate_(all[i][0]) === todayDateStr) { todayRowIdx = i + 2; break; }
     }
-    const rowData = [todayDateStr].concat(vals);
+    const existing = todayRowIdx > 0 ? all[todayRowIdx - 2].slice(1) : ["", "", "", ""];
+    const plan = plan07Row_(airData, todayDateStr, existing);
+    plan.log.forEach(s => console.log('  ชีต ' + s));
+
+    const rowData = [todayDateStr].concat(plan.vals);
     if (todayRowIdx > 0) sheet.getRange(todayRowIdx, 1, 1, 5).setValues([rowData]);
     else                 sheet.appendRow(rowData);
 
@@ -610,6 +633,52 @@ function recordHistoryAndCheckPHEOC(airData) {
     console.log("❌ บันทึกประวัติ/เช็ค PHEOC ไม่สำเร็จ: " + e.message);
   }
   return { provinces: pheocProvinces };
+}
+
+/**
+ * ตัดสินว่าแถวของวันนี้ในชีตควรเป็นค่าอะไร — ชีตนี้คือ "ค่าเฉลี่ย 24 ชม. ณ 07:00 น."
+ * (หน้าเว็บอ่านชีตนี้ตรงๆ และเขียนกำกับว่า "ข้อมูล ณ 07:00 น.")
+ *
+ * ค่าจาก getNewAQI_JSON คือค่าเฉลี่ย 24 ชม. ณ ชั่วโมงล่าสุด ไม่ใช่ค่ารายชั่วโมง
+ * ของเดิมเขียนทับทุกรอบ → รอบ 15:00 แทนค่าเช้าด้วยค่าเฉลี่ย ณ บ่าย
+ * (2 ต.ค. 2569: ขอนแก่น 07:00 = 23.6 แต่ชีตกลายเป็น 21.8)
+ *
+ * กติกาต่อสถานี:
+ *   1. ค่าของวันนี้ ณ 07:xx           → เขียน (ค่าจริงที่ต้องการ ทับได้เสมอ)
+ *   2. ค่าเวลาอื่น และช่องยังว่าง       → เขียนเป็นค่าชั่วคราว
+ *      (รอบเช้าที่รันก่อน Air4Thai ออกค่า 07:00 — มีตัวเลขดีกว่าช่องว่าง)
+ *   3. ค่าเวลาอื่น และช่องมีค่าแล้ว     → คงค่าเดิม ← จุดที่แก้ปัญหารอบ 15:00
+ *   4. ไม่มีค่า หรือเป็นค่าของวันอื่น   → คงค่าเดิม (ไม่บันทึก 0 แทนสถานีล่ม)
+ *
+ * ไม่คำนวณค่าเฉลี่ยเองจาก history รายชั่วโมง เพราะถ้าบางชั่วโมงขาด ผลจะไม่ตรง
+ * กับที่ Air4Thai ประกาศ (2 ต.ค. ขอนแก่นมี 16/24 ชม. คำนวณได้ 21.3 ไม่ใช่ 23.6)
+ *
+ * existing = ค่าเดิมในชีต 4 ช่องตามลำดับ TARGET_STATIONS ("" = ว่าง)
+ * คืน { vals: [4 ค่า], log: [ข้อความอธิบายทีละสถานี] }
+ */
+function plan07Row_(airData, todayDateStr, existing) {
+  const vals = [], log = [];
+  airData.forEach((p, i) => {
+    const old = existing[i];
+    const hasOld = old !== "" && old !== null && old !== undefined;
+    const has = p.pm25 !== null && !isNaN(p.pm25);
+    const isToday = p.date === todayDateStr;
+    const is07 = String(p.time).slice(0, 2) === PHEOC_HOUR;
+
+    let v = hasOld ? old : "", why;
+    if (!has || !isToday) {
+      why = 'ไม่มีค่าของวันนี้ (' + (p.date || '?') + ' ' + p.time + ') → คงเดิม';
+    } else if (is07) {
+      v = p.pm25; why = 'ค่า 07:00 = ' + p.pm25 + ' → บันทึก';
+    } else if (!hasOld) {
+      v = p.pm25; why = 'ยังไม่มีค่า 07:00 ใช้ค่า ' + p.time + ' = ' + p.pm25 + ' ไปก่อน (ชั่วคราว)';
+    } else {
+      why = 'ค่า ' + p.time + ' = ' + p.pm25 + ' ไม่ใช่ 07:00 → คงค่าเดิม ' + old;
+    }
+    vals.push(v);
+    log.push(p.name + ': ' + why);
+  });
+  return { vals: vals, log: log };
 }
 
 /**
