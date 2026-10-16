@@ -1029,39 +1029,8 @@ body.ds-open .ds-tile{display:none}
 .ds-tile:hover::after{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){.ds-tile::after{animation:none;display:none}}
 
-/* ===== สารบัญแถบขวา ===== */
-.toc{position:fixed;z-index:60;font-size:calc(13px*var(--fs,1));line-height:1.35}
-.toc-h{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:calc(12px*var(--fs,1));letter-spacing:.06em;color:var(--ink-3);padding:0 6px 8px;border-bottom:1px solid var(--line);margin-bottom:6px}
-.toc-x{display:none;border:0;background:none;font-size:calc(24px*var(--fs,1));line-height:1;color:var(--ink-2);cursor:pointer;padding:0 4px}
-.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-.toc ul{list-style:none;margin:0 0 4px;padding:0 0 0 32px;display:none}
-.toc li.on>ul{display:block}
-.toc a{display:flex;align-items:flex-start;gap:8px;text-decoration:none;color:var(--ink-2);border-radius:8px;padding:6px 8px;font-weight:600}
-.toc a:hover{background:rgba(15,27,45,.05);color:var(--ink-1)}
-.toc a:focus-visible{outline:2px solid var(--accent,#1c6ed6);outline-offset:1px}
-.toc .toc-z{font-weight:700}
-.toc-n{flex:none;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:calc(11.5px*var(--fs,1));font-weight:800;background:var(--subtle,#eef2f7);color:var(--ink-2)}
-.toc li.on>.toc-z{background:#e8f0fd;color:#0f3f86}
-.toc li.on>.toc-z .toc-n{background:#1c6ed6;color:#fff}
-.toc ul a{font-size:calc(12.5px*var(--fs,1));padding:4px 8px;border-left:2px solid var(--line);border-radius:0 6px 6px 0}
-.toc ul a.on{border-left-color:#1c6ed6;color:#0f3f86;background:#f2f6fd}
-.toc-top{margin-top:8px;font-size:calc(12px*var(--fs,1))!important;color:var(--ink-3)!important;border-top:1px solid var(--line);border-radius:0!important;padding-top:10px!important}
-.toc-fab{display:none}
-@media (min-width:1280px){
-  body,body:not(.ds-open){padding-left:0;padding-right:224px}   /* แผงดาวน์โหลดข้างซ้ายเดิมย้ายไปท้ายหน้าแล้ว */
-  .site-ft{margin-right:-224px;padding-right:224px}
-  .site-ft .ft-bar{margin-right:-224px;padding-right:224px}
-  .toc{top:84px;right:16px;width:200px;max-height:calc(100vh - 110px);overflow:auto;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:12px 8px;box-shadow:0 6px 24px rgba(15,27,45,.08)}
-}
-@media (max-width:1279.98px){
-  .toc{inset:auto 12px 76px auto;width:min(300px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 8px;box-shadow:0 12px 40px rgba(15,27,45,.22);display:none}
-  body.toc-open .toc{display:block}
-  .toc ul{display:block}
-  .toc-x{display:block}
-  .toc-fab{display:flex;align-items:center;gap:6px;position:fixed;right:12px;bottom:16px;z-index:61;border:0;border-radius:999px;padding:10px 16px;background:#0f1b2d;color:#fff;font:inherit;font-size:calc(14px*var(--fs,1));font-weight:700;box-shadow:0 6px 18px rgba(15,27,45,.3);cursor:pointer}
-  .toc-fab .ico{width:18px;height:18px}
-}
-@media print{.toc,.toc-fab{display:none!important}body{padding-right:0!important}}
+/* ไม่มีสารบัญในแดชบอร์ด — สารบัญอยู่ใน Figma · แผงดาวน์โหลดซ้ายเดิมย้ายไปท้ายหน้าแล้ว จึงไม่ต้องเว้นขอบซ้าย */
+@media (min-width:1280px){body,body:not(.ds-open){padding-left:0}}
 /* ===== ส่วนดาวน์โหลดข้อมูล (ท้ายหน้า) ===== */
 .ds-sec{padding:18px 20px}
 .ds-sec .ds-foot{margin:14px 0 0;font-size:calc(12.5px*var(--fs,1));font-weight:600;color:var(--ink-3);line-height:1.55}
@@ -1361,7 +1330,7 @@ const S = {};   // state กลาง
   document.getElementById("ftYear").textContent = new Date().getFullYear() + 543;
   applyTheme(); renderHeader(); renderToday(); renderDrill(PROV[0].name); initTrendBar(); renderTrend(); renderTrendStats(); renderT7(); renderHotspot(S.hsToday, false); renderDisease(); renderAdvice();
   document.body.classList.remove("is-loading");
-  buildToc(); visitStats();
+  visitStats();
   getJSON("/api/pm25-07").then(d => { if (d?.ok) { S.pm07 = d.allData; window.dsInit && dsInit(); } });
   getJSON("/api/pheoc").then(d => { S.pheoc = d?.ok ? d : { ok: false }; if (S.todayRow) renderToday(); });
   dzpvP.then(d => { window.DZPV = d?.ok ? d : { ok: false }; if (S.dz) renderDisease(); });
@@ -1447,66 +1416,6 @@ function pheocTitle() {
   if (!S.pheoc?.ok) return "";
   const th = d => `${+d.slice(8)} ${TH_M[+d.slice(5, 7) - 1]}`;
   return "ค่าเฉลี่ย 24 ชม. ณ 07.00 น. (Air4Thai)\n" + S.pheoc.provinces.map(p => `${p.name}: ` + p.days.map(x => `${th(x.date)} ${x.v == null ? "ไม่มีข้อมูล" : x.v}`).join(" · ")).join("\n");
-}
-
-// ---------- สารบัญแถบขวา (scrollspy) ----------
-const TOC = [["zToday", "i-gauge", "สถานการณ์วันนี้", [["แผนที่ค่าฝุ่นรายจังหวัด", "#drillMap"], ["ค่าฝุ่นรายจังหวัด", "#tiles"], ["เกณฑ์ PHEOC · จุดความร้อน", "#facts"]]], ["zTrend", "i-chart", "แนวโน้มค่าฝุ่น", [["กราฟแนวโน้ม", "#trBar"], ["ย้อนหลัง 7 วัน", "#t7"], ["สรุปช่วงที่แสดง", "#trStats"]]], ["zDrill", "i-layers", "เจาะลึกรายพื้นที่", [["จังหวัด · อำเภอ · ตำบล", "#drillPanel"], ["คาดการณ์ล่วงหน้า 3 วัน", "#forecast"]]], ["zHot", "i-fire", "จุดความร้อน", [["แผนที่จุดความร้อน", "#map"], ["สรุปรายจังหวัด", "#hotSide"]]], ["zDisease", "i-steth", "โรคที่ต้องเฝ้าระวัง", [["ผู้ป่วยรายเดือนทั้งเขต", ".dz-all"], ["ฝุ่นกับผู้ป่วยรายจังหวัด", ".pv-block"]]], ["zAdvice", "i-shield", "คำแนะนำวันนี้", [["ประชาชนและกลุ่มเสี่ยง", "#advNow"]]], ["zData", "i-down", "ดาวน์โหลดข้อมูล", [["ชุดข้อมูล CSV · Excel", "#dsBody"], ["Infographic (ส่วนหัว)", "#dlH"]]]];
-function buildToc() {
-  if (document.getElementById("toc")) return;
-  const nav = document.createElement("nav");
-  nav.id = "toc"; nav.className = "toc"; nav.setAttribute("aria-label", "สารบัญแดชบอร์ด");
-  // โครงสารบัญอ่านจากหน้าเว็บจริงทุกครั้ง: โซน = <section id> ใน <main> (ชื่อจากหัวข้อ h2) · หัวข้อย่อยแสดงเฉพาะที่มีอยู่จริง
-  // เพิ่ม/ลบ/เปลี่ยนชื่อโซนในหน้า สารบัญจะอัปเดตเอง (ไม่ต้องแก้รายการซ้ำ)
-  let M = [], sig = "";
-  const model = () => [...document.querySelectorAll("main section[id]")].map(sec => {
-    const c = TOC.find(z => z[0] === sec.id) || [sec.id, "", "", []];
-    const name = (sec.querySelector(".sec-h h2")?.textContent || c[2] || sec.id).trim();
-    return [sec.id, c[1], name, c[3].filter(([, sel]) => document.querySelector(sel))];
-  });
-  const paint = () => {
-    const m = model(), s = JSON.stringify(m); if (s === sig) return; sig = s; M = m;
-    nav.querySelector("ol").innerHTML = M.map(([id, ic, name, subs], i) => `
-    <li data-z="${id}"><a href="#${id}" class="toc-z"><span class="toc-n">${i + 1}</span><span>${name}</span></a>
-      <ul>${subs.map(([t, sel]) => `<li><a href="#${id}" data-sel="${sel}">${t}</a></li>`).join("")}</ul></li>`).join("");
-    if (!raf) raf = requestAnimationFrame(spy);
-  };
-  nav.innerHTML = `<div class="toc-h"><span>สารบัญ</span><button type="button" class="toc-x" aria-label="ปิดสารบัญ">×</button></div><ol></ol>
-    <a href="#top" class="toc-top" data-sel="body">↑ กลับด้านบน</a>`;
-  document.body.append(nav);
-  const fab = document.createElement("button");
-  fab.type = "button"; fab.id = "tocFab"; fab.className = "toc-fab"; fab.setAttribute("aria-controls", "toc"); fab.setAttribute("aria-expanded", "false");
-  fab.innerHTML = `<svg class="ico"><use href="#i-layers"/></svg><span>สารบัญ</span>`;
-  document.body.append(fab);
-  const open = v => { document.body.classList.toggle("toc-open", v); fab.setAttribute("aria-expanded", String(v)); };
-  fab.addEventListener("click", () => open(!document.body.classList.contains("toc-open")));
-  nav.querySelector(".toc-x").addEventListener("click", () => open(false));
-  addEventListener("keydown", e => { if (e.key === "Escape") open(false); });
-  nav.addEventListener("click", e => {
-    const a = e.target.closest("a"); if (!a) return;
-    e.preventDefault();
-    const sel = a.dataset.sel, t = sel === "body" ? document.body : (sel && document.querySelector(sel)) || document.querySelector(a.getAttribute("href"));
-    if (sel === "body") scrollTo({ top: 0, behavior: "smooth" });
-    else if (t) { const y = t.getBoundingClientRect().top + scrollY - 16; scrollTo({ top: Math.max(0, y), behavior: "smooth" }); }
-    open(false);
-  });
-  var raf = 0;
-  const spy = () => { raf = 0; if (!M.length) return;
-    const line = innerHeight * 0.28;
-    let cur = M[0][0], sub = null;
-    for (const [id, , , subs] of M) {
-      const z = document.getElementById(id); if (!z) continue;
-      if (z.getBoundingClientRect().top <= line) { cur = id; sub = null;
-        for (const [, sel] of subs) { const t = document.querySelector(sel); if (t && z.contains(t) && t.getBoundingClientRect().top <= line) sub = sel; } }
-    }
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) { cur = M.at(-1)[0]; sub = null; }
-    nav.querySelectorAll("li[data-z]").forEach(li => li.classList.toggle("on", li.dataset.z === cur));
-    nav.querySelectorAll("a[data-sel]").forEach(a => a.classList.toggle("on", a.dataset.sel === sub && a.closest("li[data-z]")?.dataset.z === cur));
-  };
-  paint();
-  let mt = 0; new MutationObserver(() => { clearTimeout(mt); mt = setTimeout(paint, 300); }).observe(document.querySelector("main"), { childList: true, subtree: true, characterData: true });
-  addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(spy); }, { passive: true });
-  addEventListener("resize", () => { if (!raf) raf = requestAnimationFrame(spy); });
-  spy();
 }
 
 // ---------- สถิติการเข้าชม (นับผู้เข้าชมไม่ซ้ำต่อวัน · ไม่เก็บข้อมูลส่วนบุคคล) ----------
