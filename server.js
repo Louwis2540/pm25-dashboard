@@ -617,6 +617,72 @@ app.get('/api/disease-pv', async (req, res) => {
 });
 
 /* ══════════════════════════════════════════
+   PHEOC — เกณฑ์เดียวกับ LINE (tools/line_report.gs)
+   ค่าเฉลี่ย 24 ชม. ณ 07:00 น. (Air4Thai รายชั่วโมง) ถึงเกณฑ์ติดกัน N วัน
+   ไม่ใช้ค่าในชีต PM25_History เพราะชีตเก็บค่ารอบบ่าย (≈15:00)
+══════════════════════════════════════════ */
+const A4T_HISTORY = 'https://air4thai.pcd.go.th/forweb/getHistoryData.php';
+const bkkDate = (ms = Date.now()) => new Date(ms + 7 * 3600e3).toISOString().slice(0, 10);
+const addDaysIso = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+const hh = h => String(h).padStart(2, '0') + ':00:00';
+
+// ค่าของวันที่ d ตามเกณฑ์ (avg24 = เฉลี่ย 24 ชม. สิ้นสุด hour:00 · hour = ค่ารายชั่วโมงเดียว)
+function pheocValue(byHour, d, rule) {
+  if (rule.value === 'hour') { const v = byHour[d + ' ' + hh(rule.hour)]; return { v: v ?? null, n: v == null ? 0 : 1 }; }
+  const keys = [], prev = addDaysIso(d, -1);
+  for (let h = rule.hour + 1; h <= 23; h++) keys.push(prev + ' ' + hh(h));
+  for (let h = 0; h <= rule.hour; h++) keys.push(d + ' ' + hh(h));
+  const v = keys.map(k => byHour[k]).filter(x => typeof x === 'number');
+  if (v.length < (rule.min_hours || 18)) return { v: null, n: v.length };
+  return { v: Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10, n: v.length };
+}
+
+async function buildPheoc() {
+  const { provinces, pheoc: rule0 } = readConfig();
+  const rule = { threshold: 75.1, hour: 7, days: 2, value: 'avg24', min_hours: 18, ...(rule0 || {}) };
+  const today = bkkDate();
+  const dates = Array.from({ length: rule.days }, (_, i) => addDaysIso(today, i - rule.days + 1));
+  const ids = provinces.map(p => p.air4thai_station).filter(Boolean);
+  const url = `${A4T_HISTORY}?stationID=${ids.join(',')}&param=PM25&type=hr&sdate=${addDaysIso(dates[0], -1)}&edate=${today}&stime=00&etime=23`;
+  const r = await fetch(url, { signal: AbortSignal.timeout(12000) });
+  if (!r.ok) throw new Error('Air4Thai HTTP ' + r.status);
+  const j = await r.json();
+  const byStation = {};
+  for (const st of (j.stations || [])) {
+    const m = {};
+    for (const row of (st.data || [])) {
+      const v = typeof row.PM25 === 'number' ? row.PM25 : parseFloat(row.PM25);
+      const dt = String(row.DATETIMEDATA || '');
+      if (!isNaN(v) && v >= 0 && /^\d{4}-\d{2}-\d{2} \d{2}/.test(dt)) m[dt.slice(0, 13) + ':00:00'] = v;
+    }
+    byStation[String(st.stationID).toLowerCase()] = m;
+  }
+  const list = provinces.map(p => {
+    const m = byStation[String(p.air4thai_station || '').toLowerCase()] || {};
+    const days = dates.map(d => ({ date: d, ...pheocValue(m, d, rule) }));
+    const hit = days.every(x => x.v != null && x.v >= rule.threshold);
+    return { name: p.name, station: p.air4thai_station, days, hit };
+  });
+  const todayReady = list.some(p => p.days.at(-1).v != null);
+  return { ok: true, rule, dates, todayReady, anyHit: list.some(p => p.hit), hit: list.filter(p => p.hit).map(p => p.name), provinces: list, source: 'Air4Thai (getHistoryData รายชั่วโมง)', fetchedAt: new Date().toISOString() };
+}
+
+app.get('/api/pheoc', async (req, res) => {
+  const cached = getCached('pheoc');
+  if (cached) return res.json(cached);
+  try {
+    const data = await singleFlight('pheoc', buildPheoc);
+    _lastGood.set('pheoc', data);
+    setCached('pheoc', data, 30 * 60 * 1000);   // 30 นาที
+    res.json(data);
+  } catch (e) {
+    const stale = _lastGood.get('pheoc');
+    if (stale) return res.json({ ...stale, stale: true });
+    res.status(502).json({ ok: false, message: 'ตรวจเกณฑ์ PHEOC ไม่สำเร็จ: ' + e.message });
+  }
+});
+
+/* ══════════════════════════════════════════
    PROVINCE GeoJSON
 ══════════════════════════════════════════ */
 const GEOJSON_URL = 'https://raw.githubusercontent.com/apisit/thailand.json/master/thailand.json';
