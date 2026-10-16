@@ -281,11 +281,93 @@ async function areaDetail(predPath, predKey, level, id) {
 // เฉพาะจังหวัดในเขต (config.provinces) — กันใช้ endpoint นี้เป็น proxy ทั้งประเทศ
 const regionPv = () => new Set(readConfig().provinces.map(p => String(p.pv_idn)));
 
+/* ── C5: ปัจจัยอากาศประกอบค่าคาดการณ์ 3 วัน ─────────────────────────────
+   แบบจำลอง สคร.7 (ฤดูฝุ่น 68/69, n≈400 จังหวัด-วัน · OLS cluster-robust):
+     log(PM) = 0.551·log(PM เมื่อวาน) − 0.232·log(การระบายอากาศ) − 0.0165·ความชื้น + …
+   แนวโน้มของวัน D = ผลรวมของการเปลี่ยนการระบายอากาศ/ความชื้น เทียบวันก่อนหน้า
+     ≥ +10% → 1 (เอื้อต่อการสะสม) · ≤ −10% → −1 (เอื้อต่อการเจือจาง) · อื่น ๆ → 0
+   การระบายอากาศ (vr) = เฉลี่ย 24 ชม. (08:00 วันก่อน – 07:00 วัน D) ของ ความสูงชั้นผสม × ความเร็วลม 10 ม.
+   แหล่ง: Open-Meteo (ไม่ใช้ key) · จุดความร้อน: GISTDA VIIRS 24 ชม. ล่าสุด รัศมี 200 กม. (เฉพาะในไทย)          */
+const C5_COEF = { lvr: -0.2316, rh: -0.0165 };
+const C5_CENT = { 'ขอนแก่น': [16.43, 102.83], 'มหาสารคาม': [16.18, 103.30], 'ร้อยเอ็ด': [16.05, 103.65], 'กาฬสินธุ์': [16.43, 103.51] };
+const WD_TH = ['เหนือ', 'ตะวันออกเฉียงเหนือ', 'ตะวันออก', 'ตะวันออกเฉียงใต้', 'ใต้', 'ตะวันตกเฉียงใต้', 'ตะวันตก', 'ตะวันตกเฉียงเหนือ'];
+const kmBetween = (a, b) => { const r = Math.PI / 180, dl = (b[0] - a[0]) * r, dn = (b[1] - a[1]) * r;
+  return 2 * 6371 * Math.asin(Math.sqrt(Math.sin(dl / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dn / 2) ** 2)); };
+
+async function c5Weather() {
+  const cached = getCached('c5-wx'); if (cached) return cached;
+  const names = Object.keys(C5_CENT);
+  const q = new URLSearchParams({ latitude: names.map(n => C5_CENT[n][0]).join(','), longitude: names.map(n => C5_CENT[n][1]).join(','),
+    hourly: 'boundary_layer_height,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation',
+    wind_speed_unit: 'ms', timezone: 'Asia/Bangkok', past_days: '1', forecast_days: '5' });
+  const r = await fetch('https://api.open-meteo.com/v1/forecast?' + q, { signal: AbortSignal.timeout(12000) });
+  if (!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
+  let j = await r.json(); if (!Array.isArray(j)) j = [j];
+  const out = {};
+  names.forEach((n, i) => {
+    const h = j[i]?.hourly || {}, idx = {};
+    (h.time || []).forEach((t, k) => idx[t] = k);   // 'YYYY-MM-DDTHH:00' เวลาไทย
+    out[n] = d => {   // ปัจจัยของวัน d (หน้าต่าง 08:00 วันก่อน – 07:00 วัน d)
+      const prev = addDaysIso(d, -1), ks = [];
+      for (let x = 8; x <= 23; x++) ks.push(idx[`${prev}T${String(x).padStart(2, '0')}:00`]);
+      for (let x = 0; x <= 7; x++) ks.push(idx[`${d}T${String(x).padStart(2, '0')}:00`]);
+      const ok = ks.filter(k => k != null && h.boundary_layer_height?.[k] != null && h.wind_speed_10m?.[k] != null);
+      if (ok.length < 18) return null;
+      const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+      const vr = mean(ok.map(k => h.boundary_layer_height[k] * h.wind_speed_10m[k]));
+      const rh = mean(ok.map(k => h.relative_humidity_2m?.[k]).filter(v => v != null));
+      const rain = ok.map(k => h.precipitation?.[k] || 0).reduce((s, v) => s + v, 0);
+      const u = mean(ok.map(k => -h.wind_speed_10m[k] * Math.sin(h.wind_direction_10m[k] * Math.PI / 180)));
+      const v = mean(ok.map(k => -h.wind_speed_10m[k] * Math.cos(h.wind_direction_10m[k] * Math.PI / 180)));
+      const from = (Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360;
+      return { vr: Math.round(vr), rh: Math.round(rh), rain: Math.round(rain * 10) / 10, wd: WD_TH[Math.round(from / 45) % 8] };
+    };
+  });
+  setCached('c5-wx', out, 60 * 60 * 1000);
+  return out;
+}
+
+async function c5Hotspots200() {
+  const cached = getCached('c5-hs'); if (cached) return cached;
+  const { api } = readConfig(); if (!api.gistda_key) throw new Error('ไม่มี GISTDA_KEY');
+  const BASE = 'https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day';
+  const pts = [];
+  for (let off = 0, page = 0; page < 10; page++, off += 1000) {
+    const r = await fetch(`${BASE}?api_key=${api.gistda_key}&limit=1000&offset=${off}`, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) throw new Error('GISTDA HTTP ' + r.status);
+    const f = (await r.json()).features || [];
+    for (const x of f) { const c = x.geometry?.coordinates; if (c) pts.push([c[1], c[0]]); }
+    if (f.length < 1000) break;
+  }
+  const out = {};
+  for (const [n, c] of Object.entries(C5_CENT)) out[n] = pts.filter(p => kmBetween(c, p) <= 200).length;
+  setCached('c5-hs', out, 60 * 60 * 1000);
+  return out;
+}
+
+// เติม trend/fac ให้รายการจังหวัด (ถ้าดึงปัจจัยไม่ได้ ก็คืนค่าคาดการณ์ GISTDA ตามเดิม)
+async function withC5(data) {
+  const base = String(data.asOf || '').slice(0, 10) || bkkDate();
+  const [wx, hs] = await Promise.allSettled([c5Weather(), c5Hotspots200()]);
+  if (wx.status !== 'fulfilled') { console.warn('C5 อากาศ:', wx.reason?.message); return data; }
+  return { ...data, c5: { model: 'สคร.7 ฤดูฝุ่น 68/69', hsNote: 'จุดความร้อน 24 ชม. ล่าสุด รัศมี 200 กม. (เฉพาะในไทย)' }, items: data.items.map(it => {
+    const fn = wx.value[it.name]; if (!fn) return it;
+    const days = [0, 1, 2, 3].map(k => fn(addDaysIso(base, k)));   // วันนี้ + 3 วันที่คาดการณ์
+    const trend = [1, 2, 3].map(k => {
+      const a = days[k - 1], b = days[k]; if (!a || !b) return null;
+      const dl = C5_COEF.lvr * Math.log(b.vr / Math.max(a.vr, 1)) + C5_COEF.rh * (b.rh - a.rh);
+      const pct = Math.exp(dl) - 1; return pct >= 0.10 ? 1 : pct <= -0.10 ? -1 : 0;
+    });
+    const fac = [1, 2, 3].map((k, i) => days[k] ? { ...days[k], hs200: i === 0 && hs.status === 'fulfilled' ? hs.value[it.name] ?? null : null } : null);
+    return { ...it, trend, fac };
+  }) };
+}
+
 app.get('/api/pm25/provinces', async (req, res) => {
   try {
     const data = await gistdaPm25('getPm25byProvincePred3', 'gistda-pv');
     const pv = regionPv();
-    res.json({ ...data, items: data.items.filter(i => pv.has(i.code)) });
+    res.json(await withC5({ ...data, items: data.items.filter(i => pv.has(i.code)) }));
   } catch (e) {
     res.status(502).json({ ok: false, message: 'GISTDA PM2.5 error: ' + e.message });
   }
@@ -561,19 +643,20 @@ async function diseasePvFromSheet(beYear) {
   const [iT, iY, iP, iW, iG, iM, iD] = ['table', 'b_year', 'pv_name', 'wk', 'group', 'm', 'date_com'].map(ix);
   if ([iT, iY, iP, iW, iG, iM].some(i => i < 0)) return { rows: [] };
   const names = new Set(provinces.map(p => p.name));
-  const acc = {}; let maxDateCom = '';
+  const acc = {}, acc1 = {}; let maxDateCom = '';   // acc = s_pm25_2 (Type 1+3) · acc1 = s_pm25_1 (ทุกคนที่มารับบริการ · ใช้ในชุดดาวน์โหลด)
   for (const line of lines.slice(1)) {
     const c = csvLine(line).map(x => x.replace(/"/g, ''));
-    if (c[iT] !== 's_pm25_2_in_week' || String(c[iY]) !== String(beYear) || !names.has(c[iP])) continue;
+    const t1 = c[iT] === 's_pm25_1_in_week';
+    if ((c[iT] !== 's_pm25_2_in_week' && !t1) || String(c[iY]) !== String(beYear) || !names.has(c[iP])) continue;
     const key = PV_KEY[c[iG]], w = Number(c[iW]), v = Number(String(c[iM]).replace(/,/g, ''));
     if (!key || !w || !(v >= 0)) continue;
-    const a = acc[c[iP]] ||= {};
+    const a = (t1 ? acc1 : acc)[c[iP]] ||= {};
     (a[w] ||= {})[key] = (a[w][key] || 0) + v;
     const dc = sheetDateCom(c[iD]);
     if (dc > maxDateCom) maxDateCom = dc;
   }
   if (Object.keys(acc).length < provinces.length) return { rows: [] };   // ชีตต้องครบทุกจังหวัดเช่นกัน
-  return { rows: pvRowsFrom(acc), dateCom: maxDateCom };
+  return { rows: pvRowsFrom(acc), rows1: Object.keys(acc1).length === provinces.length ? pvRowsFrom(acc1) : [], dateCom: maxDateCom };
 }
 
 async function buildDiseasePv() {
@@ -593,7 +676,7 @@ async function buildDiseasePv() {
   const data = {
     ok: true, mock: false,
     pop: population.midyear, popNote: population.label, popMethod: population.method,
-    rows: src.rows,
+    rows: src.rows, rows1: src.rows1 || [], dateCom: src.dateCom || '',
     meta: { source, mophMissing: missing, dataDate, ageDays: age.ageDays, staleDays,
             stale: age.ageDays !== null && age.ageDays > staleDays },
   };
@@ -680,6 +763,66 @@ app.get('/api/pheoc', async (req, res) => {
     if (stale) return res.json({ ...stale, stale: true });
     res.status(502).json({ ok: false, message: 'ตรวจเกณฑ์ PHEOC ไม่สำเร็จ: ' + e.message });
   }
+});
+
+/* ══════════════════════════════════════════
+   สถิติการเข้าชม — นับผู้เข้าชมไม่ซ้ำต่อวัน (หน้าเว็บส่ง POST วันละครั้งต่อเบราว์เซอร์)
+   ไม่เก็บ IP / cookie / ข้อมูลส่วนบุคคล · กันยิงซ้ำด้วยแฮช IP ในหน่วยความจำ 10 นาที (ไม่บันทึกลงที่ใด)
+   เก็บถาวรในชีต (แท็บ _visits) ผ่าน Apps Script tools/visits.gs — ตั้ง env VISIT_HOOK_URL + VISIT_TOKEN
+   ไม่ได้ตั้ง env → นับในหน่วยความจำอย่างเดียว (หายเมื่อ deploy ใหม่)
+══════════════════════════════════════════ */
+const crypto = require('crypto');
+const VISIT = { base: { total: 0, month: 0, today: 0, since: null, day: null }, pending: 0, loaded: false, recent: new Map() };
+async function visitHook(body) {
+  const url = process.env.VISIT_HOOK_URL; if (!url) return null;
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, redirect: 'follow',
+    body: JSON.stringify({ token: process.env.VISIT_TOKEN || '', ...body }), signal: AbortSignal.timeout(15000) });
+  const j = await r.json(); if (!j.ok) throw new Error(j.error || 'visit hook error'); return j;
+}
+function visitRoll() {   // ขึ้นวันใหม่/เดือนใหม่ (เวลาไทย)
+  const d = bkkDate();
+  if (VISIT.base.day && VISIT.base.day !== d) { VISIT.base.today = 0; if (VISIT.base.day.slice(0, 7) !== d.slice(0, 7)) VISIT.base.month = 0; }
+  VISIT.base.day = d; if (!VISIT.base.since) VISIT.base.since = d;
+}
+async function visitLoad() {
+  if (VISIT.loaded) return;
+  try { const j = await visitHook({ action: 'get', date: bkkDate() }); if (j) Object.assign(VISIT.base, j.stats, { day: bkkDate() }); VISIT.loaded = true; }
+  catch (e) { console.warn('โหลดสถิติการเข้าชมไม่สำเร็จ:', e.message); }
+}
+async function visitFlush() {
+  if (!VISIT.pending || !process.env.VISIT_HOOK_URL) return;
+  const n = VISIT.pending; VISIT.pending = 0;
+  try { const j = await visitHook({ action: 'add', date: bkkDate(), n }); if (j) Object.assign(VISIT.base, j.stats, { day: bkkDate() }); }
+  catch (e) { VISIT.pending += n; console.warn('บันทึกสถิติการเข้าชมไม่สำเร็จ:', e.message); }
+}
+setInterval(visitFlush, 5 * 60 * 1000).unref();
+const visitOut = () => { visitRoll(); const p = process.env.VISIT_HOOK_URL ? VISIT.pending : 0;
+  return { ok: true, today: VISIT.base.today + p, month: VISIT.base.month + p, total: VISIT.base.total + p, since: VISIT.base.since }; };
+
+app.get('/api/visit', async (req, res) => { await visitLoad(); res.set('Cache-Control', 'no-store'); res.json(visitOut()); });
+app.post('/api/visit', async (req, res) => {
+  await visitLoad(); visitRoll();
+  const ip = String(req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const k = crypto.createHash('sha256').update(ip + bkkDate()).digest('hex').slice(0, 16), now = Date.now();
+  for (const [kk, t] of VISIT.recent) if (now - t > 10 * 60 * 1000) VISIT.recent.delete(kk);
+  if (!VISIT.recent.has(k)) {
+    VISIT.recent.set(k, now);
+    if (process.env.VISIT_HOOK_URL) VISIT.pending++; else { VISIT.base.today++; VISIT.base.month++; VISIT.base.total++; }
+  }
+  res.set('Cache-Control', 'no-store'); res.json(visitOut());
+});
+
+/* ── ค่าฝุ่น ณ 07:00 (แท็บ PM25_07 · ใช้ในชุดดาวน์โหลด) ── */
+app.get('/api/pm25-07', async (req, res) => {
+  const cached = getCached('pm25-07'); if (cached) return res.json(cached);
+  const { api, provinces } = readConfig();
+  const csv = await fetchCSV([`https://docs.google.com/spreadsheets/d/${api.sheet_id}/gviz/tq?tqx=out:csv&sheet=PM25_07`]);
+  if (!csv) return res.status(502).json({ ok: false, message: 'อ่านแท็บ PM25_07 ไม่ได้' });
+  try {
+    const { allData } = parseSheetData(csv, provinces);
+    const data = { ok: true, allData, note: 'ค่าเฉลี่ย 24 ชม. ณ 07:00 จาก Air4Thai (เกณฑ์ PHEOC)' };
+    setCached('pm25-07', data, 30 * 60 * 1000); res.json(data);
+  } catch (e) { res.status(500).json({ ok: false, message: 'CSV parse error: ' + e.message }); }
 });
 
 /* ══════════════════════════════════════════
