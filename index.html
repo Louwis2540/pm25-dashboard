@@ -1455,9 +1455,22 @@ function buildToc() {
   if (document.getElementById("toc")) return;
   const nav = document.createElement("nav");
   nav.id = "toc"; nav.className = "toc"; nav.setAttribute("aria-label", "สารบัญแดชบอร์ด");
-  nav.innerHTML = `<div class="toc-h"><span>สารบัญ</span><button type="button" class="toc-x" aria-label="ปิดสารบัญ">×</button></div><ol>${TOC.map(([id, ic, name, subs], i) => `
+  // โครงสารบัญอ่านจากหน้าเว็บจริงทุกครั้ง: โซน = <section id> ใน <main> (ชื่อจากหัวข้อ h2) · หัวข้อย่อยแสดงเฉพาะที่มีอยู่จริง
+  // เพิ่ม/ลบ/เปลี่ยนชื่อโซนในหน้า สารบัญจะอัปเดตเอง (ไม่ต้องแก้รายการซ้ำ)
+  let M = [], sig = "";
+  const model = () => [...document.querySelectorAll("main section[id]")].map(sec => {
+    const c = TOC.find(z => z[0] === sec.id) || [sec.id, "", "", []];
+    const name = (sec.querySelector(".sec-h h2")?.textContent || c[2] || sec.id).trim();
+    return [sec.id, c[1], name, c[3].filter(([, sel]) => document.querySelector(sel))];
+  });
+  const paint = () => {
+    const m = model(), s = JSON.stringify(m); if (s === sig) return; sig = s; M = m;
+    nav.querySelector("ol").innerHTML = M.map(([id, ic, name, subs], i) => `
     <li data-z="${id}"><a href="#${id}" class="toc-z"><span class="toc-n">${i + 1}</span><span>${name}</span></a>
-      <ul>${subs.map(([s, sel]) => `<li><a href="#${id}" data-sel="${sel}">${s}</a></li>`).join("")}</ul></li>`).join("")}</ol>
+      <ul>${subs.map(([t, sel]) => `<li><a href="#${id}" data-sel="${sel}">${t}</a></li>`).join("")}</ul></li>`).join("");
+    if (!raf) raf = requestAnimationFrame(spy);
+  };
+  nav.innerHTML = `<div class="toc-h"><span>สารบัญ</span><button type="button" class="toc-x" aria-label="ปิดสารบัญ">×</button></div><ol></ol>
     <a href="#top" class="toc-top" data-sel="body">↑ กลับด้านบน</a>`;
   document.body.append(nav);
   const fab = document.createElement("button");
@@ -1476,19 +1489,21 @@ function buildToc() {
     else if (t) { const y = t.getBoundingClientRect().top + scrollY - 16; scrollTo({ top: Math.max(0, y), behavior: "smooth" }); }
     open(false);
   });
-  let raf = 0;
-  const spy = () => { raf = 0;
+  var raf = 0;
+  const spy = () => { raf = 0; if (!M.length) return;
     const line = innerHeight * 0.28;
-    let cur = TOC[0][0], sub = null;
-    for (const [id, , , subs] of TOC) {
+    let cur = M[0][0], sub = null;
+    for (const [id, , , subs] of M) {
       const z = document.getElementById(id); if (!z) continue;
       if (z.getBoundingClientRect().top <= line) { cur = id; sub = null;
         for (const [, sel] of subs) { const t = document.querySelector(sel); if (t && z.contains(t) && t.getBoundingClientRect().top <= line) sub = sel; } }
     }
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) { cur = TOC.at(-1)[0]; sub = null; }
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) { cur = M.at(-1)[0]; sub = null; }
     nav.querySelectorAll("li[data-z]").forEach(li => li.classList.toggle("on", li.dataset.z === cur));
     nav.querySelectorAll("a[data-sel]").forEach(a => a.classList.toggle("on", a.dataset.sel === sub && a.closest("li[data-z]")?.dataset.z === cur));
   };
+  paint();
+  let mt = 0; new MutationObserver(() => { clearTimeout(mt); mt = setTimeout(paint, 300); }).observe(document.querySelector("main"), { childList: true, subtree: true, characterData: true });
   addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(spy); }, { passive: true });
   addEventListener("resize", () => { if (!raf) raf = requestAnimationFrame(spy); });
   spy();
