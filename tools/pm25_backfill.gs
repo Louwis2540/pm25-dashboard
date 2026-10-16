@@ -135,6 +135,44 @@ function backfillWrite() {
   console.log('หน้าเว็บจะเห็นค่าใหม่ภายใน 5 นาที (server อ่านชีตทุก 5 นาที)');
 }
 
+/**
+ * เติมแท็บ PM25_07 (ค่าเฉลี่ย 24 ชม. ณ 07:00 — ค่าที่ใช้ตัดสิน PHEOC) ตั้งแต่ BF_FROM ถึงวันนี้
+ * เติมเฉพาะวัน/ช่องที่ว่าง · หัวตารางเหมือนที่ line_report.gs สร้าง (time · 4 จังหวัด · หมายเหตุ)
+ */
+function backfill07() {
+  const SHEET_07 = 'PM25_07';
+  const ss = SpreadsheetApp.openById(BF_SPREADSHEET_ID);
+  let sh = ss.getSheetByName(SHEET_07);
+  if (!sh) { sh = ss.insertSheet(SHEET_07); sh.appendRow(['time'].concat(BF_STATIONS.map(s => s.name)).concat(['หมายเหตุ'])); }
+  const v = sh.getDataRange().getValues();
+  const head = v[0].map(x => String(x).trim());
+  const colOf = {}; BF_STATIONS.forEach(st => colOf[st.name] = head.indexOf(st.name) + 1);
+  const rowOf = {}, have = {};
+  for (let i = 1; i < v.length; i++) {
+    const d = bfNormDate_(v[i][0]); if (!d || rowOf[d]) continue;
+    rowOf[d] = i + 1; have[d] = {};
+    BF_STATIONS.forEach(st => { const x = v[i][colOf[st.name] - 1]; if (x !== '' && !isNaN(+x)) have[d][st.name] = true; });
+  }
+  const to = bfToday_();
+  const hourly = bfFetchHourly_(bfAddDays_(BF_FROM, -1), to);
+  const note = 'เฉลี่ย 24 ชม. สิ้นสุด 07:00 · Air4Thai (เติมย้อนหลัง)';
+  const newRows = []; let filled = 0, skipped = 0;
+  for (let d = BF_FROM; d <= to; d = bfAddDays_(d, 1)) {
+    const vals = {};
+    BF_STATIONS.forEach(st => {
+      if (have[d] && have[d][st.name]) return;
+      const c = bfDaily_(hourly[st.id.toLowerCase()] || {}, d, 'r07');
+      if (c.v == null) { skipped++; return; }
+      vals[st.name] = c.v; filled++;
+    });
+    if (!Object.keys(vals).length) continue;
+    if (rowOf[d]) Object.keys(vals).forEach(n => sh.getRange(rowOf[d], colOf[n]).setValue(vals[n]));
+    else newRows.push([d].concat(BF_STATIONS.map(st => vals[st.name] !== undefined ? vals[st.name] : '')).concat([note]));
+  }
+  if (newRows.length) sh.getRange(sh.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+  console.log(SHEET_07 + ': เติมแล้ว ' + filled + ' ค่า (แถวใหม่ ' + newRows.length + ' วัน) · เว้นว่าง ' + skipped + ' ค่า (ข้อมูลไม่ถึง ' + MIN_HOURS + ' ชม.)');
+}
+
 // ───────────────────────────────────────────────────────────────
 
 /** ค่ารายวันของวันที่ d ตามวิธี m → { v: ค่าทศนิยม 1 ตำแหน่ง หรือ null, n: จำนวนชั่วโมงที่มีค่า } */
