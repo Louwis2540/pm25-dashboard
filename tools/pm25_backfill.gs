@@ -219,6 +219,32 @@ function backfillDebug() {
   });
 }
 
+/**
+ * หาว่า Air4Thai เก็บข้อมูลรายชั่วโมงย้อนหลังได้ถึงวันไหน (ค้นแบบแบ่งครึ่ง) + ลองขอแบบรายวัน (type=day)
+ */
+function backfillProbe() {
+  const has = (d, type) => {
+    const url = BF_HISTORY_URL + '?stationID=46t&param=PM25&type=' + type + '&sdate=' + d + '&edate=' + d + '&stime=00&etime=23';
+    try {
+      const j = JSON.parse(UrlFetchApp.fetch(url, { muteHttpExceptions: true }).getContentText());
+      const st = bfStationList_(j)[0] || {};
+      return (st.data || []).filter(r => bfNum_(r.PM25) != null).length;
+    } catch (e) { return -1; }
+  };
+  let lo = '2025-01-01', hi = bfAddDays_(bfToday_(), -2);
+  console.log('มีค่ารายชั่วโมง: ' + hi + ' = ' + has(hi, 'hr') + ' ชม. · ' + lo + ' = ' + has(lo, 'hr') + ' ชม.');
+  if (has(lo, 'hr') > 0) { console.log('→ ย้อนได้ถึง ' + lo + ' หรือก่อนนั้น'); }
+  else {
+    while (bfAddDays_(lo, 1) < hi) {
+      const days = Math.round((Date.parse(hi) - Date.parse(lo)) / 864e5), mid = bfAddDays_(lo, Math.floor(days / 2));
+      if (has(mid, 'hr') > 0) hi = mid; else lo = mid;
+      Utilities.sleep(300);
+    }
+    console.log('→ ข้อมูลรายชั่วโมงวันแรกที่มี: ' + hi);
+  }
+  ['day', 'dy', 'daily'].forEach(t => console.log('ลองแบบรายวัน type=' + t + ' วันที่ 2026-01-10: ' + has('2026-01-10', t) + ' ค่า'));
+}
+
 /** อ่านแท็บ PM25_History → ค่ารายวัน, แถวของแต่ละวัน, คอลัมน์ของแต่ละจังหวัด */
 function bfReadSheet_() {
   const sh = SpreadsheetApp.openById(BF_SPREADSHEET_ID).getSheetByName(BF_SHEET);
