@@ -22,7 +22,8 @@
  *   7. ค่า 07:00 ที่ใช้ตัดสิน PHEOC = "ค่าเฉลี่ย 24 ชม. ที่สิ้นสุด 07:00" (เดิมใช้ค่ารายชั่วโมง 07:00 ชั่วโมงเดียว)
  *      คำนวณจากค่ารายชั่วโมง 08:00 เมื่อวาน – 07:00 วันนี้ ต้องมีอย่างน้อย 18/24 ชม. · สลับกลับได้ที่ PHEOC_VALUE
  *      หน้าเว็บ (/api/pheoc ใน server.js) ใช้เกณฑ์เดียวกันจาก config.json → pheoc
- *   8. บันทึกค่า 07:00 ลงแท็บ PM25_07 ทุกรอบ (แยกจาก PM25_History ที่เป็นค่ารอบบ่าย ≈15:00)
+ *   8. บันทึกค่า 07:00 ลงแท็บ PM25_07 ทุกรอบ
+ *   9. PM25_History (ที่แดชบอร์ดอ่าน) เปลี่ยนเป็นค่าเฉลี่ย 24 ชม. ณ 07:00 เหมือนกัน — ไม่เขียนค่ารอบบ่ายแล้ว
  */
 
 // ── ค่าที่ไม่เป็นความลับ ───────────────────────────────────────────────
@@ -590,12 +591,6 @@ function recordHistoryAndCheckPHEOC(airData) {
       sheet.appendRow(["time", "ขอนแก่น", "ร้อยเอ็ด", "กาฬสินธุ์", "มหาสารคาม"]);
     }
 
-    const todayDateStr = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd");
-
-    // เว้นว่างเมื่อไม่มีข้อมูล — ของเดิมใช้ `|| 0` ทำให้ "สถานีล่ม" ถูกบันทึกเป็น
-    // 0 µg/m³ แล้วหน้าเว็บ (Zone B/D) เอาไปแสดงเป็นค่าจริง
-    const vals = airData.map(p => (p.pm25 === null || isNaN(p.pm25)) ? "" : p.pm25);
-
     const lastRow = sheet.getLastRow();
     const all = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 5).getValues() : [];
 
@@ -604,15 +599,24 @@ function recordHistoryAndCheckPHEOC(airData) {
     // ค่า ณ เวลาที่สคริปต์รัน (บ่าย 3) ไม่ใช่ค่าเช้า
     pheocProvinces = checkPheoc07_();
 
-    // ── เขียนทับแถวของวันนี้ถ้ามีอยู่แล้ว ────────────────────────────
-    // ของเดิม appendRow ทุกรอบ → ในชีตมีวันซ้ำ 106 วัน (บางวัน 5 แถว)
-    let todayRowIdx = -1;
-    for (let i = all.length - 1; i >= 0; i--) {
-      if (normDate_(all[i][0]) === todayDateStr) { todayRowIdx = i + 2; break; }
-    }
-    const rowData = [todayDateStr].concat(vals);
-    if (todayRowIdx > 0) sheet.getRange(todayRowIdx, 1, 1, 5).setValues([rowData]);
-    else                 sheet.appendRow(rowData);
+    // ── PM25_History = ค่าเฉลี่ย 24 ชม. ณ 07:00 (แก้ 16/10/2026 ตามที่ Louis กำหนด) ──
+    // เดิมเขียนค่า ณ เวลาที่สคริปต์รัน (รอบบ่ายเขียนทับ) → ตอนนี้เขียนค่า 07:00 ของเมื่อวานและวันนี้
+    // วันไหน/จังหวัดไหนยังไม่มีค่า 07:00 (เช่น รันก่อน 07:00 หรือสถานีขาดข้อมูล) → ไม่เขียนช่องนั้น ไม่เดาค่า
+    // ไม่บันทึก 0 แทนสถานีล่ม (บทเรียนเดิม `|| 0`)
+    const hist = LAST_HIST07 || {};
+    const dates = {};
+    TARGET_STATIONS.forEach(st => Object.keys(hist[st.id.toLowerCase()] || {}).forEach(d => dates[d] = true));
+    Object.keys(dates).sort().forEach(d => {
+      let rowIdx = -1;
+      for (let i = all.length - 1; i >= 0; i--) if (normDate_(all[i][0]) === d) { rowIdx = i + 2; break; }
+      const vals = TARGET_STATIONS.map(st => { const c = (hist[st.id.toLowerCase()] || {})[d]; return c ? c.v : null; });
+      if (rowIdx > 0) {
+        vals.forEach((v, k) => { if (v !== null) sheet.getRange(rowIdx, k + 2).setValue(v); });
+      } else {
+        sheet.appendRow([d].concat(vals.map(v => v === null ? "" : v)));
+        all.push([d]);
+      }
+    });
 
   } catch (e) {
     // ของเดิมกลืน error เงียบๆ — อย่างน้อยต้องเห็นใน Execution log
@@ -725,8 +729,10 @@ function record07Rows_(hist) {
  * วันไหนไม่มีค่า 07:00 ถือว่า "ไม่เข้าเกณฑ์" โดยตั้งใจ — ไม่เดาแทนข้อมูลที่ขาด
  * เพราะการประกาศเปิด PHEOC ผิดพลาดมีต้นทุนสูงกว่าการไม่ประกาศ
  */
+let LAST_HIST07 = null;   // ค่า 07:00 ชุดล่าสุดที่ดึงมา (ใช้เขียน PM25_History ต่อ ไม่ต้องยิง API ซ้ำ)
 function checkPheoc07_(dryRun) {
   const hist = fetch07Values_(2);
+  LAST_HIST07 = hist;
   if (!dryRun) record07Rows_(hist);   // dry run ไม่เขียนชีต
   const today = new Date();
   const d1 = Utilities.formatDate(today, 'GMT+7', 'yyyy-MM-dd');                        // วันนี้
