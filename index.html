@@ -10,6 +10,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- html2canvas โหลดแบบ synchronous ตามบทเรียนเดิม (ห้าม async) -->
 <script src="/html2canvas.min.js"></script>
+<!-- QR ในอินโฟกราฟิก (qrcode-generator · MIT) -->
+<script src="/qrcode.js"></script>
 <style>
 :root{
   --bg:#f3f6f9; --surface:#ffffff; --subtle:#f7f9fb; --line:#e3e8ef; --line-strong:#cfd7e2;
@@ -1042,6 +1044,223 @@ body.ds-open .ds-tile{display:none}
 .ft-visit .vs{display:inline-flex;align-items:baseline;gap:6px}
 .ft-visit .vs b{font-variant-numeric:tabular-nums;font-size:calc(15px*var(--fs,1))}
 .ft-visit .vn{opacity:.75;font-size:calc(12px*var(--fs,1))}
+
+/* ===== B4 อินโฟกราฟิก (ชุดเดียวกับเดโม่) ===== */
+#ig .pm-tag sub,#ig .pm sub{font-size:.7em;vertical-align:-.25em;line-height:0}
+#ig .pvs .me,#ig .pvrow .me{outline:4px solid var(--lv-ink);outline-offset:-1px}
+#ig .facts3 .k{display:block}
+#ig .dzg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#ig .dzg2>div{border:1px solid var(--line);border-radius:16px;padding:8px 14px 2px}
+#ig .dzg2 .dh .dz-icon{width:34px;height:34px;border-radius:10px}
+#ig .dzg2 .dh .nm{font-size:calc(17px*var(--fs,1))}
+#ig .dzl{display:block;font-size:calc(13.5px*var(--fs,1));margin-top:-4px}
+#ig .fc3{width:100%;border-collapse:separate;border-spacing:4px;font-size:calc(16px*var(--fs,1));margin-top:4px}
+#ig .fc3 th{font-size:calc(14px*var(--fs,1));font-weight:600;color:var(--ink-2);text-align:center;line-height:1.2}
+#ig .fc3 th small{display:block;font-size:calc(12px*var(--fs,1));color:var(--ink-3)}
+#ig .fc3 td{text-align:center;border-radius:8px;padding:5px 4px;font-weight:700}
+#ig .fc3 td:first-child{text-align:left;font-weight:600;padding-left:2px}
+#ig .fc3 tr.me td:first-child{color:var(--lv-ink);font-weight:800}
+#ig .fc3 tr.me td:not(:first-child){outline:3px solid var(--ink-1);outline-offset:-2px}
+#ig .ig-note{font-size:calc(14px*var(--fs,1));color:var(--ink-3)}
+#ig .lvleg{display:flex;gap:6px;flex-wrap:wrap}
+#ig .kpis{display:grid;grid-template-rows:repeat(3,auto);gap:8px;align-content:space-between}
+#ig .kpis.kpis-h{grid-template-rows:none;grid-template-columns:1.3fr 1fr 1fr}
+#ig .kpis .k{white-space:nowrap}
+#ig .pvrow4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+/* อินโฟกราฟิก: html2canvas วาด inset shadow / radial-gradient ไม่ถูก → ใช้ชั้นแบบ linear + เงาด้านนอก ให้ได้ลุคกระจกใกล้เคียงแดชบอร์ด */
+#ig .igt .tiles{background:linear-gradient(120deg,rgba(116,192,252,.35),rgba(177,151,252,.28) 35%,rgba(255,192,120,.32) 68%,rgba(140,233,154,.32))!important}
+#ig .igt .tile{
+  background:linear-gradient(155deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.45) 28%,rgba(255,255,255,.05) 52%,rgba(255,255,255,0) 70%),
+    linear-gradient(0deg,color-mix(in srgb,var(--tc,#ccc) 30%,transparent) 0%,transparent 42%),
+    color-mix(in srgb,var(--tint,#fff) 70%,#fff)!important;
+  border:2px solid rgba(255,255,255,.95)!important;
+  box-shadow:0 2px 6px rgba(15,27,45,.08),0 16px 28px -12px color-mix(in srgb,var(--tc,#ccc) 60%,transparent)!important}
+#ig .igt .tile .ring{background:rgba(255,255,255,.62);box-shadow:0 10px 18px -10px color-mix(in srgb,var(--tc,#ccc) 75%,transparent)}
+#ig .maxbar{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,var(--lv-soft),var(--lv-tint));border:2px solid var(--lv);border-left:10px solid var(--lv);border-radius:14px;padding:2px 18px}
+#ig .maxbar .mk{display:flex;align-items:center;gap:6px;font-size:calc(17px*var(--fs,1));font-weight:700;color:var(--ink-2)}
+#ig .maxbar .mp{font-family:Anuphan;font-size:calc(26px*var(--fs,1));font-weight:700;color:var(--lv-ink);line-height:1.2}
+#ig .maxbar .mv{font-family:Anuphan;font-size:calc(30px*var(--fs,1));font-weight:700;color:var(--ink-1)}
+#ig .maxbar .mv small{font-size:calc(16px*var(--fs,1));color:var(--ink-3)}
+#ig .maxbar .ml{margin-left:auto;font-family:Anuphan;font-size:calc(22px*var(--fs,1));font-weight:700;color:#fff;background:var(--lv-ink);border-radius:999px;padding:2px 16px}
+#ig .igt>.tiles{width:1360px;transform-origin:0 0}
+#ig .ig-date .kl{font-size:calc(15px*var(--fs,1));color:var(--ink-1)}
+#ig .ig-date .kl b{color:var(--lv-ink)}
+#ig .igt .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px}
+#ig .ig-date b{font-weight:700}
+#ig .igt .tile{background:linear-gradient(170deg,color-mix(in srgb,var(--tint,#fff) 45%,#fff),var(--tint,#fff));border:1px solid color-mix(in srgb,var(--tc,#ccc) 30%,#fff);border-radius:18px;cursor:default;transform:none!important}
+#ig .igt .tile.mx{outline:4px solid var(--tc);outline-offset:-2px}
+#ig .kpis.kpis-h>div{padding:3px 12px}
+#ig .pvrow4>div{position:relative;border:1px solid var(--line);border-radius:16px;padding:12px 10px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+#ig .pvrow4>div.mx{outline:4px solid var(--lv-ink);outline-offset:-2px}
+#ig .pvrow4 .mxb{position:absolute;top:-2px;right:10px;background:var(--lv-ink);color:#fff;font-size:calc(13px*var(--fs,1));font-weight:700;border-radius:0 0 8px 8px;padding:1px 9px}
+#ig .pvrow4 .pn{font-family:Anuphan;font-size:calc(26px*var(--fs,1));font-weight:700;color:var(--ink-1);line-height:1.2}
+#ig .pvrow4 .x{font-family:Anuphan;font-size:calc(46px*var(--fs,1));font-weight:700;line-height:1.1;white-space:nowrap}
+#ig .pvrow4 .x small{font-size:calc(16px*var(--fs,1));color:var(--ink-3)}
+#ig .pvrow4 .x .pm{font-style:normal;font-family:"IBM Plex Sans Thai";font-size:calc(14px*var(--fs,1));font-weight:700;color:#fff;border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:middle;position:relative;top:-6px}
+#ig .pvrow4 .chip{font-size:calc(15px*var(--fs,1));font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
+#ig .kpis>div{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:4px 14px;background:var(--subtle)}
+#ig .kpis .fi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+#ig .kpis .k{display:block;font-size:calc(16px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+#ig .kpis b{font-family:Anuphan;font-size:calc(22px*var(--fs,1));display:block;line-height:1.2}
+#ig .kpis small{display:block;font-size:calc(16px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+#ig:not(.social) .ig-note{font-size:calc(16px*var(--fs,1))}
+#ig:not(.social) .lvleg{display:grid;grid-template-columns:repeat(5,auto);gap:5px}
+#ig:not(.social) .lvleg span{font-size:calc(15px*var(--fs,1));padding:3px 8px 3px 5px;white-space:nowrap;gap:5px}
+#ig:not(.social) .lvleg b{font-size:calc(16px*var(--fs,1))}
+#ig:not(.social) .t7{font-size:calc(16.5px*var(--fs,1))}
+#ig:not(.social) .t7 td{padding:2px 5px!important}
+#ig:not(.social) .fc3 td{padding:2px 4px}
+#ig:not(.social) .row1{grid-template-columns:520px 1fr}
+#ig:not(.social) .box h4 small{font-size:calc(15px*var(--fs,1))!important}
+#ig:not(.social) .dzl{font-size:calc(15px*var(--fs,1))}
+#ig:not(.social) .ig-f{font-size:calc(15px*var(--fs,1))}
+#ig:not(.social) .fc3{font-size:calc(17px*var(--fs,1))}
+#ig:not(.social) .fc3 th{font-size:calc(15px*var(--fs,1))}
+#ig .trd{display:flex;align-items:center;gap:4px;font-size:calc(14px*var(--fs,1));font-weight:700;color:var(--ink-2);margin-top:2px}
+#ig .s7{display:flex;gap:4px;justify-content:center;margin-top:8px}
+#ig .ig-date .today-b{font-family:Anuphan;font-weight:700;font-size:calc(26px*var(--fs,1));color:#fff;background:var(--lv-ink);border-radius:12px;padding:2px 16px;line-height:1.35}
+#ig:not(.social) .ig-date .today-b{font-size:calc(21px*var(--fs,1));padding:1px 12px}
+#ig .avg .k{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+#ig .avg .k .hp{font-family:Anuphan;font-weight:700;font-size:calc(30px*var(--fs,1));color:var(--lv-ink);line-height:1.2}
+#ig:not(.social) .avg .k .hp{font-size:calc(24px*var(--fs,1))}
+#ig.social .pvrow .n{font-family:Anuphan;font-size:calc(28px*var(--fs,1));font-weight:700;color:var(--ink-1);line-height:1.3}
+#ig .pvs .pn{font-family:Anuphan;font-size:calc(22px*var(--fs,1));font-weight:700;color:var(--ink-1)}
+#ig .pvs .chip{white-space:nowrap;font-size:calc(13px*var(--fs,1))!important}
+#ig .ig-date .d{white-space:nowrap}
+#ig:not(.social) .ig-date>span:last-child{text-align:right;font-size:calc(16px*var(--fs,1));line-height:1.3;white-space:nowrap}
+#ig .ig-date .ew{display:block;font-size:calc(14px*var(--fs,1));color:var(--ink-2);font-weight:600}
+#ig.social[data-dense] .avg .v{font-size:calc(80px*var(--fs,1))!important}
+#ig.social[data-dense="3"] .avg .wart{width:150px;height:110px}
+#ig.social .pvrow div{padding:8px 10px}
+#ig.social .pvrow .x{line-height:1.2}
+#ig.social .s7{margin-top:6px}
+#ig.social .avg{padding:8px 18px}
+#ig .s7 i{width:22px;height:16px;border-radius:4px}
+#ig .s7 i.td{outline:2.5px solid var(--ink-1);outline-offset:1px}
+#ig .s7k{display:block;font-size:calc(12.5px*var(--fs,1));color:var(--ink-3);margin-top:3px}
+#ig.social .ig-body{justify-content:space-between;padding-bottom:14px}
+#ig.social .avg{flex:1 1 auto}
+#ig.social[data-dense] .avg .v{font-size:calc(96px*var(--fs,1))!important}
+#ig.social .avg .l{font-size:calc(32px*var(--fs,1))}
+#ig .trd.up{color:#c2410c}
+#ig .trd.dn{color:#0e7a3a}
+#ig .ig-act{display:flex;align-items:center;gap:10px;background:#fff1e6;border:2px solid #fdba74;color:#9a3412;border-radius:14px;padding:8px 14px;font-size:calc(18px*var(--fs,1));font-weight:600}
+#ig:not(.social) .ig-act{padding:4px 12px;font-size:calc(16px*var(--fs,1))}
+#ig:not(.social) .ig-act b{font-size:calc(18px*var(--fs,1))}
+#ig .ig-act b{font-family:Anuphan;font-size:calc(20px*var(--fs,1))}
+#ig .ig-note b{color:var(--ink-1)}
+.modal .cap{display:flex;gap:10px;align-items:flex-start;padding:0 16px 12px}
+.modal .cap textarea{flex:1;min-height:96px;font:13px/1.5 "IBM Plex Sans Thai",sans-serif;border:1px solid var(--line-strong);border-radius:10px;padding:8px 10px;resize:vertical;color:var(--ink-1)}
+#ig .fcs{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:10px;align-items:stretch}
+#ig .fcs .t{display:flex;align-items:center;gap:8px;font-family:Anuphan;font-weight:700;font-size:calc(20px*var(--fs,1));color:var(--lv-ink);padding-right:4px}
+#ig .fcs .c{border:3px solid;border-radius:14px;padding:6px 12px;display:flex;flex-direction:column;line-height:1.25}
+#ig .fcs .c small{font-size:calc(15px*var(--fs,1));font-weight:600}
+#ig .fcs .c b{font-family:Anuphan;font-size:calc(21px*var(--fs,1))}
+#ig .lvleg span{display:flex;align-items:center;gap:6px;border-radius:999px;padding:3px 12px 3px 6px;font-size:calc(14px*var(--fs,1));border:2px solid transparent}
+#ig .lvleg span.cur{border-color:var(--ink-1)}
+#ig .lvleg i{width:14px;height:14px;border-radius:50%}
+#ig .lvleg b{font-family:Anuphan;font-size:calc(15px*var(--fs,1))}
+#ig:not(.social) .avg .l{font-size:calc(28px*var(--fs,1))}
+#ig:not(.social) .avg .k{font-size:calc(17px*var(--fs,1))}
+#ig:not(.social) .facts3 div{padding:8px 14px}
+#ig:not(.social) .facts3 b{font-size:calc(20px*var(--fs,1))}
+#ig:not(.social) .facts3 .fi{width:40px;height:40px}
+#ig .fc3 td{padding:3px 4px}
+#ig[data-dense="2"] .facts3 .k,#ig[data-dense="3"] .facts3 .k{font-size:calc(13px*var(--fs,1))}
+#ig[data-dense="3"]:not(.social) .ig-body{gap:4px}
+#ig[data-dense="3"]:not(.social) .advice .w{padding:6px 14px;gap:5px}
+#ig[data-dense="3"]:not(.social) .advice .w h4{margin:0}
+#ig:not(.social) .advice{grid-template-columns:150px 1fr 1fr}
+#ig:not(.social) .advice .lv b{font-size:calc(24px*var(--fs,1))!important}
+#ig:not(.social) .advice .lv .f{font-size:calc(40px*var(--fs,1))}
+#ig[data-dense="3"]:not(.social) .facts3 div{padding:4px 12px}
+#ig[data-dense="3"]:not(.social) .facts3 .fi{width:34px;height:34px}
+#ig[data-dense="3"]:not(.social) .facts3 b{font-size:calc(18px*var(--fs,1))}
+#ig[data-dense="3"] .dzg2>div{padding:4px 12px 0}
+#ig[data-dense="3"] .dzg2{gap:8px}
+#ig[data-dense="3"] .ig-date{padding:6px 44px}
+#ig[data-dense="3"] .ig-f{padding:8px 44px}
+#ig .ig-f{align-items:center;font-size:calc(13.5px*var(--fs,1));line-height:1.5}
+#ig .ig-f .qr{flex:none;display:block;line-height:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+#ig .ig-f b{color:var(--ink-1)}
+/* ================= iOS LOOK — อินโฟกราฟิก (html2canvas: ไม่มี blur/inset/radial → ใช้ linear + เงาด้านนอก) ================= */
+#ig{background:linear-gradient(165deg,var(--lv-tint) 0%,#f2f5fa 38%,#f4f1fa 70%,#eef6f2 100%)!important}
+#ig .ig-date{background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.35))!important;border-bottom:1px solid rgba(255,255,255,.9)}
+#ig .ig-date .today-b,#ig .ig-date em{border-radius:999px!important;background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--lv-ink)!important;box-shadow:0 4px 10px -4px var(--lv-ink)}
+/* การ์ด/กล่องทั้งหมด = กระจกขาวใส ขอบสว่าง เงานุ่ม มุม 22 */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .avg,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .maxbar,#ig .scale>div,#ig .fcs .c{
+  border-radius:22px!important;border:1.5px solid rgba(255,255,255,.95)!important;
+  box-shadow:0 1px 2px rgba(15,27,45,.05),0 10px 24px -12px rgba(15,27,45,.22)!important}
+#ig .box,#ig .kpis>div,#ig .facts3>div,#ig .pvrow>div{background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(255,255,255,.62) 45%,rgba(255,255,255,.5))!important}
+#ig .dzg2>div{background:linear-gradient(160deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.55) 40%,rgba(255,255,255,0) 70%),var(--dzs,#f3f6fa)!important}
+#ig .avg{background:linear-gradient(160deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.4) 40%,rgba(255,255,255,0) 70%),var(--lv-tint)!important;border:2px solid color-mix(in srgb,var(--lv) 45%,#fff)!important;box-shadow:0 14px 30px -14px var(--lv)!important}
+#ig .maxbar{background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.1) 60%),var(--lv-soft)!important;border-left:1.5px solid rgba(255,255,255,.95)!important;box-shadow:0 10px 24px -12px var(--lv)!important}
+#ig .maxbar .ml{background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--lv-ink)!important}
+/* หัวข้อส่วน = แคปซูลกระจกย้อมสีตามระดับ */
+#ig .ig-sec{border-radius:999px!important;padding:6px 18px 6px 7px!important;background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 55%),linear-gradient(100deg,var(--lv-ink),color-mix(in srgb,var(--lv) 75%,#fff))!important;box-shadow:0 10px 22px -12px var(--lv-ink)!important}
+#ig .ig-sec span{border-radius:999px!important}
+/* คำแนะนำ: แผงสีระดับเป็นกระจกย้อมสี · รายการเป็นแถวแบบ iOS list */
+#ig .advice{background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(255,255,255,.7))!important;border:2px solid color-mix(in srgb,var(--lv) 40%,#fff)!important}
+#ig .advice .lv{background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 45%),linear-gradient(160deg,var(--lv),var(--lv-ink))!important}
+#ig .do{border-radius:14px!important;background:linear-gradient(180deg,#fff,rgba(255,255,255,.7))!important;border:1px solid rgba(15,27,45,.06)!important;box-shadow:0 2px 6px -3px rgba(15,27,45,.18)!important}
+#ig .do span{border-radius:12px!important}
+/* ตาราง: ช่องสีโค้งมนมีประกายด้านบน */
+#ig .t7 td,#ig .fc3 td:not(:first-child){border-radius:10px!important;background-image:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 55%)!important}
+#ig .t7 td:first-child,#ig .fc3 td:first-child{background-image:none!important}
+/* เกณฑ์ระดับ: แคปซูล */
+#ig .lvleg span{border:1.5px solid rgba(255,255,255,.95)!important;box-shadow:0 4px 10px -6px rgba(15,27,45,.25)}
+#ig .ig-f{background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(255,255,255,.85))!important;border-top:1px solid rgba(255,255,255,.95)!important}
+#ig .ig-f .qr{border-radius:14px!important;box-shadow:0 6px 14px -8px rgba(15,27,45,.35)}
+/* อินโฟกราฟิก */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .scale>div,#ig .fcs .c{
+  box-shadow:0 0 0 1px rgba(15,27,45,.10),0 2px 4px rgba(15,27,45,.08),0 14px 28px -12px rgba(15,27,45,.30)!important}
+#ig .igt .tile{box-shadow:0 0 0 1px rgba(15,27,45,.10),0 2px 4px rgba(15,27,45,.08),0 16px 28px -12px color-mix(in srgb,var(--tc,#ccc) 75%,transparent)!important}
+#ig .avg{box-shadow:0 0 0 1px rgba(15,27,45,.08),0 2px 4px rgba(15,27,45,.08),0 16px 32px -14px var(--lv)!important}
+#ig .maxbar{box-shadow:0 0 0 1px rgba(15,27,45,.08),0 2px 4px rgba(15,27,45,.08),0 12px 24px -12px var(--lv)!important}
+#ig .ig-sec{box-shadow:0 2px 4px rgba(15,27,45,.14),0 12px 24px -10px var(--lv-ink)!important}
+#ig .do{box-shadow:0 0 0 1px rgba(15,27,45,.06),0 3px 8px -3px rgba(15,27,45,.22)!important}
+#ig .t7 td:not(:first-child),#ig .fc3 td:not(:first-child){box-shadow:0 0 0 1px rgba(15,27,45,.06),0 3px 6px -3px rgba(15,27,45,.35)}
+#ig .lvleg span{box-shadow:0 0 0 1px rgba(15,27,45,.07),0 4px 10px -5px rgba(15,27,45,.3)!important}
+/* html2canvas: เส้นขอบจริง (border) แสดงผลแน่นอนกว่าเงาแบบ spread */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .ig-act,#ig .scale>div,#ig .fcs .c,#ig .igt .tile{border:1.5px solid rgba(15,27,45,.13)!important;border-top-color:rgba(255,255,255,.95)!important}
+#ig .advice{border:2px solid color-mix(in srgb,var(--lv) 55%,#fff)!important}
+#ig .do{border:1px solid rgba(15,27,45,.10)!important}
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .scale>div,#ig .fcs .c{box-shadow:0 2px 4px rgba(15,27,45,.12),0 16px 30px -12px rgba(15,27,45,.40)!important}
+#ig .igt .tile{box-shadow:0 2px 4px rgba(15,27,45,.12),0 18px 30px -12px color-mix(in srgb,var(--tc,#ccc) 90%,transparent)!important}
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .ig-act,#ig .scale>div,#ig .fcs .c,#ig .igt .tile{border-color:rgba(15,27,45,.17)!important;border-top-color:rgba(255,255,255,.95)!important}
+#ig .ig-sec{box-shadow:0 3px 6px rgba(15,27,45,.18),0 14px 26px -10px var(--lv-ink)!important}
+/* อินโฟกราฟิก: ใช้หลักเดียวกัน — การ์ดจังหวัด/ค่าสูงสุด เด่น · กล่องเนื้อหา เงากลาง · ช่องตารางและรายการคำแนะนำ แบน */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .scale>div,#ig .fcs .c{box-shadow:0 1px 2px rgba(15,27,45,.08),0 10px 22px -12px rgba(15,27,45,.30)!important}
+#ig .igt .tile{box-shadow:0 2px 4px rgba(15,27,45,.12),0 18px 30px -12px color-mix(in srgb,var(--tc,#ccc) 90%,transparent)!important}
+#ig .t7 td:not(:first-child),#ig .fc3 td:not(:first-child){box-shadow:none!important;background-image:none!important}
+#ig .do{box-shadow:none!important;border:1px solid rgba(15,27,45,.08)!important}
+#ig .lvleg span{box-shadow:none!important;border:1px solid rgba(15,27,45,.08)!important}
+#ig .ig-act{box-shadow:none!important}
+/* ================= แผงดาวน์โหลด Infographic: ชัดเจน ไม่กลืนพื้นหลัง =================
+   หลัก: ช่องกรอกต้องมีขอบเขตมองเห็นได้ (ความต่างของขอบ ≥ 3:1 ตาม WCAG 1.4.11) + ป้ายชื่อช่องที่มองเห็น (ไม่ใช่ placeholder)
+   ปุ่มหลัก = สีทึบ ไม่ใช้กระจก (การกระทำหลักต้องเด่นและชัดที่สุด) */
+.hdr-in .meta .dl-panel{margin-left:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px;background:#fff;border:1.5px solid rgba(15,27,45,.16);border-radius:18px;padding:12px 14px;box-shadow:0 1px 2px rgba(15,27,45,.06),0 10px 24px -14px rgba(15,27,45,.28)}
+.dl-panel .dl-h{display:flex;align-items:center;gap:10px;margin-right:6px;align-self:center}
+.dl-panel .dl-i{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--brand);color:#fff;flex:none}
+.dl-panel .dl-h b{display:block;font-size:calc(15px*var(--fs,1));line-height:1.25;color:var(--ink-1)}
+.dl-panel .dl-h small{display:block;font-size:calc(12px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+.dl-panel .dl-f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dl-panel .dl-f>span{font-size:calc(12px*var(--fs,1));font-weight:700;color:var(--ink-2);padding-left:4px}
+.dl-panel select.size{-webkit-appearance:none;appearance:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%232f3b4e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center!important;
+  border:1.5px solid #8a96a8!important;border-radius:12px!important;padding:9px 40px 9px 14px!important;font-size:calc(14.5px*var(--fs,1));font-weight:600;color:var(--ink-1);min-height:42px;box-shadow:0 1px 2px rgba(15,27,45,.06)!important;cursor:pointer;max-width:100%}
+.dl-panel select.size:hover{border-color:var(--ink-2)!important}
+.dl-panel select.size:focus-visible{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)!important}
+.dl-panel .dl-go{min-height:42px;padding:9px 18px!important;font-size:calc(15px*var(--fs,1))}
+@media (max-width:680px){
+  .hdr-in .meta .dl-panel{width:100%;flex-direction:column;align-items:stretch;padding:12px}
+  .dl-panel .dl-f,.dl-panel select.size,.dl-panel .dl-go{width:100%}
+  .dl-panel .dl-go{justify-content:center}
+  .dl-panel .dl-h{align-self:flex-start;margin:0 0 2px}
+}
+#ig{--fs:1}
+.cap[hidden]{display:none!important}
+.cap[hidden]{display:none!important}
 </style>
 <link rel="stylesheet" href="/ui-look.css?v=1">
 </head>
@@ -1089,13 +1308,19 @@ body.ds-open .ds-tile{display:none}
     <div id="hdrText" hidden><h1>รายงานสถานการณ์ฝุ่นละออง <span class="pm25">PM<sub>2.5</sub></span> เขตสุขภาพที่ 7</h1><div class="sub">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</div></div>
     <div class="meta">
       <div class="date" id="hdrDate"><span class="sk" aria-hidden="true"></span></div>
-      <div class="btns">
-        <label class="sr-only" for="igSize">ขนาดรูป</label>
+      <div class="btns dl-panel" role="group" aria-labelledby="dlH">
+        <div class="dl-h" id="dlH"><span class="dl-i"><svg class="ico"><use href="#i-down"/></svg></span><span><b>ดาวน์โหลด Infographic</b><small>เลือกรูปแบบและพื้นที่ แล้วกดสร้างภาพ</small></span></div>
+        <label class="dl-f"><span>ใช้สำหรับ</span>
         <select class="size" id="igSize">
-          <option value="a4">A4 · พิมพ์ติดบอร์ด</option>
-          <option value="social">1080×1350 · โพสต์ Facebook/LINE</option>
-        </select>
-        <button class="btn primary" id="btnIg"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลด Infographic</button>
+          <option value="a4">A4 · รายงานสำหรับเจ้าหน้าที่</option>
+          <option value="social">1080×1350 · โพสต์ประชาชน (Facebook/LINE)</option>
+        </select></label>
+        <label class="dl-f"><span>พื้นที่</span>
+        <select class="size" id="igPv">
+          <option value="">ทั้งเขตสุขภาพที่ 7</option>
+          <option>ขอนแก่น</option><option>มหาสารคาม</option><option>ร้อยเอ็ด</option><option>กาฬสินธุ์</option>
+        </select></label>
+        <button class="btn primary dl-go" id="btnIg"><svg class="ico"><use href="#i-down"/></svg>สร้างภาพ</button>
       </div>
     </div>
   </div>
@@ -1235,6 +1460,7 @@ body.ds-open .ds-tile{display:none}
   <div class="box">
     <div class="bar"><h3 id="mTitle">Infographic พร้อมดาวน์โหลด</h3><a class="btn primary" id="mDl" download><svg class="ico"><use href="#i-down"/></svg>บันทึกรูป</a><button class="btn" id="mClose">ปิด</button></div>
     <div class="hint" id="mHint"></div>
+    <div class="cap" id="mCap" hidden><textarea id="mCapT" readonly aria-label="ข้อความสำหรับโพสต์"></textarea><button class="btn primary" id="mCopy" type="button">คัดลอกข้อความโพสต์</button></div>
     <div class="img"><img id="mImg" alt="Infographic สถานการณ์ PM2.5 เขตสุขภาพที่ 7"></div>
   </div>
 </div>
@@ -2879,56 +3105,150 @@ function fitInfographic(size) {
   for (let d = 0; d <= 3; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) return d; }
   return 3;
 }
+// ================= INFOGRAPHIC (ฉบับปรับ) =================
+// กลุ่มเป้าหมายหลัก: เจ้าหน้าที่สาธารณสุขรายจังหวัด (รายงานสถานการณ์ประจำวันฉบับย่อ) + ส่งต่อประชาชน
+// - เลือก "ทั้งเขต" หรือรายจังหวัดก่อนดาวน์โหลด (tailored) · ธีมสีและคำแนะนำตามระดับของจังหวัดที่เลือก
+//   ทั้งเขต → ใช้ระดับของจังหวัดที่ค่าสูงสุด (หลักป้องกันไว้ก่อน แบบ EPA รายงานค่าสูงสุดของพื้นที่)
+// - ตัดการเทียบปี 2568 ออก · โรคใช้แบบ E1 (เฉลี่ยราย/สัปดาห์ในแต่ละเดือน) · เพิ่มคาดการณ์ 3 วัน + QR ไปแดชบอร์ด
+const IG_URL = "https://apps-odpc7.ddc.moph.go.th/pm25";
+S.igPv = "";
+function igQR(size) {
+  try { const q = qrcode(0, "M"); q.addData(IG_URL); q.make();
+    const n = q.getModuleCount(), c = size / (n + 2); let r = "";
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) r += `<rect x="${((x + 1) * c).toFixed(2)}" y="${((y + 1) * c).toFixed(2)}" width="${(c + .02).toFixed(2)}" height="${(c + .02).toFixed(2)}"/>`;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="#fff"/><g fill="#0f1b2d">${r}</g></svg>`;
+  } catch { return ""; }
+}
+function igFocus() {
+  const vals = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null);
+  const maxP = [...vals].sort((a, b) => b.v - a.v)[0];
+  const sel = S.igPv ? vals.find(o => o.p.name === S.igPv) : null;
+  const f = sel || maxP;
+  return { vals, maxP, f, lv: f ? lvOf(f.v) : S.lv, region: !S.igPv };
+}
+function igForecast(F, big) {
+  const items = PROV.map(p => ({ p, it: S.gpv?.items.find(i => i.code === String(p.code)) })).filter(o => o.it);
+  if (!items.length) return "";
+  const base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00"), day = k => new Date(base.getTime() + (k + 1) * 864e5);
+  const hd = [0, 1, 2].map(k => { const d = day(k); return `<th>${d.getDate()} ${TH_M[d.getMonth()]}<small>${k === 0 ? "พรุ่งนี้" : TH_D[d.getDay()]}</small></th>`; }).join("");
+  const rows = (F.region ? items : [...items.filter(o => o.p.name === S.igPv), ...items.filter(o => o.p.name !== S.igPv)]);
+  return `<table class="fc3 num"><tr><th>จังหวัด</th>${hd}</tr>${rows.map(({ p, it }) => `<tr class="${!F.region && p.name === S.igPv ? "me" : ""}"><td>${p.name}</td>${it.pred.slice(0, 3).map(x => x == null ? `<td>–</td>` : `<td style="background:${LV[lvOf(x)].c};color:${textOn(LV[lvOf(x)].c)}">${f1(x)}</td>`).join("")}</tr>`).join("")}</table>`;
+}
+function igDzRows() {
+  if (S.igPv && window.DZPV) {   // รายจังหวัด: ผู้ป่วยที่อยู่จริงในจังหวัดนั้น (Type area 1+3 · HDC s_pm25_2_in_week)
+    const K = Object.fromEntries(Object.entries(DZPV_COL).map(([k, v]) => [v, k]));
+    return window.DZPV.rows.filter(r => r.pv === S.igPv).map(r => ({ wk: r.wk, ...Object.fromEntries(Object.entries(K).map(([c, k]) => [k, r[c]])) }));
+  }
+  return S.dz?.[2026] || [];
+}
+function igDzPanel(d, m, last, W, H, fs) {
+  const n = last + 1, L = 2, pw = W - 4, slot = pw / n, bw = Math.min(30, slot * .6), T = fs + 6, B = fs * 1.9, ph = H - T - B;
+  const mx = Math.max(...m.map(o => o?.sum || 0)) * 1.05 || 1;
+  let g = `<line x1="0" x2="${W}" y1="${T + ph}" y2="${T + ph}" stroke="rgba(15,27,45,.18)"/>`;
+  for (let i = 0; i < n; i++) {
+    const o = m[i], x0 = L + i * slot + (slot - bw) / 2;
+    if (o) { const h = o.sum / mx * ph, v = o.sum;
+      g += `<rect x="${x0}" y="${T + ph - h}" width="${bw}" height="${h}" rx="3" fill="${d.c}" opacity="${o.prov ? .45 : 1}"/>`
+        + `<text x="${x0 + bw / 2}" y="${T + ph - h - 4}" text-anchor="middle" font-size="${fs - 1}" font-weight="700" fill="${o.prov ? "#8a96a8" : "#33415c"}" font-family="'IBM Plex Sans Thai',Anuphan,sans-serif">${fmt(v)}</text>`; }
+    g += `<text x="${L + i * slot + slot / 2}" y="${H - 4}" text-anchor="middle" font-size="${fs - 1}" fill="#5f6c80" font-family="'IBM Plex Sans Thai',Anuphan,sans-serif">${TH_M[i]}${o?.prov ? "*" : ""}</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
+}
+function igFcStrip(F) {   // ขนาดโซเชียล: คาดการณ์ 3 วันของจังหวัดที่โฟกัส (สาระที่ 3: พรุ่งนี้เป็นอย่างไร)
+  const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); if (!it) return "";
+  const base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00");
+  return `<div class="fcs"><span class="t">${inl("i-cal", 22)}คาดการณ์ 3 วัน · ${F.f.p.name}</span>${it.pred.slice(0, 3).map((x, k) => { const d = new Date(base.getTime() + (k + 1) * 864e5), l = x == null ? null : LV[lvOf(x)];
+    return `<span class="c" style="background:${l ? l.soft : "#eef1f5"};color:${l ? l.ink : "#5f6c80"};border-color:${l ? l.c : "#ccd4de"}"><small>${k === 0 ? "พรุ่งนี้" : `${TH_D[d.getDay()]} ${d.getDate()} ${TH_M[d.getMonth()]}`}</small><b>${l ? `${l.face} ${l.name}` : "–"}</b></span>`; }).join("")}</div>`;
+}
+function igTrendHtml(pv, center) {
+  const t = igTrend(pv); if (!t) return "";
+  return `<span class="trd ${t.up ? "up" : t.dn ? "dn" : ""}"${center ? ' style="justify-content:center"' : ""}>${t.up ? "▲ สูงขึ้นกว่าเมื่อวาน" : t.dn ? "▼ ลดลงจากเมื่อวาน" : "● ใกล้เคียงเมื่อวาน"}</span>`;
+}
+// แถบสี 7 วันย้อนหลัง (โพสต์ประชาชน): เห็นแนวโน้มโดยไม่ต้องอ่านตัวเลข
+function igStrip7(pv) {
+  const days = S.last7 || []; if (!days.length) return "";
+  return `<span class="s7">${days.map((d, i) => { const x = d[pv], l = x != null ? LV[lvOf(x)] : null;
+    return `<i class="${i === days.length - 1 ? "td" : ""}" style="background:${l ? l.c : "#dfe4ea"}"></i>`; }).join("")}</span><span class="s7k">7 วันที่ผ่านมา → วันนี้</span>`;
+}
+function dzAsOf() { const p = String(S.dz?.meta?.dataDate || "").split("/"); return p.length === 3 ? `${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : "–"; }
+// การ์ดรายจังหวัด: ใช้การ์ดเดียวกับแดชบอร์ด (A3) ทุกประการ — คัดลอกจาก #tiles ที่แสดงอยู่
+function igTiles() {
+  const src = document.getElementById("tiles"); if (!src || !src.children.length) return "";
+  const html = src.innerHTML.replace(/aria-pressed="true"/g, 'aria-pressed="false"').replace(/<button /g, '<div ').replace(/<\/button>/g, '</div>');
+  return `<div class="ws-v2 igt"><div class="tiles">${html}</div></div>`;
+}
+// ย่อการ์ด 4 ใบให้พอดีแถว ด้วย transform (html2canvas วาด transform ได้ถูก แต่ zoom วาดตัวหนังสือเพี้ยน)
+const IG_TW = 1360;
+function igFitTiles(ig) {
+  const box = ig.querySelector(".igt"), t = box?.querySelector(".tiles"); if (!t) return;
+  const tw = ig.classList.contains("social") ? IG_TW : IG_TW + 120; t.style.width = tw + "px";
+  const k = box.clientWidth / tw; t.style.transform = `scale(${k})`; box.style.height = (t.offsetHeight * k) + "px";
+}
+function igEpiWk() { return epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
 function buildInfographic(size = "a4", dense = 0) {
-  const L = LV[S.lv], ig = document.getElementById("ig");
+  const F = igFocus(), L = LV[F.lv], ig = document.getElementById("ig");
   ig.className = size; ig.dataset.dense = dense;
-  const CH = [96, 80, 66, 56][dense];
-  const avgBox = `<div class="avg">${weatherArt(S.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k"><b class="pm-tag">ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span></b>เฉลี่ย 4 จังหวัด</span><span class="v num">${f1(S.avg)}<small> µg/m³</small></span><span class="l">คุณภาพอากาศ${L.name}</span></div></div>`;
-  const head = `<div class="ig-banner"><img src="/header-v3.webp" alt="" width="2400" height="300"></div><div class="ig-date"><span class="d">${S.todayRow ? `<b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${L.face} ภาพรวมเขต: ${L.name}</span></div>`;
-  const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้</div>
+  [["--lv", L.c], ["--lv-soft", L.soft], ["--lv-tint", L.tint], ["--lv-ink", L.ink]].forEach(([k, v]) => ig.style.setProperty(k, v));
+  const pmTag = `<b class="pm-tag">ค่าฝุ่น PM<sub>2.5</sub></b>`;
+  const heroK = F.region ? `${pmTag}สูงสุดในเขต <b class="hp">จ.${F.f?.p.name ?? "–"}</b>` : `${pmTag}<b class="hp">จ.${S.igPv}</b>`;
+  const hero = `<div class="avg">${weatherArt(F.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k">${heroK}</span><span class="v num">${F.f ? f1(F.f.v) : "–"}<small> µg/m³</small></span><span class="l">${L.name}</span></div></div>`;
+  const overN = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5), pheoc0 = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
+  const kline = `<span class="kl">เกิน 37.5 <b>${overN.length} จังหวัด</b> · PHEOC <b>${pheoc0 ? "ถึงเกณฑ์" : "ยังไม่ถึงเกณฑ์"}</b> · จุดความร้อน <b>${S.hsToday.length} จุด</b></span>`;
+  const scope = F.region ? `${L.face} ระดับสูงสุดในเขต: ${L.name}` : `${L.face} จ.${S.igPv}: ${L.name}`;
+  const head = `<div class="ig-banner"><img src="${document.querySelector(".hdr-banner img")?.src || "/header-v2.webp"}" alt="" width="2000" height="250"></div><div class="ig-date"><span class="d">${S.todayRow ? `<span class="today-b">วันนี้</span><b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${size === "social" ? scope : `<small class="ew">สัปดาห์ระบาดวิทยาที่ ${igEpiWk()}</small>${F.region ? kline : scope}`}</span></div>`;
+  const maxBar = F.region && F.f ? `<div class="maxbar"><span class="mk">${inl("i-pin", 22)}สูงสุดในเขตวันนี้</span><b class="mp">จ.${F.f.p.name}</b><span class="mv num">${f1(F.f.v)}<small> µg/m³</small></span><span class="ml">${L.face} ${L.name}</span></div>` : "";
+  const advFor = F.region ? `ตามระดับสูงสุดในเขต (จ.${F.f?.p.name ?? "–"})` : `จ.${S.igPv}`;
+  const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้<small style="margin-left:auto">${advFor}</small></div>
     <div class="advice"><div class="lv"><span class="f">${L.face}</span><b>${L.name}</b><span>${L.range} µg/m³</span></div>
       <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
       <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
-  const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === S.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === S.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
-  const foot = `<div class="ig-f"><span>แหล่งข้อมูล: Air4Thai · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
-  const maxP = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)[0];
-  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC</span><b>${pheocLabel("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")}</b></span></div>
-    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม.</span><b>${S.hsToday.length} จุด</b></span></div>
-    <div><span class="fi" style="background:var(--lv-soft);color:var(--lv-ink)">${inl("i-pin", 26)}</span><span><span class="k">สูงสุดวันนี้</span><b>${maxP ? maxP.p.name + " " + f1(maxP.v) : "–"}</b></span></div></div>`;
+  const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === F.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
+  const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span style="margin-right:auto"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_URL.replace("https://", "")}<br>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span style="text-align:right">${size === "social" ? "" : "ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม<br>"}สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น · กรมควบคุมโรค</span></div>`;
+  const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
+  const fc1 = (() => { const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); const x = it?.pred?.[0]; return x == null ? null : x; })();
+  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (&gt;75 µg/m³)</span><b>${pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
+    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม. (เขต 7)</span><b>${S.hsToday.length} จุด</b></span></div>
+    <div><span class="fi" style="background:${fc1 != null ? LV[lvOf(fc1)].soft : "var(--subtle)"};color:${fc1 != null ? LV[lvOf(fc1)].ink : "var(--ink-2)"}">${inl("i-cal", 26)}</span><span><span class="k">พรุ่งนี้ (คาดการณ์) · ${F.f?.p.name ?? ""}</span><b>${fc1 != null ? `${f1(fc1)} · ${LV[lvOf(fc1)].name}` : "–"}</b></span></div></div>`;
+  const pvCard = (p, cls) => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = !F.region && p.name === S.igPv;
+    return `<div class="${me ? "me" : ""}" style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n"><b class="pn">${p.name}</b>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM<sub>2.5</sub></em>${v != null ? f1(v) : "–"}<small> µg/m³</small></span></div>`; };
+  const over = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5);
+  const kpi = (ic, bg, fg, k, b, sm) => `<div><span class="fi" style="background:${bg};color:${fg}">${inl(ic, 26)}</span><span><span class="k">${k}</span><b>${b}</b>${sm ? `<small>${sm}</small>` : ""}</span></div>`;
+  const kpis = `<div class="kpis${F.region ? " kpis-h" : ""}">${kpi("i-pin", over.length ? LV[3].soft : LV[1].soft, over.length ? LV[3].ink : LV[1].ink, "จังหวัดที่เกิน 37.5 µg/m³", `${over.length} จาก ${PROV.length}${over.length ? ` · ${over.map(p => p.name).join(" ")}` : ""}`)}
+    ${kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75)", pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์")}
+    ${kpi("i-fire", "#fdeee5", "#e8590c", "จุดความร้อน 24 ชม. (เขต 7)", `${S.hsToday.length} จุด`)}</div>`;
+  const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
+  const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
   if (size === "social") {
-    ig.innerHTML = head + `<div class="ig-body">${avgBox}
-      <div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null;
-        return `<div style="border-top:6px solid ${l ? l.c : "#ccc"}"><span class="n">${p.name}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}"><span class="pm25">PM<sub>2.5</sub></span></em>${v != null ? f1(v) : "–"}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:calc(14px*var(--fs,1))">${l.name}</span>` : ""}</div>`; }).join("")}</div>
-      ${facts3}${adviceBox}${scaleBox}<div style="font-size:calc(15px*var(--fs,1));color:var(--ink-3)">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคทางเดินหายใจ โรคหัวใจและหลอดเลือด</div></div>` + foot;
+    ig.innerHTML = head + `<div class="ig-body">${F.region ? "" : hero}
+      ${F.region ? maxBar + igTiles() : `<div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = p.name === S.igPv;
+        return `<div class="${me ? "me" : ""}" style="border-top:6px solid ${l ? l.c : "#ccc"}"><span class="n">${p.name}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM<sub>2.5</sub></em>${v != null ? f1(v) : "–"}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}${igTrendHtml(p.name, true)}${igStrip7(p.name)}</div>`; }).join("")}</div>`}
+      ${facts3}${adviceBox}${igFcStrip(F)}${act}${scaleBox}${riskNote}</div>` + foot;
+    igFitTiles(ig);
     return;
   }
-  let mapSvg = "";
-  if (S.geo?.features?.length) {
-    const pj = projector(S.geo, 470, 330, 6);
-    mapSvg = S.geo.features.map(f => { const n = f.properties.name_th, v = S.todayRow?.[n], l = v != null ? LV[lvOf(v)] : null, [cx, cy] = pj.centroid(f), [dx, dy] = LABEL_NUDGE[n] || [0, 0];
-      return `<path d="${pj.path(f)}" fill="${l ? l.c : "#ccd4de"}" stroke="#fff" stroke-width="2"/><text x="${cx + dx * 1.15}" y="${cy + dy * 1.15}" text-anchor="middle" fill="${l ? textOn(l.c) : "#fff"}" font-size="16" font-weight="700" font-family="IBM Plex Sans Thai">${n}</text>`; }).join("")
-      + S.hsToday.map(f => { const [x, y] = pj.P(f.geometry.coordinates); return `<circle cx="${x}" cy="${y}" r="5" fill="${(CONF[f.properties.confidence] || [0, "#e8192c"])[1]}" stroke="#fff" stroke-width="1.5"/>`; }).join("");
-  }
+  // โรค: แบบ E1 ย่อ (เฉลี่ยราย/สัปดาห์ในแต่ละเดือน) — ไม่เทียบปี 2568
+  const wkMax = S.wkMax || 0, rows = igDzRows();
+  const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, 2026) }));
+  const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
+  const CH = [104, 94, 80, 66][dense];
+  const dzSec = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น · ${F.region ? "ทั้งเขต" : `จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}<small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)${F.region ? "" : " · เฉพาะผู้อยู่จริงในจังหวัด"} · HDC ณ ${dzAsOf()} · อัปเดตรายสัปดาห์</small></div>
+    <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${s.d.label}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, 16)}</div>`).join("")}</div>
+    <div class="dzl">ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)}) · * ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax}) เป็นข้อมูลเบื้องต้น รายงานยังไม่ครบ (แท่งจาง) · แต่ละกลุ่มใช้สเกลของตัวเอง ${(() => { const f = ser[0].m.map((o, i) => o?.n === 5 ? TH_M[i] : "").filter(Boolean); return f.length ? ` · ${f.join(" ")} มี 5 สัปดาห์ ยอดรวมจึงสูงกว่าเดือนอื่น` : ""; })()}</div>`;
   ig.innerHTML = head + `
   <div class="ig-body">
-    <div class="row1">
-      ${avgBox}
-      <div class="pvs">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null;
-        return `<div style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n">${p.name}${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:calc(14px*var(--fs,1))">${l.name}</span>` : ""}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}"><span class="pm25">PM<sub>2.5</sub></span></em>${v != null ? f1(v) : "–"}<small> µg/m³</small></span></div>`; }).join("")}</div>
-    </div>
+    ${F.region ? maxBar + igTiles()
+      : `<div class="row1">${hero}${kpis}</div>`}
     ${adviceBox}
-    <div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น<small style="font-family:IBM Plex Sans Thai;font-weight:400;font-size:calc(15px*var(--fs,1));color:var(--ink-3);margin-left:auto">ผู้ป่วยรายเดือน · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${S.wkMax} (${epiRange(2026, 1, S.wkMax)}) · HDC</small></div>
-    <div class="dzg">${(S.dzData || []).map(o => `<div style="background:linear-gradient(165deg,#fff 15%,${o.d.soft});border-color:color-mix(in srgb,${o.d.c} 25%,#fff)">
-      <div class="dh"><span class="dz-icon" style="background:#fff;color:${o.d.c}">${inl(o.d.icon, 24)}</span><span class="nm">${o.d.label}</span><span class="tt"><b class="num">${fmt(o.t26)}</b><span class="${o.pct > 0 ? "up" : "down"}">${o.pct > 0 ? "▲" : "▼"} ${Math.abs(o.pct).toFixed(1)}% จากปี 2568</span></span></div>
-      <svg viewBox="0 0 470 ${CH}" width="100%">${dzBars(o.d, o.a, o.b, 470, CH, 11)}</svg></div>`).join("")}</div>
-    <div class="dzl"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:#46546a"></i>ปี 2569 (สีตามกลุ่มโรค)</span></div>
+    ${F.region ? "" : act}
+    ${dzSec}
     <div class="row3">
-      <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าย้อนหลัง 7 วัน<small>µg/m³ · จุดความร้อน 24 ชม. ${S.hsToday.length} จุด</small></h4><table class="t7 num">${t7Html(true)}</table></div>
-      <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>ระดับคุณภาพอากาศ<small>µg/m³</small></h4><div class="scalev">${LV.map((l, i) => `<div class="${i === S.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === S.lv ? " · วันนี้" : ""}</b><span class="num">${l.range}</span></div>`).join("")}</div></div>
+      <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าย้อนหลัง 7 วัน<small>ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · Air4Thai</small></h4><table class="t7 num">${t7Html(true)}</table></div>
+      <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>คาดการณ์ 3 วัน<small>GISTDA · ${esc(S.gpv?.asOfThai || "")}</small></h4>${igForecast(F)}</div>
     </div>
-    <div style="font-size:calc(15px*var(--fs,1));color:var(--ink-3)">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
-  </div>
-  <div class="ig-f"><span>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
+    <div class="lvleg">${LV.map((l, i) => `<span class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><i style="background:${l.c}"></i><b>${l.name}</b> ${l.range}</span>`).join("")}</div>
+    ${riskNote}${F.region && F.lv >= 3 ? `<div class="ig-note"><b style="color:#9a3412">ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : ""}
+  </div>${foot}`;
+  igFitTiles(ig);
 }
 // html2canvas 1.4 อ่านสีแบบ color(srgb …) ไม่ได้ — เบราว์เซอร์ใหม่คืนค่ารูปแบบนี้จาก color-mix()
 // (เคยทำ export ล้มทุกเครื่อง 05/10/2026) → ก่อนวาด แปลงเป็น rgba() ใส่เป็น inline style ในสำเนา
@@ -2946,16 +3266,17 @@ function canvasSafeColors(root) {
 document.getElementById("btnIg").addEventListener("click", async e => {
   const btn = e.currentTarget, old = btn.innerHTML; btn.disabled = true; btn.textContent = "กำลังสร้างรูป…";
   try {
-    const size = document.getElementById("igSize").value;
+    const size = document.getElementById("igSize").value; S.igPv = document.getElementById("igPv").value;
     await document.fonts.ready; await lsFontReady(); fitInfographic(size);
     if (typeof html2canvas !== "function") throw new Error("ไม่พบ html2canvas — เปิดหน้านี้ผ่าน server (localhost:3000)");
-    const canvas = await html2canvas(document.getElementById("ig"), { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#ffffff",
+    const canvas = size === "social" && S.igPv ? await provinceSocial(S.igPv) : await html2canvas(document.getElementById("ig"), { useCORS: true, allowTaint: true, scale: 2, backgroundColor: "#ffffff", windowWidth: 1400, windowHeight: 1000,
       onclone: doc => { canvasSafeColors(doc.getElementById("ig")); igSvgFonts(doc.getElementById("ig")); } });
     const url = canvas.toDataURL("image/png");
     document.getElementById("mTitle").textContent = "Infographic พร้อมดาวน์โหลด";
     document.getElementById("mImg").src = url;
-    const a = document.getElementById("mDl"); a.href = url; a.download = `PM25-เขต7-${S.todayRow?.date || "today"}-${size}.png`;
+    const a = document.getElementById("mDl"); a.href = url; a.download = `PM25-${S.igPv || "เขต7"}-${S.todayRow?.date || "today"}-${size}.png`;
     document.getElementById("mHint").textContent = `บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" · ขนาด ${canvas.width}×${canvas.height} px ` + (size === "social" ? "(สัดส่วน 4:5 สำหรับโพสต์ Facebook/LINE)" : "(สัดส่วน A4 สำหรับพิมพ์ติดบอร์ด)");
+    const cap = document.getElementById("mCap"); cap.hidden = size !== "social"; if (size === "social") document.getElementById("mCapT").value = igCaption();
     document.getElementById("modal").classList.add("on"); document.getElementById("mClose").focus();
   } catch (err) { alert("สร้าง Infographic ไม่สำเร็จ: " + err.message); }
   finally { btn.disabled = false; btn.innerHTML = old; }
@@ -2967,7 +3288,7 @@ const CARD = { value: { right: 672, base: 642, maxW: 320 }, unit: { x: 680, y: 5
 async function provinceCard(pvName) {
   const pv = PROV.find(p => p.name === pvName), v = S.todayRow?.[pvName];
   if (v == null) throw new Error("ไม่มีค่าฝุ่นของจังหวัดนี้วันนี้");
-  const img = new Image(); img.src = `templates/${pv.code}-${lvOf(v)}.png`; await img.decode();
+  const img = new Image(); img.src = window.TPL?.[`${pv.code}-${lvOf(v)}`] || `templates/${pv.code}-${lvOf(v)}.png`; await img.decode();
   await Promise.all(["700 160px 'LINE Seed Sans TH'", "700 36px 'LINE Seed Sans TH'"].map(f => document.fonts.load(f)));
   const c = document.createElement("canvas"); c.width = c.height = 1080;
   const x = c.getContext("2d"); x.drawImage(img, 0, 0);
@@ -2987,7 +3308,105 @@ async function provinceCard(pvName) {
   const d = new Date(S.todayRow.date + "T00:00:00"), ds = `${d.getDate()} ${TH_MF[d.getMonth()]} ${d.getFullYear() + 543}`;
   let dfs = 38; do { x.font = `700 ${dfs}px 'LINE Seed Sans TH'`; } while (x.measureText(ds).width > CARD.date.maxW && (dfs -= 2) > 20);
   x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(ds, CARD.date.cx, CARD.date.cy);
+  fixTemplatePM(x); fixTemplateToday(x);
   return c;
+}
+// ---------- โพสต์ประชาชนรายจังหวัด: กราฟิกเทมเพลต สคร.7 (1080×1080) + แถบคาดการณ์ 3 วัน + QR (รวม 1080×1350 · 4:5) ----------
+function fixTemplatePM(x) {   // เทมเพลตพิมพ์ "PM.25" ในก้อนเมฆ → ทาทับเป็น PM₂.₅ (ตัวห้อยตามหลักวิชาการ)
+  x.fillStyle = "rgb(203,203,203)"; x.fillRect(150, 548, 162, 52);
+  x.fillStyle = "rgb(65,50,0)"; x.textAlign = "left"; x.textBaseline = "alphabetic";
+  x.font = "700 50px 'LINE Seed Sans TH'"; const w1 = x.measureText("PM").width;
+  x.font = "700 30px 'LINE Seed Sans TH'"; const w2 = x.measureText("2.5").width, x0 = 231 - (w1 + 3 + w2) / 2;
+  x.font = "700 50px 'LINE Seed Sans TH'"; x.fillText("PM", x0, 592);
+  x.font = "700 30px 'LINE Seed Sans TH'"; x.fillText("2.5", x0 + w1 + 3, 602);
+}
+const HOT_DDC = "1422", HOT_PCD = "1650";
+const RISK_DEF = "เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ และผู้มีโรคระบบทางเดินหายใจหรือโรคหัวใจ";
+// เทียบเมื่อวาน (ค่าจริง Air4Thai ทั้งสองวัน)
+function igTrend(pv) {
+  const v = S.todayRow?.[pv], y = S.prevRow?.[pv];
+  if (v == null || y == null) return null;
+  const d = Math.round((v - y) * 10) / 10;
+  return { y, d, up: d > 0.5, dn: d < -0.5, txt: d > 0.5 ? `▲ เพิ่มขึ้นจากเมื่อวาน (${f1(y)})` : d < -0.5 ? `▼ ลดลงจากเมื่อวาน (${f1(y)})` : `● ใกล้เคียงเมื่อวาน (${f1(y)})` };
+}
+function fixTemplateToday(x) {   // วงกลม "วันที่" → "วันนี้" (สื่อว่าเป็นข้อมูลของวันนี้)
+  x.fillStyle = "rgb(203,96,64)"; x.beginPath(); x.arc(672, 366, 44, 0, 7); x.fill();
+  x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "alphabetic";
+  let fs = 40; do { x.font = `700 ${fs}px 'LINE Seed Sans TH'`; } while (x.measureText("วันนี้").width > 76 && (fs -= 1) > 24);
+  x.fillText("วันนี้", 672, 382);
+  fixTemplateTime(x);
+}
+// เทมเพลตพิมพ์ "ข้อมูล ณ เวลา 07.00 น." ไว้ตายตัว แต่ค่าในชีตเป็นค่ารอบบ่าย ≈15.00 น. → ทาสีพื้นกล่องทับแล้วเขียนเวลาที่ถูกต้อง
+function fixTemplateTime(x) {
+  const [r, g, b] = x.getImageData(396, 712, 1, 1).data;
+  x.fillStyle = `rgb(${r},${g},${b})`; x.fillRect(400, 698, 290, 44);
+  x.fillStyle = "#fff"; x.textAlign = "left"; x.textBaseline = "alphabetic";
+  const t = `ข้อมูล ณ เวลา ${typeof REPORT_TIME === "string" ? REPORT_TIME : "15.00 น."}`;
+  let fs = 31; do { x.font = `500 ${fs}px 'LINE Seed Sans TH', Anuphan`; } while (x.measureText(t).width > 270 && (fs -= 1) > 20);
+  x.fillText(t, 410, 731);
+}
+async function provinceSocial(pvName) {
+  const card = await provinceCard(pvName);
+  await Promise.all(["700 30px 'LINE Seed Sans TH'", "600 22px 'LINE Seed Sans TH'"].map(f => document.fonts.load(f)));
+  const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d"); x.drawImage(card, 0, 0);
+  const pv = PROV.find(p => p.name === pvName), it = S.gpv?.items.find(i => i.code === String(pv.code));
+  const v = S.todayRow?.[pvName], lv = lvOf(v), tr = igTrend(pvName);
+  const TEAL = "#25586a", INK = "#33415c";
+  { const bg = x.createLinearGradient(0, 1080, W, H); bg.addColorStop(0, "#f6f3ee"); bg.addColorStop(.55, "#eef2f8"); bg.addColorStop(1, "#f3eef8"); x.fillStyle = bg; x.fillRect(0, 1080, W, H - 1080); }
+  x.fillStyle = TEAL; x.fillRect(0, 1080, W, 6);
+  x.textAlign = "left"; x.textBaseline = "alphabetic";
+  // แถบล่าง 3 อย่าง ตัวใหญ่อ่านได้บนมือถือ: แนวโน้มจากเมื่อวาน · คาดการณ์ 3 วัน (เป็นระดับ) · สายด่วน
+  if (tr) { x.font = "700 32px 'LINE Seed Sans TH'"; x.fillStyle = tr.up ? "#c2410c" : tr.dn ? "#0e7a3a" : INK; x.fillText(`วันนี้ ${tr.up ? "▲ สูงขึ้นกว่าเมื่อวาน" : tr.dn ? "▼ ลดลงจากเมื่อวาน" : "● ใกล้เคียงเมื่อวาน"}`, 40, 1128); }
+  if (it) {
+    const base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00");
+    it.pred.slice(0, 3).forEach((p, k) => {
+      const d = new Date(base.getTime() + (k + 1) * 864e5), l = p == null ? null : LV[lvOf(p)];
+      const bx = 40 + k * 276, by = 1146, bw = 264, bh = 108;
+      x.save(); x.shadowColor = "rgba(15,27,45,.32)"; x.shadowBlur = 26; x.shadowOffsetY = 10;
+      x.beginPath(); x.roundRect(bx, by, bw, bh, 24); x.fillStyle = l ? l.soft : "#eceff3"; x.fill(); x.restore();
+      const gl = x.createLinearGradient(0, by, 0, by + bh); gl.addColorStop(0, "rgba(255,255,255,.85)"); gl.addColorStop(.5, "rgba(255,255,255,.15)"); gl.addColorStop(1, "rgba(255,255,255,0)");
+      x.beginPath(); x.roundRect(bx, by, bw, bh, 24); x.fillStyle = gl; x.fill();
+      x.lineWidth = 3; x.strokeStyle = "rgba(255,255,255,.95)"; x.stroke(); x.beginPath(); x.roundRect(bx - .5, by - .5, bw + 1, bh + 1, 24); x.lineWidth = 1; x.strokeStyle = "rgba(15,27,45,.14)"; x.stroke();
+      x.beginPath(); x.roundRect(bx + 3, by + bh - 9, bw - 6, 6, 3); x.fillStyle = l ? l.c : "#ccd4de"; x.fill();
+      x.fillStyle = l ? l.ink : "#5f6c80"; x.font = "700 26px 'LINE Seed Sans TH'";
+      x.fillText(k === 0 ? "พรุ่งนี้" : `${TH_D[d.getDay()]} ${d.getDate()} ${TH_M[d.getMonth()]}`, bx + 18, by + 38);
+      let fs = 32; const name = l ? l.name : "–";
+      do { x.font = `700 ${fs}px 'LINE Seed Sans TH'`; } while (x.measureText(name).width > bw - 36 && (fs -= 1) > 20);
+      x.fillText(name, bx + 18, by + 86);
+    });
+  }
+  x.fillStyle = TEAL; x.font = "700 30px 'LINE Seed Sans TH'"; x.fillText(`ปรึกษาปัญหาสุขภาพ สายด่วน ${HOT_DDC}`, 40, 1308);
+  x.fillStyle = "#6b7689"; x.font = "600 20px 'LINE Seed Sans TH'"; x.fillText("คาดการณ์: GISTDA (ค่าประมาณจากดาวเทียม)", 40, 1338);
+  // QR ไปแดชบอร์ด
+  try {
+    const q = qrcode(0, "M"); q.addData(IG_URL); q.make();
+    const n = q.getModuleCount(), S_ = 150, cs = S_ / n, qx = 890, qy = 1110;
+    x.save(); x.shadowColor = "rgba(15,27,45,.25)"; x.shadowBlur = 18; x.shadowOffsetY = 6; x.fillStyle = "#fff"; x.beginPath(); x.roundRect(qx - 12, qy - 12, S_ + 24, S_ + 24, 22); x.fill(); x.restore();
+    x.fillStyle = "#0f1b2d";
+    for (let r = 0; r < n; r++) for (let cc = 0; cc < n; cc++) if (q.isDark(r, cc)) x.fillRect(qx + cc * cs, qy + r * cs, cs + .3, cs + .3);
+    x.textAlign = "center"; x.fillStyle = TEAL; x.font = "700 22px 'LINE Seed Sans TH'"; x.fillText("สแกนดูข้อมูลเพิ่มเติม", qx + S_ / 2, qy + S_ + 40);
+  } catch {}
+  return c;
+}
+// จ. ข้อความโพสต์ (แคปชัน) — ใช้ข้อความเดียวกันทุกจังหวัด และช่วยผู้ใช้โปรแกรมอ่านหน้าจอ
+function igCaption() {
+  const F = igFocus(), L = LV[F.lv], pvn = F.f?.p.name, v = F.f?.v, tr = pvn ? igTrend(pvn) : null;
+  const d = S.todayRow ? new Date(S.todayRow.date + "T00:00:00") : null;
+  const ds = d ? `${TH_D[d.getDay()]}ที่ ${d.getDate()} ${TH_MF[d.getMonth()]} ${d.getFullYear() + 543}` : "";
+  const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)), p1 = it?.pred?.[0];
+  const head = F.region
+    ? `สถานการณ์ฝุ่น PM₂.₅ เขตสุขภาพที่ 7 วัน${ds} (ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME})\n` + PROV.map(p => { const x = S.todayRow?.[p.name]; return x == null ? "" : `• ${p.name} ${f1(x)} µg/m³ ${LV[lvOf(x)].name}`; }).filter(Boolean).join("\n")
+    : `สถานการณ์ฝุ่น PM₂.₅ จ.${pvn} วัน${ds} (ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME})\n${f1(v)} µg/m³ · ระดับ${L.name}${tr ? ` · ${tr.up ? "สูงขึ้นกว่าเมื่อวาน" : tr.dn ? "ลดลงจากเมื่อวาน" : "ใกล้เคียงเมื่อวาน"}` : ""}`;
+  return [head,
+    `\nคำแนะนำ${F.region ? ` (ตามระดับสูงสุดในเขต จ.${pvn})` : ""}`,
+    `ประชาชนทั่วไป: ${L.pub.join(" / ")}`,
+    `กลุ่มเสี่ยง*: ${L.risk.join(" / ")}`, `*${RISK_DEF}`,
+    p1 != null ? `\nพรุ่งนี้คาดว่า${F.region ? ` จ.${pvn} ` : ""}จะอยู่ในระดับ${LV[lvOf(p1)].name}` : "",
+    F.lv >= 3 ? "ร่วมงดเผาในที่โล่ง ลดฝุ่นเพื่อคนในชุมชน" : "",
+    `\nปรึกษาปัญหาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}`,
+    `ดูข้อมูลเพิ่มเติม: ${IG_URL}`,
+    `#ฝุ่นPM25 #สคร7 #กรมควบคุมโรค${pvn && !F.region ? ` #${pvn}` : ""}`].filter(Boolean).join("\n");
 }
 async function showProvinceCard(pvName, btn) {
   const old = btn.innerHTML; btn.disabled = true; btn.textContent = "กำลังสร้างภาพ…";
@@ -3001,6 +3420,7 @@ async function showProvinceCard(pvName, btn) {
   } catch (err) { alert("สร้างภาพไม่สำเร็จ: " + err.message); }
   finally { btn.disabled = false; btn.innerHTML = old; }
 }
+document.getElementById("mCopy").addEventListener("click", async e => { const btn = e.currentTarget, t = document.getElementById("mCapT"); t.select(); let ok = false; try { await navigator.clipboard.writeText(t.value); ok = true; } catch { try { ok = document.execCommand("copy"); } catch {} } btn.textContent = ok ? "คัดลอกแล้ว ✓" : "เลือกข้อความแล้ว กด Ctrl+C"; setTimeout(() => { btn.textContent = "คัดลอกข้อความโพสต์"; }, 2500); });
 document.getElementById("mClose").addEventListener("click", () => document.getElementById("modal").classList.remove("on"));
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") e.target.classList.remove("on"); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.getElementById("modal").classList.remove("on"); });
