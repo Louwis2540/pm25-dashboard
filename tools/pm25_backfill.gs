@@ -56,7 +56,7 @@ function backfillValidate() {
       const ref = row[st.name];
       if (typeof ref !== 'number') return;
       methods.forEach(m => {
-        const c = bfDaily_(hourly[st.id] || {}, d, m);
+        const c = bfDaily_(hourly[st.id.toLowerCase()] || {}, d, m);
         if (c.v == null) return;
         const diff = c.v - ref, s = stat[m];
         s.n++; s.abs += Math.abs(diff); s.bias += diff; if (Math.abs(diff) <= 1) s.within1++;
@@ -113,7 +113,7 @@ function backfillWrite() {
   need.forEach(({ d, miss }) => {
     const vals = {};
     miss.forEach(st => {
-      const c = bfDaily_(hourly[st.id] || {}, d, BACKFILL_METHOD);
+      const c = bfDaily_(hourly[st.id.toLowerCase()] || {}, d, BACKFILL_METHOD);
       if (c.v == null) { skipped++; return; }
       vals[st.name] = c.v; filled++;
       logRows.push([stamp, d, st.name, c.v, BACKFILL_METHOD, c.n, st.id]);
@@ -156,7 +156,7 @@ function bfDaily_(byHour, d, m) {
 /** ดึงค่ารายชั่วโมงทุกสถานี → { '46t': { 'yyyy-MM-dd HH:mm:ss': ค่า } } */
 function bfFetchHourly_(from, to) {
   const out = {};
-  BF_STATIONS.forEach(st => out[st.id] = {});
+  BF_STATIONS.forEach(st => out[st.id.toLowerCase()] = {});
   for (let s = from; s <= to; s = bfAddDays_(s, CHUNK_DAYS)) {
     let e = bfAddDays_(s, CHUNK_DAYS - 1); if (e > to) e = to;
     const url = BF_HISTORY_URL + '?stationID=' + BF_STATIONS.map(x => x.id).join(',') +
@@ -172,17 +172,51 @@ function bfFetchHourly_(from, to) {
     }
     if (!json) { console.log('❌ ดึง ' + s + '–' + e + ' ไม่สำเร็จ'); continue; }
     let n = 0;
-    (json.stations || []).forEach(st => {
-      const tgt = out[st.stationID]; if (!tgt) return;
-      (st.data || []).forEach(r => {
-        const v = r.PM25;
-        if (typeof v === 'number' && !isNaN(v) && v >= 0) { tgt[String(r.DATETIMEDATA)] = v; n++; }
+    bfStationList_(json).forEach(st => {
+      const tgt = out[String(st.stationID || st.StationID || '').trim().toLowerCase()]; if (!tgt) return;
+      (st.data || st.Data || []).forEach(r => {
+        const v = bfNum_(r.PM25 !== undefined ? r.PM25 : r.pm25);
+        const dt = bfDt_(r.DATETIMEDATA || r.datetimedata || r.DATETIME);
+        if (v != null && dt) { tgt[dt] = v; n++; }
       });
     });
     console.log('  ดึง ' + s + '–' + e + ': ' + n + ' ค่ารายชั่วโมง');
+    if (!n && !bfWarned_) { bfWarned_ = true; console.log('  ⚠️ ไม่มีค่าในคำตอบ — ตัวอย่างคำตอบ: ' + JSON.stringify(json).slice(0, 400)); }
     Utilities.sleep(500);
   }
   return out;
+}
+
+let bfWarned_ = false;
+function bfStationList_(json) {   // รูปแบบคำตอบอาจเป็น { stations: [...] } หรือ array ตรง ๆ
+  if (Array.isArray(json)) return json;
+  return json.stations || json.Stations || json.data || [];
+}
+function bfNum_(v) {   // ค่าอาจมาเป็นตัวเลขหรือข้อความ เช่น "12.3" · "-", "N/A", null = ไม่มีค่า
+  if (v === null || v === undefined || v === '') return null;
+  const x = typeof v === 'number' ? v : parseFloat(String(v).replace(',', ''));
+  return isNaN(x) || x < 0 || x > 1000 ? null : x;
+}
+function bfDt_(v) {   // ทำวันเวลาให้เป็น 'yyyy-MM-dd HH:00:00'
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2})/.exec(String(v || '').trim());
+  return m ? m[1] + '-' + m[2] + '-' + m[3] + ' ' + ('0' + m[4]).slice(-2) + ':00:00' : '';
+}
+
+/**
+ * ตรวจการเชื่อมต่อ: ขอข้อมูลสถานีขอนแก่น 1 วัน แล้วพิมพ์คำตอบดิบ (รันเมื่อ backfillValidate ดึงได้ 0 ค่า)
+ */
+function backfillDebug() {
+  const day = bfAddDays_(bfToday_(), -2);
+  [day, '2026-01-10'].forEach(d => {
+    ['46t', '46t,113t'].forEach(ids => {
+      const url = BF_HISTORY_URL + '?stationID=' + ids + '&param=PM25&type=hr&sdate=' + d + '&edate=' + d + '&stime=00&etime=23';
+      try {
+        const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+        const t = res.getContentText();
+        console.log(d + ' [' + ids + '] HTTP ' + res.getResponseCode() + ' · ยาว ' + t.length + ' ตัวอักษร\n' + t.slice(0, 600));
+      } catch (e) { console.log(d + ' [' + ids + '] error: ' + e.message); }
+    });
+  });
 }
 
 /** อ่านแท็บ PM25_History → ค่ารายวัน, แถวของแต่ละวัน, คอลัมน์ของแต่ละจังหวัด */
