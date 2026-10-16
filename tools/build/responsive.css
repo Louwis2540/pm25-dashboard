@@ -1,0 +1,17 @@
+/* ===== จอใหญ่ (โน้ตบุ๊ก/เดสก์ท็อป): ขยายพื้นที่และตัวอักษรตามขนาดจอ =====
+   หลัก: (1) ใช้พื้นที่จอให้คุ้มแต่ไม่ยืดจนอ่านยาก — กว้างสูงสุด ~1680 px
+         (2) ตัวอักษรโตตามระยะมองจอที่ไกลขึ้น — คูณขนาดทุกตัวด้วย --fs เป็นขั้น (WCAG 1.4.4 ยังซูมเองได้)
+         (3) บรรทัดคำอธิบายยาวไม่เกิน ~90 ตัวอักษร (Bringhurst 45–90) */
+:root{--fs:1;--wrap-max:1280px;--gut:clamp(16px,2.4vw,48px)}
+@media (min-width:1366px){:root{--fs:1.06;--wrap-max:1360px}}
+@media (min-width:1536px){:root{--fs:1.1;--wrap-max:1480px}}
+@media (min-width:1760px){:root{--fs:1.15;--wrap-max:1600px}}
+@media (min-width:2200px){:root{--fs:1.22;--wrap-max:1760px}}
+.wrap,.hdr-banner,.hdr-in,.ft-in,.ft-bar div{max-width:var(--wrap-max);padding-left:var(--gut);padding-right:var(--gut)}
+#ig{--fs:1}   /* อินโฟกราฟิกส่งออกเป็นภาพขนาดคงที่ — ไม่ขยายตามจอ */
+@media (min-width:1366px){
+  .wrap{gap:calc(28px*var(--fs))}
+  /* โซน A: คอลัมน์การ์ดจังหวัดกว้างตามขนาดตัวอักษร ชื่อจังหวัดไม่ชนไอคอนสภาพอากาศ */
+  .wrap .ws-v2{grid-template-columns:minmax(0,1fr) calc(568px*var(--fs))}
+  .pv-guide ul,.pv-guide p,.dz-notes,.dz-notes li,.e1-notes li{max-width:96ch}
+}

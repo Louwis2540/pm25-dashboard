@@ -1,0 +1,185 @@
+/* ================= iOS LOOK (Liquid Glass) — แดชบอร์ด ================= */
+/* หลัก Apple HIG: วัสดุกระจก (material) ซ้อนบนพื้นหลังที่มีสี · มุมโค้งต่อเนื่อง · เส้นขอบบาง (hairline)
+   · ลำดับชั้นด้วยความลึก ไม่ใช่เส้นกรอบ · การเคลื่อนไหวแบบสปริง · เคารพ prefers-reduced-motion */
+:root{--ios-r:22px;--ios-r-s:14px;--ios-spring:cubic-bezier(.2,.9,.25,1.15);--ios-ease:cubic-bezier(.25,.8,.25,1);
+  --ios-mat:rgba(255,255,255,.58);--ios-mat-strong:rgba(255,255,255,.74);--ios-hair:rgba(255,255,255,.72);
+  --ios-shadow:0 1px 1px rgba(15,27,45,.04),0 8px 24px -8px rgba(15,27,45,.14),0 24px 48px -24px rgba(15,27,45,.16)}
+/* วอลเปเปอร์: แสงสีนุ่มตามระดับฝุ่นวันนี้ (กระจกต้องมีสีด้านหลังจึงจะเห็นความใส) */
+body{background:
+  radial-gradient(60vw 50vh at 8% 0%,color-mix(in srgb,var(--lv) 22%,transparent),transparent 70%),
+  radial-gradient(50vw 45vh at 95% 12%,rgba(116,192,252,.28),transparent 70%),
+  radial-gradient(55vw 50vh at 85% 70%,rgba(177,151,252,.22),transparent 70%),
+  radial-gradient(55vw 50vh at 10% 85%,rgba(255,192,120,.22),transparent 70%),
+  linear-gradient(180deg,var(--lv-tint),#f2f5fa 60%,#f5f2fa)!important;background-attachment:fixed!important}
+/* วัสดุกระจกหลัก */
+main .card,main .glass{background:linear-gradient(160deg,rgba(255,255,255,.55),rgba(255,255,255,.18) 40%,rgba(255,255,255,0) 60%),var(--ios-mat)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(185%);backdrop-filter:blur(26px) saturate(185%);
+  border:1px solid var(--ios-hair)!important;border-radius:var(--ios-r)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(255,255,255,.4),var(--ios-shadow)!important;
+  transition:transform .45s var(--ios-spring),box-shadow .35s var(--ios-ease)}
+/* การ์ดที่มีสีของหัวข้อ: กระจกย้อมสี (tinted glass) */
+main section[style*="--sec"] .card,main section[style*="--sec"] .glass{background:linear-gradient(160deg,rgba(255,255,255,.6),rgba(255,255,255,.12) 45%,rgba(255,255,255,0) 65%),color-mix(in srgb,var(--sec) 10%,rgba(255,255,255,.55))!important}
+main section .dz.card{background:linear-gradient(160deg,rgba(255,255,255,.6),rgba(255,255,255,.1) 45%,rgba(255,255,255,0) 65%),color-mix(in srgb,var(--dsoft) 70%,rgba(255,255,255,.4))!important}
+.wx-hero{background:linear-gradient(135deg,rgba(255,255,255,.75),color-mix(in srgb,var(--lv-tint) 70%,transparent) 55%,color-mix(in srgb,var(--lv-soft) 80%,transparent))!important}
+/* หัวข้อแต่ละโซน: แคปซูลกระจกย้อมสี + ตัวอักษรขาวมีแสงสะท้อน */
+main .sec-h{border-radius:var(--ios-r)!important;border-left:0!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%),linear-gradient(100deg,color-mix(in srgb,var(--sec,var(--brand)) 92%,#000),color-mix(in srgb,var(--sec,var(--brand)) 72%,#fff))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.08),0 10px 24px -12px color-mix(in srgb,var(--sec,var(--brand)) 70%,transparent)!important}
+main .sec-h .badge{border-radius:14px!important;box-shadow:inset 0 1px 0 #fff,0 4px 10px rgba(15,27,45,.12)!important}
+/* ชิ้นย่อยในการ์ด (fact / kv): กระจกบาง */
+main .fact,main .kv div{background:rgba(255,255,255,.55)!important;border:1px solid rgba(255,255,255,.75)!important;border-radius:var(--ios-r-s)!important;box-shadow:inset 0 1px 0 #fff,0 2px 8px -4px rgba(15,27,45,.12)}
+/* ปุ่ม: แคปซูลกระจก กดแล้วยุบแบบสปริง */
+.btn,select.size{border-radius:999px!important;border:1px solid rgba(255,255,255,.8)!important;background:rgba(255,255,255,.62)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:inset 0 1px 0 #fff,0 4px 14px -6px rgba(15,27,45,.25)!important;transition:transform .35s var(--ios-spring),box-shadow .25s}
+.btn.primary{background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 60%),var(--brand)!important;color:#fff!important;border-color:rgba(255,255,255,.35)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 8px 20px -8px var(--brand)!important}
+.btn:active,main .tile:active,.seg button:active{transform:scale(.96)}
+/* Segmented control แบบ iOS: รางกระจก + ปุ่มที่เลือกเป็นแคปซูลขาวลอย */
+.seg{border-radius:999px!important;background:rgba(118,118,128,.14)!important;border:0!important;padding:3px!important;box-shadow:inset 0 1px 2px rgba(15,27,45,.08)}
+.seg button{border-radius:999px!important;transition:background .3s var(--ios-ease),color .3s,box-shadow .3s}
+.seg button[aria-pressed="true"]{background:#fff!important;color:var(--ink-1)!important;box-shadow:0 3px 8px rgba(15,27,45,.14),0 1px 1px rgba(15,27,45,.06)}
+.seg button[aria-pressed="true"]::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#7048e8;margin-left:6px;vertical-align:middle}
+/* ป้าย (chip): แคปซูลมีขอบสว่าง */
+main .chip{box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 1px 2px rgba(15,27,45,.06)}
+/* ตารางค่าสี: ช่องโค้งมนแบบปุ่ม iOS มีประกายด้านบน */
+main .t7 td.cell,main .fc-t td.cell{border-radius:10px!important;background-image:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 5px -2px rgba(15,27,45,.25)}
+/* แผนที่/กราฟ: มุมโค้งตามการ์ด */
+main .leaflet-container,main .chart-wrap,main .area-map{border-radius:var(--ios-r-s)!important;overflow:hidden}
+/* tooltip และหน้าต่างดาวน์โหลด: วัสดุกระจกหนา (thick material) แบบ iOS sheet */
+.tip{background:rgba(255,255,255,.78)!important;-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,.85)!important;border-radius:14px!important;box-shadow:0 12px 30px -10px rgba(15,27,45,.3)!important}
+.modal{background:rgba(15,27,45,.28)!important;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.modal .box{border-radius:28px!important;background:rgba(255,255,255,.86)!important;-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);box-shadow:0 30px 80px -20px rgba(15,27,45,.45)!important;animation:iosSheet .5s var(--ios-spring)}
+@keyframes iosSheet{from{transform:translateY(40px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+/* ตัวเลขใหญ่: ระยะตัวอักษรแน่นแบบ SF Pro Display */
+.wx-hero .big,main .ring .c b,.kpi-num{letter-spacing:-.025em}
+/* การ์ดลอยขึ้นเมื่อชี้ (เฉพาะอุปกรณ์มีเมาส์) */
+@media (hover:hover){main .card:hover,main .glass:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(15,27,45,.05),0 18px 40px -14px rgba(15,27,45,.22)!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* เบราว์เซอร์ที่ไม่มี backdrop-filter: ใช้พื้นทึบขึ้นให้อ่านง่าย */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){main .card,main .glass{background:rgba(255,255,255,.92)!important}}
+
+/* ================= iOS LOOK — อินโฟกราฟิก (html2canvas: ไม่มี blur/inset/radial → ใช้ linear + เงาด้านนอก) ================= */
+#ig{background:linear-gradient(165deg,var(--lv-tint) 0%,#f2f5fa 38%,#f4f1fa 70%,#eef6f2 100%)!important}
+#ig .ig-date{background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.35))!important;border-bottom:1px solid rgba(255,255,255,.9)}
+#ig .ig-date .today-b,#ig .ig-date em{border-radius:999px!important;background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--lv-ink)!important;box-shadow:0 4px 10px -4px var(--lv-ink)}
+/* การ์ด/กล่องทั้งหมด = กระจกขาวใส ขอบสว่าง เงานุ่ม มุม 22 */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .avg,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .maxbar,#ig .scale>div,#ig .fcs .c{
+  border-radius:22px!important;border:1.5px solid rgba(255,255,255,.95)!important;
+  box-shadow:0 1px 2px rgba(15,27,45,.05),0 10px 24px -12px rgba(15,27,45,.22)!important}
+#ig .box,#ig .kpis>div,#ig .facts3>div,#ig .pvrow>div{background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(255,255,255,.62) 45%,rgba(255,255,255,.5))!important}
+#ig .dzg2>div{background:linear-gradient(160deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.55) 40%,rgba(255,255,255,0) 70%),var(--dzs,#f3f6fa)!important}
+#ig .avg{background:linear-gradient(160deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.4) 40%,rgba(255,255,255,0) 70%),var(--lv-tint)!important;border:2px solid color-mix(in srgb,var(--lv) 45%,#fff)!important;box-shadow:0 14px 30px -14px var(--lv)!important}
+#ig .maxbar{background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.1) 60%),var(--lv-soft)!important;border-left:1.5px solid rgba(255,255,255,.95)!important;box-shadow:0 10px 24px -12px var(--lv)!important}
+#ig .maxbar .ml{background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--lv-ink)!important}
+/* หัวข้อส่วน = แคปซูลกระจกย้อมสีตามระดับ */
+#ig .ig-sec{border-radius:999px!important;padding:6px 18px 6px 7px!important;background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 55%),linear-gradient(100deg,var(--lv-ink),color-mix(in srgb,var(--lv) 75%,#fff))!important;box-shadow:0 10px 22px -12px var(--lv-ink)!important}
+#ig .ig-sec span{border-radius:999px!important}
+/* คำแนะนำ: แผงสีระดับเป็นกระจกย้อมสี · รายการเป็นแถวแบบ iOS list */
+#ig .advice{background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(255,255,255,.7))!important;border:2px solid color-mix(in srgb,var(--lv) 40%,#fff)!important}
+#ig .advice .lv{background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 45%),linear-gradient(160deg,var(--lv),var(--lv-ink))!important}
+#ig .do{border-radius:14px!important;background:linear-gradient(180deg,#fff,rgba(255,255,255,.7))!important;border:1px solid rgba(15,27,45,.06)!important;box-shadow:0 2px 6px -3px rgba(15,27,45,.18)!important}
+#ig .do span{border-radius:12px!important}
+/* ตาราง: ช่องสีโค้งมนมีประกายด้านบน */
+#ig .t7 td,#ig .fc3 td:not(:first-child){border-radius:10px!important;background-image:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 55%)!important}
+#ig .t7 td:first-child,#ig .fc3 td:first-child{background-image:none!important}
+/* เกณฑ์ระดับ: แคปซูล */
+#ig .lvleg span{border:1.5px solid rgba(255,255,255,.95)!important;box-shadow:0 4px 10px -6px rgba(15,27,45,.25)}
+#ig .ig-f{background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(255,255,255,.85))!important;border-top:1px solid rgba(255,255,255,.95)!important}
+#ig .ig-f .qr{border-radius:14px!important;box-shadow:0 6px 14px -8px rgba(15,27,45,.35)}
+
+/* ================= ขอบเขตกล่องชัดขึ้น (เงาเข้มขึ้น + เส้นขอบบางสีเข้ม) ================= */
+/* หลัก: บนพื้นสว่าง ขอบขาวอย่างเดียวแยกกล่องไม่ออก → เพิ่มเส้นขอบบาง 1px สีเข้มโปร่ง + เงาใกล้ (contact) + เงาไกล (ambient) */
+:root{--ios-edge:rgba(15,27,45,.10);
+  --ios-shadow:0 0 0 1px var(--ios-edge),0 1px 2px rgba(15,27,45,.08),0 6px 14px -4px rgba(15,27,45,.14),0 22px 44px -18px rgba(15,27,45,.26)}
+main .card,main .glass{box-shadow:inset 0 1px 0 rgba(255,255,255,.95),var(--ios-shadow)!important}
+main .tile{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),0 0 0 1px var(--ios-edge),0 2px 4px rgba(15,27,45,.08),0 16px 32px -12px color-mix(in srgb,var(--tc,#ccc) 65%,transparent)!important}
+main .sec-h{box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.1),0 2px 4px rgba(15,27,45,.12),0 14px 28px -12px color-mix(in srgb,var(--sec,var(--brand)) 80%,transparent)!important}
+main .fact,main .kv div,main .box-h,main .note-box,main .pv-guide,main .dz-note,main .fc-det{box-shadow:inset 0 1px 0 #fff,0 0 0 1px var(--ios-edge),0 4px 10px -4px rgba(15,27,45,.16)!important}
+main .t7 td.cell,main .fc-t td.cell{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 0 1px rgba(15,27,45,.08),0 3px 6px -2px rgba(15,27,45,.3)!important}
+@media (hover:hover){main .card:hover,main .glass:hover{box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(15,27,45,.12),0 2px 4px rgba(15,27,45,.08),0 26px 50px -18px rgba(15,27,45,.32)!important}}
+
+/* อินโฟกราฟิก */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .scale>div,#ig .fcs .c{
+  box-shadow:0 0 0 1px rgba(15,27,45,.10),0 2px 4px rgba(15,27,45,.08),0 14px 28px -12px rgba(15,27,45,.30)!important}
+#ig .igt .tile{box-shadow:0 0 0 1px rgba(15,27,45,.10),0 2px 4px rgba(15,27,45,.08),0 16px 28px -12px color-mix(in srgb,var(--tc,#ccc) 75%,transparent)!important}
+#ig .avg{box-shadow:0 0 0 1px rgba(15,27,45,.08),0 2px 4px rgba(15,27,45,.08),0 16px 32px -14px var(--lv)!important}
+#ig .maxbar{box-shadow:0 0 0 1px rgba(15,27,45,.08),0 2px 4px rgba(15,27,45,.08),0 12px 24px -12px var(--lv)!important}
+#ig .ig-sec{box-shadow:0 2px 4px rgba(15,27,45,.14),0 12px 24px -10px var(--lv-ink)!important}
+#ig .do{box-shadow:0 0 0 1px rgba(15,27,45,.06),0 3px 8px -3px rgba(15,27,45,.22)!important}
+#ig .t7 td:not(:first-child),#ig .fc3 td:not(:first-child){box-shadow:0 0 0 1px rgba(15,27,45,.06),0 3px 6px -3px rgba(15,27,45,.35)}
+#ig .lvleg span{box-shadow:0 0 0 1px rgba(15,27,45,.07),0 4px 10px -5px rgba(15,27,45,.3)!important}
+/* html2canvas: เส้นขอบจริง (border) แสดงผลแน่นอนกว่าเงาแบบ spread */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .ig-act,#ig .scale>div,#ig .fcs .c,#ig .igt .tile{border:1.5px solid rgba(15,27,45,.13)!important;border-top-color:rgba(255,255,255,.95)!important}
+#ig .advice{border:2px solid color-mix(in srgb,var(--lv) 55%,#fff)!important}
+#ig .do{border:1px solid rgba(15,27,45,.10)!important}
+
+/* ================= เงาเข้มขึ้นอีกระดับ ================= */
+:root{--ios-edge:rgba(15,27,45,.14);
+  --ios-shadow:0 0 0 1px var(--ios-edge),0 2px 3px rgba(15,27,45,.10),0 10px 20px -6px rgba(15,27,45,.20),0 30px 56px -22px rgba(15,27,45,.34)}
+main .card,main .glass{box-shadow:inset 0 1px 0 rgba(255,255,255,.95),var(--ios-shadow)!important}
+main .tile{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),0 0 0 1px var(--ios-edge),0 3px 6px rgba(15,27,45,.12),0 22px 40px -14px color-mix(in srgb,var(--tc,#ccc) 80%,transparent)!important}
+main .sec-h{box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.12),0 3px 6px rgba(15,27,45,.16),0 18px 34px -12px color-mix(in srgb,var(--sec,var(--brand)) 90%,transparent)!important}
+main .fact,main .kv div,main .box-h,main .note-box,main .pv-guide,main .dz-note,main .fc-det{box-shadow:inset 0 1px 0 #fff,0 0 0 1px var(--ios-edge),0 6px 14px -5px rgba(15,27,45,.24)!important}
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .scale>div,#ig .fcs .c{box-shadow:0 2px 4px rgba(15,27,45,.12),0 16px 30px -12px rgba(15,27,45,.40)!important}
+#ig .igt .tile{box-shadow:0 2px 4px rgba(15,27,45,.12),0 18px 30px -12px color-mix(in srgb,var(--tc,#ccc) 90%,transparent)!important}
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .ig-act,#ig .scale>div,#ig .fcs .c,#ig .igt .tile{border-color:rgba(15,27,45,.17)!important;border-top-color:rgba(255,255,255,.95)!important}
+#ig .ig-sec{box-shadow:0 3px 6px rgba(15,27,45,.18),0 14px 26px -10px var(--lv-ink)!important}
+
+/* ================= ปรับสมดุล: ลำดับความลึก 3 ระดับ (elevation hierarchy) =================
+   ระดับ 2 เด่นสุด = ข้อมูลหลักที่ต้องเห็นก่อน/กดได้ (การ์ดจังหวัด, hero ค่าฝุ่น, หัวโซน)
+   ระดับ 1 = กล่องรวมเนื้อหาของแต่ละโซน (กระจกบาง เงากลาง)
+   ระดับ 0 = ชิ้นย่อยข้างใน (ตัวชี้วัดย่อย หมายเหตุ ตาราง กราฟ) → แบน มีแค่เส้นขอบบาง ไม่แย่งสายตาข้อมูล */
+main .card,main .glass{box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 0 0 1px rgba(15,27,45,.09),0 2px 4px rgba(15,27,45,.05),0 14px 32px -16px rgba(15,27,45,.22)!important}
+@media (hover:hover){main .card:hover,main .glass:hover{transform:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 0 0 1px rgba(15,27,45,.09),0 2px 4px rgba(15,27,45,.05),0 14px 32px -16px rgba(15,27,45,.22)!important}
+  main .tile:hover,main .pv:hover,main .fc-c:hover{transform:translateY(-3px)}}
+/* ระดับ 2 */
+main .wx-hero,main .pv-hero,main .hero{box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(15,27,45,.12),0 3px 6px rgba(15,27,45,.10),0 22px 44px -18px color-mix(in srgb,var(--lv) 70%,rgba(15,27,45,.4))!important}
+main .sec-h{box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 2px 4px rgba(15,27,45,.12),0 12px 24px -14px color-mix(in srgb,var(--sec,var(--brand)) 80%,transparent)!important}
+/* ระดับ 0: ชิ้นย่อยแบน */
+main .fact,main .kv div,main .box-h,main .note-box,main .pv-guide,main .dz-note,main .fc-det,main .st{box-shadow:none!important;border:1px solid rgba(15,27,45,.10)!important;background:rgba(255,255,255,.62)!important}
+main .t7 td.cell,main .fc-t td.cell{box-shadow:none!important;background-image:none!important}
+main .fc-t td.fc-c{box-shadow:0 1px 2px rgba(15,27,45,.15)!important}
+main .chip{box-shadow:none!important}
+/* กราฟ/แผนที่อยู่บนพื้นเรียบ ไม่มีกระจกซ้อน (ลดสิ่งรบกวนข้อมูล) */
+main .chart-card,main .chart-wrap{background:rgba(255,255,255,.7)!important}
+/* LINE Seed กว้างกว่าเดิม: กันข้อความตัดบรรทัดในกล่องเล็ก */
+main .fact b,main .fact span{overflow-wrap:anywhere}
+main .facts-box .fact{padding:8px 10px!important;gap:8px!important}
+main .facts-box .fact .fi{width:30px!important;height:30px!important}
+main .facts-box .fact span{font-size:12px!important}
+main .facts-box .fact b{font-size:14px!important}
+
+/* อินโฟกราฟิก: ใช้หลักเดียวกัน — การ์ดจังหวัด/ค่าสูงสุด เด่น · กล่องเนื้อหา เงากลาง · ช่องตารางและรายการคำแนะนำ แบน */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .scale>div,#ig .fcs .c{box-shadow:0 1px 2px rgba(15,27,45,.08),0 10px 22px -12px rgba(15,27,45,.30)!important}
+#ig .igt .tile{box-shadow:0 2px 4px rgba(15,27,45,.12),0 18px 30px -12px color-mix(in srgb,var(--tc,#ccc) 90%,transparent)!important}
+#ig .t7 td:not(:first-child),#ig .fc3 td:not(:first-child){box-shadow:none!important;background-image:none!important}
+#ig .do{box-shadow:none!important;border:1px solid rgba(15,27,45,.08)!important}
+#ig .lvleg span{box-shadow:none!important;border:1px solid rgba(15,27,45,.08)!important}
+#ig .ig-act{box-shadow:none!important}
+
+/* ================= แผงดาวน์โหลด Infographic: ชัดเจน ไม่กลืนพื้นหลัง =================
+   หลัก: ช่องกรอกต้องมีขอบเขตมองเห็นได้ (ความต่างของขอบ ≥ 3:1 ตาม WCAG 1.4.11) + ป้ายชื่อช่องที่มองเห็น (ไม่ใช่ placeholder)
+   ปุ่มหลัก = สีทึบ ไม่ใช้กระจก (การกระทำหลักต้องเด่นและชัดที่สุด) */
+.hdr-in .meta .dl-panel{margin-left:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px;background:#fff;border:1.5px solid rgba(15,27,45,.16);border-radius:18px;padding:12px 14px;box-shadow:0 1px 2px rgba(15,27,45,.06),0 10px 24px -14px rgba(15,27,45,.28)}
+.dl-panel .dl-h{display:flex;align-items:center;gap:10px;margin-right:6px;align-self:center}
+.dl-panel .dl-i{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--brand);color:#fff;flex:none}
+.dl-panel .dl-h b{display:block;font-size:15px;line-height:1.25;color:var(--ink-1)}
+.dl-panel .dl-h small{display:block;font-size:12px;font-weight:600;color:var(--ink-2)}
+.dl-panel .dl-f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dl-panel .dl-f>span{font-size:12px;font-weight:700;color:var(--ink-2);padding-left:4px}
+.dl-panel select.size{-webkit-appearance:none;appearance:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%232f3b4e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center!important;
+  border:1.5px solid #8a96a8!important;border-radius:12px!important;padding:9px 40px 9px 14px!important;font-size:14.5px;font-weight:600;color:var(--ink-1);min-height:42px;box-shadow:0 1px 2px rgba(15,27,45,.06)!important;cursor:pointer;max-width:100%}
+.dl-panel select.size:hover{border-color:var(--ink-2)!important}
+.dl-panel select.size:focus-visible{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)!important}
+/* ปุ่มหลักทุกปุ่ม (ดาวน์โหลด/สร้างภาพ): สีทึบ แบน ไม่ใช้กระจก */
+.btn.primary{background:var(--brand)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:1.5px solid var(--brand)!important;border-radius:12px!important;color:#fff!important;box-shadow:0 2px 6px -1px rgba(14,42,71,.35)!important}
+.btn.primary:hover{background:color-mix(in srgb,var(--brand) 86%,#fff)!important}
+.btn.primary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.dl-panel .dl-go{min-height:42px;padding:9px 18px!important;font-size:15px}
+@media (max-width:680px){
+  .hdr-in .meta .dl-panel{width:100%;flex-direction:column;align-items:stretch;padding:12px}
+  .dl-panel .dl-f,.dl-panel select.size,.dl-panel .dl-go{width:100%}
+  .dl-panel .dl-go{justify-content:center}
+  .dl-panel .dl-h{align-self:flex-start;margin:0 0 2px}
+}

@@ -13,3 +13,8 @@ uploads/
 
 # ฐานข้อมูล local — ห้าม commit (ทำให้ repo บวมและชนกัน)
 *.db
+
+# เครื่องมือ build (ไฟล์ที่สร้างขึ้น)
+tools/build/*.html
+tools/build/**/__pycache__/
+tools/build/*.png
