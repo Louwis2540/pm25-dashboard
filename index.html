@@ -1033,6 +1033,7 @@ body.ds-open .ds-tile{display:none}
 
 /* ไม่มีสารบัญในแดชบอร์ด — สารบัญอยู่ใน Figma · แผงดาวน์โหลดซ้ายเดิมย้ายไปท้ายหน้าแล้ว จึงไม่ต้องเว้นขอบซ้าย */
 @media (min-width:1280px){body,body:not(.ds-open){padding-left:0}}
+.cap[hidden]{display:none!important}
 /* ===== ส่วนดาวน์โหลดข้อมูล (ท้ายหน้า) ===== */
 .ds-sec{padding:18px 20px}
 .ds-sec .ds-foot{margin:14px 0 0;font-size:calc(12.5px*var(--fs,1));font-weight:600;color:var(--ink-3);line-height:1.55}
@@ -1336,7 +1337,7 @@ body.ds-open .ds-tile{display:none}
       <!-- A4 แผนที่ค่าฝุ่นวันนี้ — ย้ายมาแทนที่ A1 (ฝั่งซ้าย) -->
       <div class="glass mapbox today-map">
         <div class="box-h"><span class="bi"><svg class="ico"><use href="#i-map"/></svg></span>
-          <div><h3>แผนที่ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> วันนี้</h3><p>ค่าเฉลี่ย 24 ชม. ณ 15.00 น. · คลิกจังหวัดเพื่อดูรายละเอียด</p></div></div>
+          <div><h3>แผนที่ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> วันนี้</h3><p>ค่าเฉลี่ย 24 ชม. ณ 07.00 น. · คลิกจังหวัดเพื่อดูรายละเอียด</p></div></div>
         <svg id="drillMap" viewBox="0 0 400 290" role="img" aria-label="แผนที่ค่าฝุ่น PM2.5 วันนี้ 4 จังหวัด คลิกเพื่อดูรายละเอียด"></svg>
         <div class="legend" style="justify-content:center;margin-top:6px" id="aqiLegend"></div>
         <div class="map-note" id="mapNote"></div>
@@ -1365,7 +1366,7 @@ body.ds-open .ds-tile{display:none}
         <div class="chart-wrap" id="cw"><svg id="chart" viewBox="0 0 760 400" role="img" aria-label="กราฟเส้นค่าฝุ่น PM2.5 รายวัน 4 จังหวัด"></svg><div class="tip" id="tip"></div></div>
         <div class="tr-hint">💡 <b>ซูม</b> กด Ctrl (Mac: ⌘) ค้างพร้อมหมุนล้อเมาส์ · ถ่าง-หุบสองนิ้วบนทัชแพดหรือจอสัมผัส · <b>เลื่อนช่วง</b> ปัดซ้าย-ขวา (ทัชแพด/นิ้วเดียว) · ลากเมาส์เพื่อเลือกช่วง · ดับเบิลคลิกหรือกด รีเซ็ต เพื่อกลับ</div>
       </div>
-      <div class="card chart-card t7-card"><div class="t7-head"><span class="bi"><svg class="ico"><use href="#i-cal"/></svg></span><div><h3>ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> ย้อนหลัง 7 วัน</h3><p>เฉลี่ย 24 ชม. ณ 15.00 น. · หน่วย µg/m³</p></div></div><div class="t7-wrap"><table class="t7 num" id="t7"></table></div><div class="t7-note" id="t7Note"></div></div>
+      <div class="card chart-card t7-card"><div class="t7-head"><span class="bi"><svg class="ico"><use href="#i-cal"/></svg></span><div><h3>ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> ย้อนหลัง 7 วัน</h3><p>เฉลี่ย 24 ชม. ณ 07.00 น. · หน่วย µg/m³</p></div></div><div class="t7-wrap"><table class="t7 num" id="t7"></table></div><div class="t7-note" id="t7Note"></div></div>
       <div class="card chart-card" id="trStats"></div>
     </div>
   </section>
@@ -1412,7 +1413,7 @@ body.ds-open .ds-tile{display:none}
       <div><h2>ดาวน์โหลดข้อมูล</h2><p>ชุดข้อมูลสำหรับเจ้าหน้าที่ · เลือก กรอง ตรวจ แล้วดาวน์โหลด CSV/Excel พร้อมคำอธิบายตัวแปร</p></div></div>
     <div class="card ds-sec">
       <div id="dsBody"></div>
-      <p class="ds-foot">ข้อมูลรวมระดับจังหวัด ไม่มีข้อมูลรายบุคคล · ค่าฝุ่นรายวันเป็นค่ารอบบ่าย ≈15.00 น. · ค่า ณ 07.00 น. (เกณฑ์ PHEOC) แยกเป็นอีกชุด · ช่วง 28 ม.ค.–18 ก.พ. 2569 ใช้ค่าประมาณจากดาวเทียม GISTDA และระบุไว้ในคอลัมน์ pm25_source · เมื่อนำไปใช้โปรดอ้างอิงแหล่งข้อมูล</p>
+      <p class="ds-foot">ข้อมูลรวมระดับจังหวัด ไม่มีข้อมูลรายบุคคล · ค่าฝุ่นรายวันเป็นค่าเฉลี่ย 24 ชม. ณ 07.00 น. (ก่อน 2 ส.ค. 2569 เป็นค่ารอบบ่าย) · แหล่งค่าของแต่ละวันระบุไว้ในคอลัมน์ pm25_source · เมื่อนำไปใช้โปรดอ้างอิงแหล่งข้อมูล</p>
     </div>
   </section>
 </main>
@@ -1436,7 +1437,7 @@ body.ds-open .ds-tile{display:none}
     </div>
     <div class="ft-col">
       <h4>เกี่ยวกับข้อมูล</h4>
-      <p>ค่าฝุ่นรายจังหวัดเป็นค่าเฉลี่ย 24 ชั่วโมง ณ เวลา 15.00 น. ของแต่ละวัน · ช่วง 28 ม.ค.–18 ก.พ. 2569 สถานีไม่มีข้อมูลย้อนหลัง จึงใช้ค่าประมาณจากดาวเทียม GISTDA แทน (คลาดจากค่าสถานีเฉลี่ยราว 7 µg/m³)</p>
+      <p>ค่าฝุ่นรายจังหวัดเป็นค่าเฉลี่ย 24 ชั่วโมง ณ เวลา 07.00 น. ของแต่ละวัน · ก่อน 2 ส.ค. 2569 เป็นค่ารอบบ่าย (≈15.00 น.) เพราะ Air4Thai ไม่เก็บค่ารายชั่วโมงย้อนหลังถึงช่วงนั้น (ต่างจากค่า 07.00 น. เฉลี่ยราว 0.8 µg/m³) · ช่วง 28 ม.ค.–18 ก.พ. 2569 สถานีไม่มีข้อมูล จึงใช้ค่าประมาณจากดาวเทียม GISTDA แทน (คลาดจากค่าสถานีเฉลี่ยราว 7 µg/m³)</p>
       <p>ข้อมูลรายสัปดาห์ (ทั้งค่าฝุ่นและผู้ป่วย) นับตามสัปดาห์ระบาดวิทยาของกรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค.</p>
       <p>ค่ารายอำเภอ/ตำบลและการคาดการณ์เป็นค่าประมาณจากดาวเทียม อาจต่างจากค่าสถานีตรวจวัด</p>
       <p>ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยงด้านสุขภาพ</p>
@@ -1515,8 +1516,8 @@ function epiWeekOf(d) { const y = d.getFullYear(), s2 = epiStart(y, 2); return d
 const epiRange = (y, w0, w1) => { const a = epiStart(y, w0), b = epiEnd(y, w1 ?? w0); return `${a.getDate()} ${TH_M[a.getMonth()]}–${b.getDate()} ${TH_M[b.getMonth()]}`; };
 const epiWeeksOfMonth = (y, mo, upTo = 53) => { const w = []; for (let k = 1; k <= upTo; k++) { if (epiStart(y, k).getFullYear() !== y) break; if (epiMonth(y, k) === mo) w.push(k); } return w; };
 const TH_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-// ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. รอบบ่าย ≈15:00 (line_report.gs รอบสุดท้ายของวันเขียนทับ) — ค่า 07:00 แยกไว้ที่แท็บ PM25_07
-const REPORT_TIME = "15.00 น.";
+// ชีต PM25_History = ค่าเฉลี่ย 24 ชม. ณ 07:00 (line_report.gs · ก่อน 2 ส.ค. 2569 เป็นค่ารอบบ่าย ≈15:00 เพราะ Air4Thai เก็บค่ารายชั่วโมงย้อนหลังไม่ถึง)
+const REPORT_TIME = "07.00 น.";
 // เส้นเกณฑ์ในกราฟแนวโน้ม [ค่า, ป้าย, สี]
 // 37.5 = ค่ามาตรฐาน PM2.5 เฉลี่ย 24 ชม. ของไทย · 75.1 ขึ้นไป = ระดับมีผลต่อสุขภาพ
 const TREND_TH = [[37.5, "37.5 · ค่าเกณฑ์มาตรฐาน", "#b84a00"], [75.1, "75.1 · มีผลต่อสุขภาพ", "#b00000"]];
@@ -1777,7 +1778,7 @@ function renderDrill(pvName, level = "province", amp = null) {
   document.getElementById("aqiLegend").innerHTML = LV.map(l => `<span><i style="background:${l.c};height:10px;width:10px;border-radius:2px"></i>${l.name}</span>`).join("");
   if (level !== "province") return renderArea(pvName, level, amp);
 
-  // แผงรายละเอียดจังหวัด — ค่าสถานี Air4Thai (เฉลี่ย 24 ชม. ณ 15.00 น.)
+  // แผงรายละเอียดจังหวัด — ค่าสถานี Air4Thai (เฉลี่ย 24 ชม. ณ 07.00 น.)
   const v = S.todayRow?.[pvName], l = v != null ? LV[lvOf(v)] : LV[0], pr = S.prevRow?.[pvName];
   const dd = v != null && pr != null ? r1(v - pr) : null;
   const all = S.pm?.allData || {}, series = Object.keys(all).sort().map(d => ({ d, x: all[d]?.[pvName] })).filter(o => o.x != null && o.x > 0);
@@ -2028,7 +2029,7 @@ function renderTrend() {
   const dom = season ? (TR.range === "season" ? dustSeasonOf(last) : trendWindow("0000-01-01", "9999-12-31")) : [P[0].s, P.at(-1).s];
   const span = Math.max(1, dDiff(dom[0], dom[1]));
   document.getElementById("trendSub").textContent =
-    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 15.00 น.)" : mon ? "ค่าเฉลี่ยรายเดือน" : "ค่าเฉลี่ยรายสัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์)"} · ${TR.pv !== "all" ? "จ." + TR.pv + " · " : ""}${season ? (TR.range.startsWith("year:") ? "ปี " : "ฤดูฝุ่น ") : ""}${thDate(dom[0])} ${+dom[0].slice(0, 4) + 543} – ${thDate(dom[1])} ${+dom[1].slice(0, 4) + 543} · µg/m³`;
+    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 07.00 น.)" : mon ? "ค่าเฉลี่ยรายเดือน" : "ค่าเฉลี่ยรายสัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์)"} · ${TR.pv !== "all" ? "จ." + TR.pv + " · " : ""}${season ? (TR.range.startsWith("year:") ? "ปี " : "ฤดูฝุ่น ") : ""}${thDate(dom[0])} ${+dom[0].slice(0, 4) + 543} – ${thDate(dom[1])} ${+dom[1].slice(0, 4) + 543} · µg/m³`;
   document.getElementById("legend").innerHTML = PROV.filter((_, k) => SHOW.includes(k)).map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
 
   // วาดตามความกว้างจริงของกล่อง (1 หน่วย ≈ 1 px) — มือถือตัวอักษรไม่ถูกย่อจนอ่านไม่ออก
@@ -2777,7 +2778,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     cases: ["ผู้ป่วย (รายคน ตัดซ้ำในสัปดาห์)", "ราย"], population: ["ประชากร Type area 1+3 กลางปี (ประมาณ ณ 1 ก.ค.)", "คน"],
     rate_per_100k: ["อัตราป่วยต่อประชากรแสนคน", "ต่อแสน"], preliminary: ["1 = ข้อมูลเบื้องต้น รายงานยังไม่ครบ (4 สัปดาห์ล่าสุด)", ""],
     hdc_table: ["ตาราง HDC ต้นทาง", ""], date_com: ["วันที่ HDC ประมวลผล", ""],
-    date: ["วันที่ (ค.ศ. ปปปป-ดด-วว)", ""], pm25_24h: ["ค่า PM2\u002E5 เฉลี่ย 24 ชม. รอบบ่าย (≈15.00 น.)", "µg/m³"], pm25_source: ["แหล่งค่าของวันนั้น: station = สถานีตรวจวัด Air4Thai · satellite = ค่าประมาณจากดาวเทียม GISTDA (ใช้แทนช่วงที่สถานีไม่มีข้อมูล)", ""], pm25_07: ["ค่า PM2\u002E5 เฉลี่ย 24 ชม. ณ 07.00 น. (ใช้ตัดสินเกณฑ์ PHEOC)", "µg/m³"], pheoc_2day: ["1 = ค่า ณ 07.00 น. ≥ 75.1 µg/m³ ทั้งวันนี้และวันก่อนหน้า (เข้าเกณฑ์เปิด PHEOC)", ""], satellite_days: ["จำนวนวันในสัปดาห์ที่ใช้ค่าประมาณจากดาวเทียม GISTDA แทนค่าสถานี", "วัน"], aqi_level: ["ระดับคุณภาพอากาศ (เกณฑ์กรมควบคุมมลพิษ)", ""],
+    date: ["วันที่ (ค.ศ. ปปปป-ดด-วว)", ""], pm25_24h: ["ค่า PM2\u002E5 เฉลี่ย 24 ชม. ณ 07.00 น. (ก่อน 2 ส.ค. 2569 เป็นค่ารอบบ่าย ≈15.00 น.)", "µg/m³"], pm25_source: ["แหล่งค่าของวันนั้น: station_07 = สถานี Air4Thai ค่าเฉลี่ย 24 ชม. ณ 07.00 น. · station_pm = สถานี Air4Thai ค่ารอบบ่าย ≈15.00 น. (ก่อน 2 ส.ค. 2569) · satellite = ค่าประมาณจากดาวเทียม GISTDA (ช่วงที่สถานีไม่มีข้อมูล)", ""], pm25_07: ["ค่า PM2\u002E5 เฉลี่ย 24 ชม. ณ 07.00 น. (ใช้ตัดสินเกณฑ์ PHEOC)", "µg/m³"], pheoc_2day: ["1 = ค่า ณ 07.00 น. ≥ 75.1 µg/m³ ทั้งวันนี้และวันก่อนหน้า (เข้าเกณฑ์เปิด PHEOC)", ""], satellite_days: ["จำนวนวันในสัปดาห์ที่ใช้ค่าประมาณจากดาวเทียม GISTDA แทนค่าสถานี", "วัน"], aqi_level: ["ระดับคุณภาพอากาศ (เกณฑ์กรมควบคุมมลพิษ)", ""],
     pm25_mean: ["ค่า PM2\u002E5 เฉลี่ยของวันที่มีข้อมูลในสัปดาห์", "µg/m³"], pm25_max: ["ค่า PM2\u002E5 รายวันสูงสุดในสัปดาห์", "µg/m³"],
     days_over_37_5: ["จำนวนวันที่ค่าเฉลี่ย 24 ชม. เกิน 37.5 µg/m³ (ค่ามาตรฐาน)", "วัน"], pm25_days: ["จำนวนวันที่มีค่าฝุ่นในสัปดาห์", "วัน"],
     type1c: ["ประชากร Type area 1 (หลังตัดซ้ำ) ณ สิ้นปีงบประมาณ", "คน"], type3c: ["ประชากร Type area 3 (หลังตัดซ้ำ) ณ สิ้นปีงบประมาณ", "คน"],
@@ -2809,8 +2810,8 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
       note: f => f.table === "s2"
         ? "ตัวตั้ง = ผู้ป่วยที่อยู่อาศัยจริงในจังหวัด (Type area 1 และ 3) · ตัวหาร = ประชากร Type 1+3 กลางปี จาก HDC — ตัวตั้งและตัวหารเป็นประชากรกลุ่มเดียวกัน"
         : "นับผู้ป่วยสัญชาติไทยทุกคนที่มารับบริการในหน่วยบริการของจังหวัด รวมผู้อยู่นอกพื้นที่ (ใช้ดูภาระงาน) จึงไม่มีอัตราต่อแสน" },
-    { id: "pm_daily", icon: "i-chart", title: "ค่าฝุ่น PM2\u002E5 รายวัน รายจังหวัด", level: "จังหวัด · รายวัน", freq: "อัปเดตทุกวัน · ค่ารอบบ่าย ≈15.00 น.",
-      src: "Air4Thai กรมควบคุมมลพิษ (สถานีตรวจวัด) ค่าเฉลี่ย 24 ชม. รอบบ่าย ≈15.00 น. · ช่วง 28 ม.ค.–18 ก.พ. 2569 ใช้ค่าประมาณจากดาวเทียม GISTDA (ระบุในคอลัมน์ pm25_source)", desc: "ค่าเฉลี่ย 24 ชม. ของสถานีตรวจวัดในจังหวัด พร้อมระดับคุณภาพอากาศและเลขสัปดาห์ระบาดวิทยา",
+    { id: "pm_daily", icon: "i-chart", title: "ค่าฝุ่น PM2\u002E5 รายวัน รายจังหวัด", level: "จังหวัด · รายวัน", freq: "อัปเดตทุกวัน · ค่า ณ 07.00 น.",
+      src: "Air4Thai กรมควบคุมมลพิษ (สถานีตรวจวัด) ค่าเฉลี่ย 24 ชม. ณ 07.00 น. · ก่อน 2 ส.ค. 2569 เป็นค่ารอบบ่าย ≈15.00 น. · ช่วง 28 ม.ค.–18 ก.พ. 2569 ใช้ค่าประมาณจากดาวเทียม GISTDA (ระบุในคอลัมน์ pm25_source)", desc: "ค่าเฉลี่ย 24 ชม. ของสถานีตรวจวัดในจังหวัด พร้อมระดับคุณภาพอากาศและเลขสัปดาห์ระบาดวิทยา",
       filters: ["pv", "dates"],
       build(f) {
         const all = S.pm?.allData || {}, rows = [];
@@ -2819,29 +2820,12 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
           const dt = new Date(d + "T00:00:00");
           for (const p of PROV.filter(p => f.pv.includes(p.name))) {
             const v = all[d]?.[p.name]; if (v == null || !(v > 0)) continue;
-            rows.push({ date: d, year_be: dt.getFullYear() + 543, epi_week: epiWeekOf(dt), pv_code: p.code, pv_name: p.name, pm25_24h: r1(v), pm25_source: satDay(d, p.name) ? "satellite" : "station", aqi_level: LV[lvOf(v)].name });
+            rows.push({ date: d, year_be: dt.getFullYear() + 543, epi_week: epiWeekOf(dt), pv_code: p.code, pv_name: p.name, pm25_24h: r1(v), pm25_source: satDay(d, p.name) ? "satellite" : d >= "2026-08-02" ? "station_07" : "station_pm", aqi_level: LV[lvOf(v)].name });
           }
         }
         return { cols: ["date", "year_be", "epi_week", "pv_code", "pv_name", "pm25_24h", "pm25_source", "aqi_level"], rows };
       },
-      note: () => "ค่าจากสถานีตรวจวัด Air4Thai รอบบ่าย ≈15.00 น. · ช่วง 28 ม.ค.–18 ก.พ. 2569 และ จ.กาฬสินธุ์ 23 ก.พ. ใช้ค่าประมาณจากดาวเทียม GISTDA (pm25_source = satellite · คลาดจากค่าสถานีเฉลี่ยราว 7 µg/m³) · วันที่ไม่มีข้อมูลจะไม่มีแถว · ค่า ณ 07.00 น. ที่ใช้ตัดสิน PHEOC อยู่ในชุด \"ค่าฝุ่น ณ 07.00 น.\"" },
-    { id: "pm07", icon: "i-shield", title: "ค่าฝุ่น ณ 07.00 น. (เกณฑ์ PHEOC)", level: "จังหวัด · รายวัน", freq: "อัปเดตทุกวัน · เริ่ม 2 ส.ค. 2569",
-      src: "Air4Thai กรมควบคุมมลพิษ (ค่ารายชั่วโมงของสถานี) คำนวณค่าเฉลี่ย 24 ชม. สิ้นสุด 07.00 น. · แท็บ PM25_07", desc: "ค่าที่ใช้ตัดสินเกณฑ์เปิด PHEOC (≥ 75.1 µg/m³ ติดกัน 2 วัน) ชุดเดียวกับรายงาน LINE และการ์ด PHEOC บนแดชบอร์ด",
-      filters: ["pv", "dates"],
-      build(f) {
-        const all = S.pm07 || {}, rows = [], ds = Object.keys(all).sort();
-        for (const d of ds) {
-          if (d < f.d0 || d > f.d1) continue;
-          const dt = new Date(d + "T00:00:00"), prev = iso(new Date(dt.getTime() - 864e5));
-          for (const p of PROV.filter(p => f.pv.includes(p.name))) {
-            const v = all[d]?.[p.name]; if (v == null || !(v > 0)) continue;
-            const y = all[prev]?.[p.name];
-            rows.push({ date: d, year_be: dt.getFullYear() + 543, pv_code: p.code, pv_name: p.name, pm25_07: r1(v), pheoc_2day: v >= 75.1 && y >= 75.1 ? 1 : 0, aqi_level: LV[lvOf(v)].name });
-          }
-        }
-        return { cols: ["date", "year_be", "pv_code", "pv_name", "pm25_07", "pheoc_2day", "aqi_level"], rows };
-      },
-      note: () => "เฉลี่ยจากค่ารายชั่วโมง 08.00 น. วันก่อน – 07.00 น. ต้องมีอย่างน้อย 18 จาก 24 ชั่วโมง · Air4Thai เก็บข้อมูลรายชั่วโมงย้อนหลังได้ราว 2–3 เดือน ชุดนี้จึงเริ่ม 2 ส.ค. 2569" },
+      note: () => "ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จากสถานีตรวจวัด Air4Thai (ค่าเดียวกับที่ใช้ตัดสินเกณฑ์ PHEOC) · ก่อน 2 ส.ค. 2569 เป็นค่ารอบบ่าย ≈15.00 น. (pm25_source = station_pm · ต่างจากค่า 07.00 น. เฉลี่ยราว 0.8 µg/m³) · 28 ม.ค.–18 ก.พ. 2569 และ จ.กาฬสินธุ์ 23 ก.พ. ใช้ค่าประมาณจากดาวเทียม GISTDA (satellite · คลาดจากค่าสถานีเฉลี่ยราว 7 µg/m³) · วันที่ไม่มีข้อมูลจะไม่มีแถว" },
     { id: "analysis", icon: "i-layers", star: true, title: "ชุดพร้อมวิเคราะห์ ฝุ่น × ผู้ป่วย", level: "จังหวัด · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
       src: "Air4Thai (ค่าฝุ่น) + " + SRC_HDC + " ชุดที่ 2 + ประชากร Type 1+3 HDC",
       desc: "1 แถว = 1 จังหวัด × 1 สัปดาห์ มีค่าฝุ่นเฉลี่ย/สูงสุด/วันเกินมาตรฐาน ผู้ป่วยและอัตราต่อแสนทั้ง 4 กลุ่ม เปิดใน Excel, R หรือ Stata แล้ววิเคราะห์ได้ทันที",
@@ -3336,8 +3320,9 @@ function fixTemplateToday(x) {   // วงกลม "วันที่" → "�
   x.fillText("วันนี้", 672, 382);
   fixTemplateTime(x);
 }
-// เทมเพลตพิมพ์ "ข้อมูล ณ เวลา 07.00 น." ไว้ตายตัว แต่ค่าในชีตเป็นค่ารอบบ่าย ≈15.00 น. → ทาสีพื้นกล่องทับแล้วเขียนเวลาที่ถูกต้อง
+// เทมเพลตพิมพ์ "ข้อมูล ณ เวลา 07.00 น." ไว้ตายตัว → ถ้า REPORT_TIME ไม่ใช่ 07.00 จึงทาสีพื้นกล่องทับแล้วเขียนเวลาที่ถูกต้อง
 function fixTemplateTime(x) {
+  if (typeof REPORT_TIME !== "string" || REPORT_TIME.startsWith("07")) return;   // เทมเพลตพิมพ์ 07.00 น. ไว้ตรงกับข้อมูลอยู่แล้ว
   const [r, g, b] = x.getImageData(396, 712, 1, 1).data;
   x.fillStyle = `rgb(${r},${g},${b})`; x.fillRect(400, 698, 290, 44);
   x.fillStyle = "#fff"; x.textAlign = "left"; x.textBaseline = "alphabetic";
@@ -3415,7 +3400,7 @@ async function showProvinceCard(pvName, btn) {
     document.getElementById("mTitle").textContent = `ภาพสถานการณ์ฝุ่น จ.${pvName}`;
     document.getElementById("mImg").src = url; document.getElementById("mImg").alt = `ภาพสถานการณ์ฝุ่น PM2.5 จังหวัด${pvName}`;
     const a = document.getElementById("mDl"); a.href = url; a.download = `PM25-${pvName}-${S.todayRow?.date || "today"}.png`;
-    document.getElementById("mHint").textContent = `ขนาด 1080×1080 px สำหรับโพสต์ · ค่าเฉลี่ย 24 ชม. ณ 15.00 น. จาก Air4Thai · บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ"`;
+    document.getElementById("mHint").textContent = `ขนาด 1080×1080 px สำหรับโพสต์ · ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จาก Air4Thai · บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ"`;
     document.getElementById("modal").classList.add("on"); document.getElementById("mClose").focus();
   } catch (err) { alert("สร้างภาพไม่สำเร็จ: " + err.message); }
   finally { btn.disabled = false; btn.innerHTML = old; }

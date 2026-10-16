@@ -228,6 +228,46 @@ function backfillGistda() {
   console.log('เติมค่า GISTDA ' + filled + ' ค่า (แถวใหม่ ' + newRows.length + ' วัน) · ล้างค่า 0 เป็นช่องว่าง ' + cleared + ' ช่อง');
 }
 
+/**
+ * เปลี่ยนค่าใน PM25_History ให้เป็นค่าเฉลี่ย 24 ชม. ณ 07:00 (Louis 16 ต.ค. 2569: แดชบอร์ดแสดงเฉพาะค่า 07.00 น.)
+ * คัดลอกจากแท็บ PM25_07 (รัน backfill07 ก่อน) ตั้งแต่ 2 ส.ค. 2569 — ก่อนนั้น Air4Thai ไม่มีค่ารายชั่วโมงย้อนหลัง จึงคงค่ารอบบ่ายไว้
+ *   - เขียนทับค่ารอบบ่ายเดิม (ตั้งใจ) · สำรองแท็บก่อน · บันทึกค่าเดิม→ค่าใหม่ใน _backfill_log วิธี = 'to07'
+ *   - ช่องที่ PM25_07 ไม่มีค่า → คงค่าเดิมไว้ ไม่ลบ
+ */
+function historyTo07() {
+  const FROM = '2026-08-02';
+  const ss = SpreadsheetApp.openById(BF_SPREADSHEET_ID);
+  const sh = ss.getSheetByName(BF_SHEET), s7 = ss.getSheetByName('PM25_07');
+  if (!s7) throw new Error('ไม่พบแท็บ PM25_07 — รัน backfill07() ก่อน');
+  const v7 = s7.getDataRange().getValues(), h7 = v7[0].map(x => String(x).trim()), by7 = {};
+  for (let i = 1; i < v7.length; i++) {
+    const d = bfNormDate_(v7[i][0]); if (!d || d < FROM) continue;
+    by7[d] = {}; BF_STATIONS.forEach(st => { const x = v7[i][h7.indexOf(st.name)]; if (x !== '' && !isNaN(+x) && +x > 0) by7[d][st.name] = +x; });
+  }
+  const { byDate, rowOf, colOf } = bfReadSheet_();
+  const bk = BF_SHEET + '_backup_' + Utilities.formatDate(new Date(), 'GMT+7', 'yyyyMMdd_HHmm');
+  sh.copyTo(ss).setName(bk); console.log('สำรองแท็บเดิมไว้ที่ ' + bk);
+  const log = ss.getSheetByName('_backfill_log') || ss.insertSheet('_backfill_log');
+  if (log.getLastRow() === 0) log.appendRow(['เวลาที่เติม', 'วันที่', 'จังหวัด', 'ค่า (µg/m³)', 'วิธี', 'จำนวนชั่วโมงที่มีค่า', 'สถานี']);
+  const stamp = Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd HH:mm');
+  const logRows = [], newRows = []; let changed = 0, same = 0;
+  Object.keys(by7).sort().forEach(d => {
+    const vals = by7[d], cur = byDate[d] || {};
+    Object.keys(vals).forEach(n => {
+      if (cur[n] === vals[n]) { same++; return; }
+      if (rowOf[d]) sh.getRange(rowOf[d], colOf[n]).setValue(vals[n]);
+      logRows.push([stamp, d, n, vals[n], 'to07', '', 'เดิม ' + (cur[n] ?? 'ว่าง') + ' (รอบบ่าย) → ค่า 07:00 จาก PM25_07']); changed++;
+    });
+    if (!rowOf[d] && Object.keys(vals).length) {
+      const r = new Array(sh.getLastColumn()).fill(''); r[0] = d;
+      Object.keys(vals).forEach(n => r[colOf[n] - 1] = vals[n]); newRows.push(r);
+    }
+  });
+  if (newRows.length) sh.getRange(sh.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+  if (logRows.length) log.getRange(log.getLastRow() + 1, 1, logRows.length, logRows[0].length).setValues(logRows);
+  console.log('เปลี่ยนเป็นค่า 07:00 แล้ว ' + changed + ' ช่อง (แถวใหม่ ' + newRows.length + ' วัน) · ค่าเท่าเดิม ' + same + ' ช่อง · ตั้งแต่ ' + FROM);
+}
+
 // ───────────────────────────────────────────────────────────────
 
 /** ค่ารายวันของวันที่ d ตามวิธี m → { v: ค่าทศนิยม 1 ตำแหน่ง หรือ null, n: จำนวนชั่วโมงที่มีค่า } */
