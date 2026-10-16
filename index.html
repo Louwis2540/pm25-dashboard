@@ -724,7 +724,7 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
 @keyframes ldSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.is-loading .sk,.is-loading :is(#trStats,#drillPanel,#forecast,#hotSide,#advNow,#advRow,#dz,#trendSub,#drillMap,#chart,#t7):empty,.ld-spin{animation:none}}
 
-/* ===== B3: โซน E (E1 รายเดือนทั้งเขต · E2 อัตราต่อแสนรายจังหวัด) ===== */
+/* ===== B3+: โซน E (E1 เส้นรายเดือน · E2 แกนคู่) ===== */
 .dz-all .lg{flex-wrap:wrap;gap:6px 14px}
 .dz-scale{font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3);margin:0;padding-left:16px;line-height:1.55}
 .dz-all .icd b{color:var(--ink-1)}
@@ -779,16 +779,279 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
 
 /* tooltip กราฟโรค: กว้างตามข้อความ ไม่ถูกบีบเมื่ออยู่ใกล้ขอบขวา */
 .dz .tip{width:max-content;max-width:min(300px,calc(100% - 16px))}
+/* ===== E2 มุมมองเทียบแนวโน้ม (อัตราป่วย + ค่าฝุ่นเฉลี่ย ± SD) ===== */
+.pv-bh .x-view{margin-left:auto;flex:none}
+.x-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
+.x-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.x-tabs button{font:inherit;font-size:calc(13.5px*var(--fs,1));font-weight:700;display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;border:1.5px solid color-mix(in srgb,var(--c) 35%,#fff);background:#fff;color:#33415c;cursor:pointer}
+.x-tabs button i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.x-tabs button[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.x-tabs button[aria-pressed="true"] i{background:#fff}
+.x-tabs button:focus-visible{outline:3px solid var(--accent,#1c6ed6);outline-offset:2px}
+.pv-lg i.dash{width:18px;height:0;border-top:2.5px dashed #2b2f3a;border-radius:0;background:none}
+.pv-lg i.sdb{width:16px;height:10px;border-radius:3px;background:rgba(43,47,58,.16)}
+.pv-lg i.dot{width:9px;height:9px;border-radius:50%;background:#c2410c}
+.dzx .x-stat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:6px}
+.dzx .x-stat>div{background:#f6f8fb;border:1px solid #e3e8ef;border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:1px}
+.dzx .x-stat span{font-size:calc(12px*var(--fs,1));font-weight:700;color:var(--ink-2)}
+.dzx .x-stat b{font-size:calc(20px*var(--fs,1));font-weight:700;color:#2b2f3a;line-height:1.2}
+.dzx .x-stat b small{font-size:calc(13px*var(--fs,1));font-weight:600;color:var(--ink-3)}
+.dzx .x-stat em{font-style:normal;font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3)}
+.pv-guide .pg-ref{margin:8px 0 0;font-size:calc(11.5px*var(--fs,1));font-weight:500;color:var(--ink-3);line-height:1.55}
+@media (max-width:680px){.pv-bh{flex-wrap:wrap}.pv-bh .x-view{margin-left:0}.x-tabs button{font-size:calc(12.5px*var(--fs,1));padding:5px 11px}.dzx .x-stat{grid-template-columns:minmax(0,1fr)}}
+/* กล่องวิธีอ่านพับเก็บได้ (ค่าเริ่มต้น = ปิด) · ข้อควรระวังแสดงตลอด */
+details.pg-fold{padding:0}
+details.pg-fold>summary{list-style:none;cursor:pointer;padding:10px 16px;border-radius:14px;user-select:none}
+details.pg-fold>summary::-webkit-details-marker{display:none}
+details.pg-fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin-left:6px;transition:transform .2s}
+details.pg-fold[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+details.pg-fold>summary:hover{background:#eaf0f7}
+details.pg-fold>summary:focus-visible{outline:3px solid var(--accent,#1c6ed6);outline-offset:2px}
+details.pg-fold .pg-more{margin-left:auto;font-size:calc(12px*var(--fs,1));font-weight:600;color:var(--ink-3)}
+details.pg-fold>ul,details.pg-fold>.pg-ref{margin:0 16px 12px}
+details.pg-fold>ul{padding-left:18px}
+.pv-warn{grid-column:1/-1;margin:0!important;font-size:calc(13px*var(--fs,1));font-weight:600;line-height:1.6;background:#fff7e6;border:1px solid #f3dca8;border-radius:12px;padding:10px 14px;color:#6b4a00}
+.pv-warn b{color:#8a5a00;margin-right:4px}
+.pv-warn u{text-decoration-color:#d99a1b;text-underline-offset:3px}
+.dz-fold{margin-top:4px}
+/* กล่องสื่อสาร "ใช้กราฟนี้ดูอะไรได้" (โทนให้ข้อมูล ไม่ใช่คำเตือน) */
+.pv-info{grid-column:1/-1;display:flex;gap:12px;align-items:flex-start;background:#eef5fd;border:1px solid #cfe0f5;border-radius:14px;padding:12px 16px;color:#22324a}
+.pv-info>.ico{width:22px;height:22px;flex:none;color:#1c6ed6;margin-top:2px}
+.pv-info b{display:block;font-size:calc(14.5px*var(--fs,1));color:#14335c;margin-bottom:2px}
+.pv-info p{margin:4px 0 0;font-size:calc(13.5px*var(--fs,1));font-weight:500;line-height:1.65}
+.dzx .x-stat .x-sh{grid-column:1/-1;margin:0;font-size:calc(12px*var(--fs,1));font-weight:700;color:var(--ink-2)}
+.pv-lg i.hol{width:9px;height:9px;border-radius:50%;background:#fff;border:1.6px solid #6b7689}
+.pv-note{grid-column:1/-1;margin:0;font-size:calc(13px*var(--fs,1));font-weight:600;line-height:1.6;color:var(--ink-2);background:#f4f6f9;border:1px solid #e1e6ee;border-radius:12px;padding:10px 14px}
+.pv-note b{color:var(--ink-1);margin-right:6px}
+
+/* ===== C5 คาดการณ์ + ปัจจัยอากาศ ===== */
+/* DEMO C5: ตารางคาดการณ์รายจังหวัดอย่างเดียว */
+.fc .fc-t{font-size:calc(17px*var(--fs,1));margin-top:6px;border-spacing:0 6px}
+.fc .fc-t th{font-size:calc(14px*var(--fs,1));font-weight:700;color:var(--ink-1);padding:4px 2px;line-height:1.25}
+.fc .fc-t th small{display:block;font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3)}
+.fc .fc-t td{padding:11px 4px}
+.fc .fc-t td:first-child{font-size:calc(15px*var(--fs,1));font-weight:700;color:var(--ink-1);padding-right:8px}
+.fc .fc-t td.cell{font-family:"Anuphan","IBM Plex Sans Thai",sans-serif;font-size:calc(18px*var(--fs,1));border-width:3px}
+.fc-note{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:8px;font-size:calc(12px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+.fc-note span{display:flex;align-items:center;gap:5px}.fc-note i{width:12px;height:12px;border-radius:3px}
+/* DEMO C5: การระบายอากาศ */
+.fc .fc-t td.cell{line-height:1.15;padding:8px 3px 7px}
+.vb{display:inline-flex;align-items:center;gap:3px;font-family:"IBM Plex Sans Thai",sans-serif;font-size:calc(11px*var(--fs,1));font-weight:700;line-height:1;border-radius:5px;padding:3px 5px;white-space:nowrap}
+.fc-t .vb{display:flex;width:max-content;margin:5px auto 0}
+.vb-i{width:12px;height:12px;flex:none}
+.vb.v0{background:#eaf6e4;color:#1f5a0a}.vb.v1{background:#fdf0d6;color:#6b4100}.vb.v2{background:#fde4e4;color:#8a1414}
+.fc-t .vb{box-shadow:0 0 0 1px rgba(15,27,45,.12)}
+.vw{display:flex;gap:8px;align-items:flex-start;margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff4f4;border:1.5px solid #f3c0c0;font-size:calc(13px*var(--fs,1));line-height:1.45;color:#5c1a1a}
+.vw b{color:#8a1414}
+.vw-i{width:26px;height:26px;border-radius:8px;background:#fde4e4;color:#8a1414;display:grid;place-items:center;flex:none}
+.vw-i .ico{width:17px;height:17px}
+@media (max-width:680px){.fc .fc-t{table-layout:fixed;border-spacing:3px 6px}.fc .fc-t td:first-child,.fc .fc-t th:first-child{width:27%;font-size:calc(13.5px*var(--fs,1));padding-right:2px;white-space:normal;word-break:break-word}.fc .fc-t td.cell{font-size:calc(16px*var(--fs,1));padding:7px 1px 6px}.fc-t .vb{font-size:calc(10px*var(--fs,1));padding:3px 3px;gap:2px}.fc-t .vb-i{width:10px;height:10px}}
+/* DEMO C5: กล่องปัจจัยอากาศ */
+.fc-hint{font-size:calc(12.5px*var(--fs,1));font-weight:600;color:var(--ink-2);margin:2px 0 0}
+.fc-c{cursor:pointer;transition:transform .12s}
+.fc-c:hover{transform:translateY(-1px)}
+.fc-c:focus-visible{outline:3px solid var(--accent)!important;outline-offset:-3px}
+.fc-c[aria-pressed="true"]{outline:3px solid var(--ink-1);outline-offset:-3px;box-shadow:0 4px 10px rgba(15,27,45,.22)}
+.fc-det{margin-top:6px;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+.fc-det .dh{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+.fc-det .dh>b{font-family:"Anuphan","IBM Plex Sans Thai",sans-serif;font-size:calc(16px*var(--fs,1));color:var(--ink-1)}
+.fc-det .dh span{font-size:calc(12.5px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+.fr{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:calc(13.5px*var(--fs,1));font-weight:600;color:var(--ink-1)}
+.fr .ico{width:18px;height:18px;color:var(--ink-2)}
+.fr small{display:block;font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3)}
+.st{font-size:calc(12px*var(--fs,1));font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap}
+.st.ok{background:#eaf6e4;color:#1f5a0a}.st.mid{background:#fdf0d6;color:#6b4100}.st.bad{background:#fde4e4;color:#8a1414}.st.na{background:var(--subtle);color:var(--ink-3)}
+.fr-v{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.fr-v b{font-size:calc(13.5px*var(--fs,1));font-weight:700;color:var(--ink-1);white-space:nowrap}
+.tr-sum{display:flex;gap:10px;align-items:center;border-radius:10px;padding:8px 10px;margin:2px 0 4px}
+.tr-sum.bad{background:#fde4e4;color:#8a1414}.tr-sum.mid{background:#fdf0d6;color:#6b4100}.tr-sum.ok{background:#eaf6e4;color:#1f5a0a}
+.tr-sum .tr-i{font-size:calc(22px*var(--fs,1));line-height:1;width:28px;text-align:center;flex:none}
+.tr-sum b{display:block;font-family:"Anuphan","IBM Plex Sans Thai",sans-serif;font-size:calc(16px*var(--fs,1));font-weight:700}
+.tr-sum small{display:block;font-size:calc(11.5px*var(--fs,1));font-weight:600;opacity:.85}
+.fr-note{font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3);margin:6px 0 0}
+
+/* ===== รอบ 16 ต.ค. 2569 ===== */
+
+/* ===== ชุดปรับ 16 ต.ค. 2569 ===== */
+#chart{touch-action:pan-y}
+.tr-coop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,27,45,.45);color:#fff;font-size:calc(16px*var(--fs,1));font-weight:700;border-radius:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:30;text-align:center;padding:0 16px}
+.tr-coop.on{opacity:1}
+.tr-hint b{color:var(--ink-1)}
+.conf .cf-k{display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+.conf .cf-k i{flex:none;margin-top:3px}
+.conf .cf-k small{display:block;font-size:calc(11.5px*var(--fs,1));font-weight:500;color:var(--ink-3)}
+.conf .cf-frp{display:flex;align-items:flex-start;gap:8px;margin-top:4px;padding-top:6px;border-top:1px dashed var(--line);line-height:1.4}
+.conf .cf-frp .dots{display:flex;align-items:center;gap:3px;flex:none;margin-top:2px}
+.conf .cf-frp .dots b{display:block;border-radius:50%;background:#f07d00;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.conf .cf-frp small{display:block;font-size:calc(11.5px*var(--fs,1));font-weight:500;color:var(--ink-3)}
+.conf .cf-k>span,.conf .cf-frp>span:last-child{display:block;flex:1 1 auto;min-width:0;font-weight:700}
+.tf-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px}
+.tf{display:flex;flex-direction:column;gap:3px;font-size:calc(12px*var(--fs,1));font-weight:700;color:var(--ink-2)}
+.tf select{font:inherit;font-size:calc(14px*var(--fs,1));font-weight:700;color:var(--ink-1);padding:7px 34px 7px 12px;border-radius:12px;border:1.5px solid var(--line-strong,#cfd8e3);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2346546a' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center;-webkit-appearance:none;appearance:none;min-width:150px;cursor:pointer}
+.tf select:hover{border-color:#9fb0c6}
+.tf select:focus-visible{outline:3px solid var(--accent,#1c6ed6);outline-offset:2px}
+.tf-bar .seg{margin-left:auto}
+.dpick{display:flex;flex-wrap:wrap;gap:8px 10px;margin:8px 0 4px;padding:10px 12px;border-radius:14px;background:#f4f7fb;border:1px solid #dfe6ef}
+.dpick .tf select{min-width:0;width:100%}
+.dpick .tf{flex:1 1 150px}
+.dpick .tf select:disabled{color:var(--ink-3);background-color:#f1f3f6;cursor:not-allowed}
+tr.d-hit td{box-shadow:inset 0 0 0 3px var(--ink-1)}
+.fc-note2{margin:8px 0 0;font-size:calc(12.5px*var(--fs,1));font-weight:600;line-height:1.55;color:var(--ink-2);background:#f4f6f9;border:1px solid #e1e6ee;border-radius:10px;padding:8px 10px}
+.fc-note2 b{color:var(--ink-1);margin-right:6px}
+@media (max-width:680px){.tf{flex:1 1 140px}.tf select{min-width:0;width:100%}.tf-bar .seg{margin-left:0}}
+
+.fact .fact-s{display:block;font-size:calc(11px*var(--fs,1));letter-spacing:-.1px;font-weight:600;color:var(--ink-3);margin-top:1px;line-height:1.3}
+.fact.ph-hit{background:#fdecec;border-color:#f3b9b9}.fact.ph-hit b{color:#a30d0d}
+/* ===== แถบซ้าย · ชุดข้อมูลสำหรับเจ้าหน้าที่ (sidebar · stepper แนวตั้ง · สไตล์ filled) ===== */
+:root{--ds-w:clamp(340px,24vw,420px);--ds-rail:76px;--ds-c:#0f5e7a;--ds-c2:#0c4f67;--ds-tone:#e3eff4;--ds-tone2:#d2e6ee;--ds-ink:#0f2f3c}
+.ds-side{position:fixed;inset:0 auto 0 0;z-index:10050;display:flex;font-size:calc(14px*var(--fs,1));pointer-events:none}
+body{transition:padding-left .25s ease}
+@media (min-width:1280px){body.ds-open{padding-left:var(--ds-w)}}
+.ds-panel{display:none;pointer-events:auto;width:var(--ds-w);height:100%;flex-direction:column;background:#f4f8fa;border-right:1px solid rgba(15,27,45,.1);box-shadow:4px 0 24px -8px rgba(15,27,45,.25)}
+body.ds-open .ds-panel{display:flex;animation:dsIn .22s ease}
+@keyframes dsIn{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){body{transition:none}body.ds-open .ds-panel{animation:none}}
+.ds-ph{display:flex;align-items:center;gap:10px;padding:14px 14px 14px 16px;background:var(--ds-c);color:#fff;flex:none}
+.ds-ph h2{margin:0;font-size:calc(16px*var(--fs,1));font-weight:700;line-height:1.3}
+.ds-ph p{margin:2px 0 0;font-size:calc(11.5px*var(--fs,1));opacity:.88;line-height:1.45}
+.ds-pi{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.18);display:grid;place-items:center;flex:none}
+.ds-pi .ico{width:22px;height:22px}
+.ds-x{font:inherit;font-size:calc(24px*var(--fs,1));line-height:1;margin-left:auto;width:36px;height:36px;border-radius:10px;border:0;background:rgba(255,255,255,.16);color:#fff;cursor:pointer;flex:none}
+.ds-x:hover{background:rgba(255,255,255,.28)}
+.ds-scroll{overflow-y:auto;overscroll-behavior:contain;padding:14px 14px 20px;flex:1}
+.ds-scrim{display:none}
+@media (max-width:1279px){
+  body.ds-open .ds-side{inset:0;pointer-events:auto}
+  body.ds-open .ds-panel{position:relative;z-index:2;width:min(92vw,420px)}
+  body.ds-open .ds-scrim{display:block;position:fixed;inset:0;background:rgba(15,27,45,.45);z-index:1}
+}
+@media print{.ds-side,.ds-box{display:none!important}body{padding-left:0!important}}
+
+/* กล่องเล็กด้านซ้ายแดชบอร์ด (ไอคอน) */
+.ds-tile{pointer-events:auto;position:fixed;left:14px;top:120px;width:84px;font:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 6px 10px;border:2px solid var(--ds-c);background:#fff;color:var(--ds-c2);border-radius:18px;cursor:pointer;text-align:center;box-shadow:0 2px 4px rgba(15,27,45,.08),0 14px 26px -14px rgba(15,94,122,.75);transition:transform .15s,box-shadow .15s,background .15s}
+.ds-tile:hover{transform:translateY(-2px);background:var(--ds-tone)}
+.ds-tile:focus-visible{outline:3px solid #ffd166;outline-offset:3px}
+.ds-tic{width:46px;height:46px;border-radius:14px;background:var(--ds-c);color:#fff;display:grid;place-items:center}
+.ds-ticon{width:28px;height:28px}
+.ds-tlb{font-size:calc(12.5px*var(--fs,1));font-weight:700;line-height:1.3}
+.ds-tsm{font-size:calc(10px*var(--fs,1));font-weight:600;color:#5f6c80}
+body.ds-open .ds-tile{display:none}
+@media (min-width:1280px) and (max-width:1839px){body:not(.ds-open){padding-left:108px}}  /* จอกว้างกว่านี้มีขอบว่างพอ ไม่ต้องดัน */
+@media (max-width:1279px){
+  .ds-tile{top:auto;bottom:16px;left:12px;width:76px;padding:9px 4px 8px}
+  .ds-tic{width:40px;height:40px}.ds-ticon{width:24px;height:24px}
+  .ds-tsm{display:none}
+}
+
+/* stepper ไล่หัวข้อ 1 → 2 → 3 */
+.ds-step{position:relative;padding:0 0 18px 42px}
+.ds-step::before{content:"";position:absolute;left:14px;top:32px;bottom:2px;width:2px;background:var(--ds-tone2);border-radius:2px}
+.ds-step.ds-last::before{display:none}
+.ds-sh{display:flex;align-items:center;gap:10px;margin:0 0 10px -42px;min-height:30px}
+.ds-sh h3{margin:0;font-size:calc(15px*var(--fs,1));font-weight:700;color:var(--ds-ink)}
+.ds-n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ds-c);color:#fff;font-weight:700;font-size:calc(14px*var(--fs,1));flex:none;box-shadow:0 0 0 4px #f4f8fa}
+/* ชุดสำเร็จรูป */
+.ds-pre{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.ds-pbtn{font:inherit;font-size:calc(12px*var(--fs,1));border:0;background:var(--ds-tone);color:var(--ds-c2);border-radius:999px;padding:5px 11px;cursor:pointer;font-weight:600}
+.ds-pbtn:hover{background:var(--ds-tone2)}
+/* รายการชุดข้อมูล (filled เมื่อเลือก) */
+.ds-list{display:flex;flex-direction:column;gap:6px}
+.ds-card{font:inherit;text-align:left;display:flex;gap:10px;align-items:flex-start;width:100%;border:0;background:#fff;border-radius:14px;padding:10px 11px;cursor:pointer;box-shadow:0 1px 2px rgba(15,27,45,.08);transition:background .15s}
+.ds-card:hover{background:var(--ds-tone)}
+.ds-card.on{background:var(--ds-c);box-shadow:0 8px 18px -10px rgba(15,94,122,.8)}
+.ds-card.on .ds-ct b,.ds-card.on .ds-ct small,.ds-card.on .ds-ct>span{color:#fff}
+.ds-card.on .ds-ct small{opacity:.85}
+.ds-card.on .ds-ci{background:rgba(255,255,255,.2);color:#fff}
+.ds-card.soon{opacity:.7}
+.ds-ci{width:32px;height:32px;border-radius:10px;background:var(--ds-tone);color:var(--ds-c);display:grid;place-items:center;flex:none}
+.ds-ci .ico{width:18px;height:18px}
+.ds-ct{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ds-ct b{font-size:calc(13.5px*var(--fs,1));color:var(--ds-ink);line-height:1.4}
+.ds-ct small{font-size:calc(11.5px*var(--fs,1));color:var(--ds-c);font-weight:600}
+.ds-ct>span{font-size:calc(12px*var(--fs,1));line-height:1.5;margin-top:3px}
+.ds-star,.ds-soon{font-style:normal;font-size:calc(10.5px*var(--fs,1));font-weight:700;border-radius:999px;padding:1px 7px;margin-left:3px;vertical-align:1px}
+.ds-star{background:#ffd166;color:#5a3d00}
+.ds-soon{background:#dfe5ec;color:#4c596b}
+/* ตัวกรอง (filled) */
+.ds-f{border:0;padding:0;margin:0 0 12px}
+.ds-f legend{font-size:calc(12.5px*var(--fs,1));font-weight:700;color:var(--ds-ink);margin-bottom:6px;padding:0}
+.ds-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ds-chip input,.ds-seg input,.ds-fmt input{position:absolute;opacity:0;pointer-events:none}
+.ds-chip span{display:inline-block;font-size:calc(12.5px*var(--fs,1));border-radius:999px;padding:5px 12px;cursor:pointer;background:var(--ds-tone);color:var(--ds-c2);font-weight:600}
+.ds-chip input:checked+span{background:var(--ds-c);color:#fff}
+.ds-chip input:checked+span::before{content:"✓ "}
+.ds-chip input:focus-visible+span,.ds-seg input:focus-visible+span,.ds-fmt input:focus-visible+span{outline:2px solid var(--ds-c);outline-offset:2px}
+.ds-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ds-row label{display:flex;flex-direction:column;gap:3px;font-size:calc(11.5px*var(--fs,1));color:#5f6c80;min-width:0}
+.ds-row select,.ds-row input{font:inherit;font-size:calc(12.5px*var(--fs,1));border:0;border-bottom:2px solid var(--ds-c);border-radius:8px 8px 0 0;padding:7px 8px;background:var(--ds-tone);color:var(--ds-ink);width:100%;min-width:0}
+.ds-seg,.ds-fmt{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ds-seg label,.ds-fmt label{cursor:pointer}
+.ds-seg span,.ds-fmt span{display:flex;flex-direction:column;gap:1px;border-radius:12px;padding:8px 10px;background:#fff;height:100%;box-shadow:0 1px 2px rgba(15,27,45,.08)}
+.ds-seg b,.ds-fmt b{font-size:calc(12.5px*var(--fs,1));color:var(--ds-ink)}
+.ds-seg small,.ds-fmt small{font-size:calc(11px*var(--fs,1));color:#5f6c80;line-height:1.35}
+.ds-seg input:checked+span,.ds-fmt input:checked+span{background:var(--ds-c)}
+.ds-seg input:checked+span b,.ds-seg input:checked+span small,.ds-fmt input:checked+span b,.ds-fmt input:checked+span small{color:#fff}
+.ds-hint{font-size:calc(11.5px*var(--fs,1));color:#5f6c80;margin:6px 0 0}
+.ds-note{font-size:calc(12px*var(--fs,1));line-height:1.55;color:#5a4a1a;background:#fff3d1;border-radius:10px;padding:8px 10px;margin:0}
+.ds-empty{font-size:calc(12.5px*var(--fs,1));color:#5f6c80;margin:0}
+/* ขั้นที่ 3 */
+.ds-stat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.ds-stat span{display:flex;flex-direction:column;background:#fff;border-radius:12px;padding:7px 9px;font-size:calc(11px*var(--fs,1));color:#5f6c80;box-shadow:0 1px 2px rgba(15,27,45,.08)}
+.ds-stat b{font-size:calc(17px*var(--fs,1));color:var(--ds-ink);line-height:1.2}
+.ds-pv summary,.ds-cite summary{cursor:pointer;color:var(--ds-c);font-weight:600;font-size:calc(12.5px*var(--fs,1))}
+.ds-pv{margin-bottom:10px}
+.ds-prev{overflow:auto;max-height:220px;border-radius:10px;background:#fff;margin-top:6px;box-shadow:0 1px 2px rgba(15,27,45,.08)}
+.ds-prev table{border-collapse:collapse;font-size:calc(11.5px*var(--fs,1));white-space:nowrap}
+.ds-prev th{position:sticky;top:0;background:var(--ds-tone);color:var(--ds-ink);text-align:left;font-weight:700;padding:5px 8px;cursor:help}
+.ds-prev td{padding:4px 8px;border-bottom:1px solid rgba(15,27,45,.06);color:#33415c;font-variant-numeric:tabular-nums}
+.ds-dl{font:inherit;font-weight:700;font-size:calc(14px*var(--fs,1));display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:10px;background:var(--ds-c);color:#fff;border:0;border-radius:12px;padding:11px 16px;cursor:pointer;box-shadow:0 8px 18px -8px rgba(15,94,122,.7)}
+.ds-dl:hover{background:var(--ds-c2)}
+.ds-dl .ico{width:18px;height:18px}
+.ds-sub{font:inherit;font-size:calc(12.5px*var(--fs,1));width:100%;margin-top:6px;background:var(--ds-tone);color:var(--ds-c2);border:0;border-radius:12px;padding:8px 12px;cursor:pointer;font-weight:600}
+.ds-sub:hover{background:var(--ds-tone2)}
+.ds-msg{font-size:calc(12px*var(--fs,1));color:#33415c;margin:6px 0 0;min-height:1em}
+.ds-cite{margin-top:6px;font-size:calc(12px*var(--fs,1));color:#33415c}
+.ds-cite p{margin:6px 0 0;line-height:1.55}
+.ds-cite code{font-size:calc(11px*var(--fs,1));background:var(--ds-tone);border-radius:6px;padding:1px 5px;word-break:break-all}
+.ds-foot{font-size:calc(11.5px*var(--fs,1));color:#5f6c80;margin:4px 0 0;line-height:1.55}
+/* ทางลัดบนการ์ดกราฟ */
+.ds-jump{font:inherit;font-size:calc(12px*var(--fs,1));font-weight:600;display:inline-flex;align-items:center;gap:4px;border:0;background:var(--ds-tone);color:var(--ds-c2);border-radius:999px;padding:4px 11px;cursor:pointer;white-space:nowrap}
+.ds-jump .ico{width:14px;height:14px}
+.ds-jump:hover{background:var(--ds-tone2)}
+
+
+/* แสงวิ่งผ่านกล่อง (shine sweep) ทุก 7 วินาที — ดึงสายตาเบาๆ ไม่กะพริบถี่ · ปิดเองเมื่อผู้ใช้ตั้งค่าลดการเคลื่อนไหว */
+.ds-tile{overflow:hidden;isolation:isolate}
+.ds-tile::after{content:"";position:absolute;inset:-20% auto -20% -60%;width:45%;z-index:2;pointer-events:none;
+  background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.75) 45%,rgba(255,255,255,.9) 50%,rgba(255,255,255,.75) 55%,rgba(255,255,255,0) 100%);
+  transform:skewX(-18deg);animation:dsShine 7s ease-in-out 1.5s infinite}
+@keyframes dsShine{0%{left:-60%}16%{left:130%}100%{left:130%}}
+.ds-tile:hover::after{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.ds-tile::after{animation:none;display:none}}
+
+/* ไม่มีสารบัญในแดชบอร์ด — สารบัญอยู่ใน Figma · แผงดาวน์โหลดซ้ายเดิมย้ายไปท้ายหน้าแล้ว จึงไม่ต้องเว้นขอบซ้าย */
+@media (min-width:1280px){body,body:not(.ds-open){padding-left:0}}
+/* ===== ส่วนดาวน์โหลดข้อมูล (ท้ายหน้า) ===== */
+.ds-sec{padding:18px 20px}
+.ds-sec .ds-foot{margin:14px 0 0;font-size:calc(12.5px*var(--fs,1));font-weight:600;color:var(--ink-3);line-height:1.55}
+@media (min-width:900px){.ds-sec #dsBody{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:0 24px}.ds-sec .ds-step.ds-last{grid-column:1/-1}}
+/* ===== สถิติการเข้าชม ===== */
+.ft-bar .ft-visit{justify-content:flex-start;border-bottom:1px solid rgba(255,255,255,.08)}
+.ft-visit{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;font-size:calc(13px*var(--fs,1));color:inherit}
+.ft-visit .vh{font-weight:800;letter-spacing:.02em}
+.ft-visit .vs{display:inline-flex;align-items:baseline;gap:6px}
+.ft-visit .vs b{font-variant-numeric:tabular-nums;font-size:calc(15px*var(--fs,1))}
+.ft-visit .vn{opacity:.75;font-size:calc(12px*var(--fs,1))}
 </style>
 <link rel="stylesheet" href="/ui-look.css?v=1">
 </head>
-<body class="is-loading">
+<body id="top" class="is-loading">
 <div class="ld-toast" role="status" aria-live="polite"><span class="ld-spin" aria-hidden="true"></span><span>กำลังโหลดข้อมูลล่าสุด…<small>เปิดครั้งแรกของวันอาจใช้เวลาประมาณ 30 วินาที</small></span></div>
 
 <!-- ไอคอนใช้ซ้ำ -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4"/><path d="M3.3 17a9 9 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.5"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 7.5a3.8 3.8 0 0 1 .5 7.5z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/></symbol><symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z"/></symbol><symbol id="i-therm" viewBox="0 0 24 24"><path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9v7"/></symbol><symbol id="i-wind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h7"/></symbol><symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4"/><path d="M3.3 17a9 9 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.5"/></symbol>
     <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
     <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></symbol>
     <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"/></symbol>
@@ -841,14 +1104,14 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
 <main class="wrap">
 
   <!-- 1) วันนี้ — สไตล์ Weather Station -->
-  <section style="--sec:var(--lv-ink)">
+  <section id="zToday" style="--sec:var(--lv-ink)">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-gauge"/></svg></div>
       <div><h2>สถานการณ์ฝุ่นวันนี้</h2><p id="todaySub">ค่า <span class="pm25">PM<sub>2.5</sub></span> รายจังหวัด · µg/m³</p></div></div>
     <div class="ws ws-v2">
       <!-- A4 แผนที่ค่าฝุ่นวันนี้ — ย้ายมาแทนที่ A1 (ฝั่งซ้าย) -->
       <div class="glass mapbox today-map">
         <div class="box-h"><span class="bi"><svg class="ico"><use href="#i-map"/></svg></span>
-          <div><h3>แผนที่ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> วันนี้</h3><p>ค่าเฉลี่ย 24 ชม. ณ 07.00 น. · คลิกจังหวัดเพื่อดูรายละเอียด</p></div></div>
+          <div><h3>แผนที่ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> วันนี้</h3><p>ค่าเฉลี่ย 24 ชม. ณ 15.00 น. · คลิกจังหวัดเพื่อดูรายละเอียด</p></div></div>
         <svg id="drillMap" viewBox="0 0 400 290" role="img" aria-label="แผนที่ค่าฝุ่น PM2.5 วันนี้ 4 จังหวัด คลิกเพื่อดูรายละเอียด"></svg>
         <div class="legend" style="justify-content:center;margin-top:6px" id="aqiLegend"></div>
         <div class="map-note" id="mapNote"></div>
@@ -862,27 +1125,28 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
   </section>
 
   <!-- 2) แนวโน้ม -->
-  <section style="--sec:#7048e8">
+  <section id="zTrend" style="--sec:#7048e8">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-chart"/></svg></div>
       <div><h2>แนวโน้มค่าฝุ่น</h2><p>ดูรายวันหรือรายสัปดาห์ · เลือกช่วงเวลา ซูมเข้า-ออกได้ · ค่าย้อนหลัง 7 วัน</p></div></div>
     <div class="trend">
       <div class="card chart-card chart-main">
-        <div class="tr-bar" id="trBar">
-          <div class="seg" role="group" aria-label="ความละเอียดข้อมูล"><button type="button" data-mode="day">รายวัน</button><button type="button" data-mode="week">รายสัปดาห์</button></div>
-          <div class="seg" role="group" aria-label="ช่วงเวลา"><button type="button" data-range="7">7 วัน</button><button type="button" data-range="30">30 วัน</button><button type="button" data-range="90">3 เดือน</button><button type="button" data-range="season">ฤดูฝุ่น</button><button type="button" data-range="all">ทั้งหมด</button></div>
+        <div class="tr-bar tf-bar" id="trBar">
+          <label class="tf">จังหวัด<select id="trPv"><option value="all">ทั้ง 4 จังหวัด</option></select></label>
+          <label class="tf">แสดงเป็น<select id="trMode"><option value="day">รายวัน</option><option value="week">รายสัปดาห์</option><option value="month">รายเดือน</option></select></label>
+          <label class="tf">ช่วงเวลา<select id="trRange"></select></label>
           <div class="seg" role="group" aria-label="ซูมและเลื่อน"><button type="button" data-z="pan-l" title="เลื่อนไปช่วงก่อนหน้า" aria-label="เลื่อนไปช่วงก่อนหน้า">◀</button><button type="button" data-z="out" title="ซูมออก" aria-label="ซูมออก">－</button><button type="button" data-z="in" title="ซูมเข้า" aria-label="ซูมเข้า">＋</button><button type="button" data-z="pan-r" title="เลื่อนไปช่วงถัดไป" aria-label="เลื่อนไปช่วงถัดไป">▶</button><button type="button" data-z="reset">รีเซ็ต</button></div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin-top:12px"><div class="label" id="trendSub"></div><div class="legend" id="legend"></div></div>
         <div class="chart-wrap" id="cw"><svg id="chart" viewBox="0 0 760 400" role="img" aria-label="กราฟเส้นค่าฝุ่น PM2.5 รายวัน 4 จังหวัด"></svg><div class="tip" id="tip"></div></div>
-        <div class="tr-hint">💡 ลากเมาส์บนกราฟเพื่อซูมช่วงที่ต้องการ · ดับเบิลคลิกเพื่อรีเซ็ต · บนมือถือใช้ปุ่ม ＋ － ◀ ▶</div>
+        <div class="tr-hint">💡 <b>ซูม</b> กด Ctrl (Mac: ⌘) ค้างพร้อมหมุนล้อเมาส์ · ถ่าง-หุบสองนิ้วบนทัชแพดหรือจอสัมผัส · <b>เลื่อนช่วง</b> ปัดซ้าย-ขวา (ทัชแพด/นิ้วเดียว) · ลากเมาส์เพื่อเลือกช่วง · ดับเบิลคลิกหรือกด รีเซ็ต เพื่อกลับ</div>
       </div>
-      <div class="card chart-card t7-card"><div class="t7-head"><span class="bi"><svg class="ico"><use href="#i-cal"/></svg></span><div><h3>ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> ย้อนหลัง 7 วัน</h3><p>เฉลี่ย 24 ชม. ณ 07.00 น. · หน่วย µg/m³</p></div></div><div class="t7-wrap"><table class="t7 num" id="t7"></table></div><div class="t7-note" id="t7Note"></div></div>
+      <div class="card chart-card t7-card"><div class="t7-head"><span class="bi"><svg class="ico"><use href="#i-cal"/></svg></span><div><h3>ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> ย้อนหลัง 7 วัน</h3><p>เฉลี่ย 24 ชม. ณ 15.00 น. · หน่วย µg/m³</p></div></div><div class="t7-wrap"><table class="t7 num" id="t7"></table></div><div class="t7-note" id="t7Note"></div></div>
       <div class="card chart-card" id="trStats"></div>
     </div>
   </section>
 
   <!-- 3) เจาะลึก จังหวัด → อำเภอ → ตำบล (อำเภอ/ตำบล + คาดการณ์ จาก GISTDA) -->
-  <section style="--sec:#1c6ed6">
+  <section id="zDrill" style="--sec:#1c6ed6">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-layers"/></svg></div>
       <div><h2>เจาะลึกรายพื้นที่</h2><p>จังหวัด → อำเภอ → ตำบล · คลิกจังหวัดบนแผนที่หรือการ์ดด้านบน</p></div></div>
     <div class="drill">
@@ -892,7 +1156,7 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
   </section>
 
   <!-- 4) Hotspot -->
-  <section style="--sec:#e8590c">
+  <section id="zHot" style="--sec:#e8590c">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-fire"/></svg></div>
       <div><h2>จุดความร้อน (Hotspot) 4 จังหวัด</h2><p>ดาวเทียม VIIRS ผ่าน GISTDA · ย้อนหลัง 24 ชม. · ชี้ที่จุดเพื่อดูรายละเอียด</p></div></div>
     <div class="hot">
@@ -902,19 +1166,29 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
   </section>
 
   <!-- 5) โรค -->
-  <section style="--sec:#c2255c">
+  <section id="zDisease" style="--sec:#c2255c">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-steth"/></svg></div>
       <div><h2>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น</h2><p id="dzSub">ผู้ป่วย 4 กลุ่มโรค ปี 2569 · ข้อมูล HDC</p></div></div>
     <div class="dz-grid" id="dz"></div>
   </section>
 
   <!-- 6) คำแนะนำ -->
-  <section style="--sec:var(--lv-ink)">
+  <section id="zAdvice" style="--sec:var(--lv-ink)">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-shield"/></svg></div>
       <div><h2>คำแนะนำการปฏิบัติตัววันนี้</h2><p>ตามระดับคุณภาพอากาศเฉลี่ยของเขตสุขภาพที่ 7</p></div></div>
     <div class="card adv-now" id="advNow"></div>
     <div class="adv-row" id="advRow"></div>
     <div class="foot-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
+  </section>
+
+  <!-- 7) ดาวน์โหลดข้อมูล — ส่วนสุดท้าย -->
+  <section id="zData" style="--sec:#0b7285">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-down"/></svg></div>
+      <div><h2>ดาวน์โหลดข้อมูล</h2><p>ชุดข้อมูลสำหรับเจ้าหน้าที่ · เลือก กรอง ตรวจ แล้วดาวน์โหลด CSV/Excel พร้อมคำอธิบายตัวแปร</p></div></div>
+    <div class="card ds-sec">
+      <div id="dsBody"></div>
+      <p class="ds-foot">ข้อมูลรวมระดับจังหวัด ไม่มีข้อมูลรายบุคคล · ค่าฝุ่นรายวันเป็นค่ารอบบ่าย ≈15.00 น. · ค่า ณ 07.00 น. (เกณฑ์ PHEOC) แยกเป็นอีกชุด · ช่วง 28 ม.ค.–18 ก.พ. 2569 ใช้ค่าประมาณจากดาวเทียม GISTDA และระบุไว้ในคอลัมน์ pm25_source · เมื่อนำไปใช้โปรดอ้างอิงแหล่งข้อมูล</p>
+    </div>
   </section>
 </main>
 <footer class="site-ft" role="contentinfo">
@@ -937,13 +1211,21 @@ body.is-loading .sk,body.is-loading section .tile.sk,body.is-loading main .fact.
     </div>
     <div class="ft-col">
       <h4>เกี่ยวกับข้อมูล</h4>
-      <p>ค่าฝุ่นรายจังหวัดเป็นค่าเฉลี่ย 24 ชั่วโมง ณ เวลา 07.00 น. ของแต่ละวัน</p>
+      <p>ค่าฝุ่นรายจังหวัดเป็นค่าเฉลี่ย 24 ชั่วโมง ณ เวลา 15.00 น. ของแต่ละวัน · ช่วง 28 ม.ค.–18 ก.พ. 2569 สถานีไม่มีข้อมูลย้อนหลัง จึงใช้ค่าประมาณจากดาวเทียม GISTDA แทน (คลาดจากค่าสถานีเฉลี่ยราว 7 µg/m³)</p>
       <p>ข้อมูลรายสัปดาห์ (ทั้งค่าฝุ่นและผู้ป่วย) นับตามสัปดาห์ระบาดวิทยาของกรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค.</p>
       <p>ค่ารายอำเภอ/ตำบลและการคาดการณ์เป็นค่าประมาณจากดาวเทียม อาจต่างจากค่าสถานีตรวจวัด</p>
       <p>ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยงด้านสุขภาพ</p>
     </div>
   </div>
-  <div class="ft-bar"><div>
+  <div class="ft-bar">
+    <div class="ft-visit" id="ftVisit" hidden aria-live="polite">
+      <span class="vh">สถิติการเข้าชม</span>
+      <span class="vs">วันนี้ <b data-v="today">–</b></span>
+      <span class="vs">เดือนนี้ <b data-v="month">–</b></span>
+      <span class="vs">ทั้งหมด <b data-v="total">–</b></span>
+      <span class="vn"><span data-v="since"></span> · นับผู้เข้าชมไม่ซ้ำต่อวัน ไม่เก็บข้อมูลส่วนบุคคล</span>
+    </div>
+<div>
     <span>© <span id="ftYear">2569</span> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น · เขตสุขภาพที่ 7 (ขอนแก่น มหาสารคาม ร้อยเอ็ด กาฬสินธุ์)</span>
     <span>พัฒนาระบบ: วัฒนพงษ์ พลแสน</span>
   </div></div>
@@ -1007,8 +1289,8 @@ function epiWeekOf(d) { const y = d.getFullYear(), s2 = epiStart(y, 2); return d
 const epiRange = (y, w0, w1) => { const a = epiStart(y, w0), b = epiEnd(y, w1 ?? w0); return `${a.getDate()} ${TH_M[a.getMonth()]}–${b.getDate()} ${TH_M[b.getMonth()]}`; };
 const epiWeeksOfMonth = (y, mo, upTo = 53) => { const w = []; for (let k = 1; k <= upTo; k++) { if (epiStart(y, k).getFullYear() !== y) break; if (epiMonth(y, k) === mo) w.push(k); } return w; };
 const TH_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-// ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. ณ 07:00 (ดู plan07Row_ ใน tools/line_report.gs)
-const REPORT_TIME = "07.00 น.";
+// ชีต PM25_History เก็บค่าเฉลี่ย 24 ชม. รอบบ่าย ≈15:00 (line_report.gs รอบสุดท้ายของวันเขียนทับ) — ค่า 07:00 แยกไว้ที่แท็บ PM25_07
+const REPORT_TIME = "15.00 น.";
 // เส้นเกณฑ์ในกราฟแนวโน้ม [ค่า, ป้าย, สี]
 // 37.5 = ค่ามาตรฐาน PM2.5 เฉลี่ย 24 ชม. ของไทย · 75.1 ขึ้นไป = ระดับมีผลต่อสุขภาพ
 const TREND_TH = [[37.5, "37.5 · ค่าเกณฑ์มาตรฐาน", "#b84a00"], [75.1, "75.1 · มีผลต่อสุขภาพ", "#b00000"]];
@@ -1048,6 +1330,9 @@ const S = {};   // state กลาง
   document.getElementById("ftYear").textContent = new Date().getFullYear() + 543;
   applyTheme(); renderHeader(); renderToday(); renderDrill(PROV[0].name); initTrendBar(); renderTrend(); renderTrendStats(); renderT7(); renderHotspot(S.hsToday, false); renderDisease(); renderAdvice();
   document.body.classList.remove("is-loading");
+  visitStats();
+  getJSON("/api/pm25-07").then(d => { if (d?.ok) { S.pm07 = d.allData; window.dsInit && dsInit(); } });
+  getJSON("/api/pheoc").then(d => { S.pheoc = d?.ok ? d : { ok: false }; if (S.todayRow) renderToday(); });
   dzpvP.then(d => { window.DZPV = d?.ok ? d : { ok: false }; if (S.dz) renderDisease(); });
   // #ig-preview = แสดงหน้า infographic ทับด้านบน ใช้ตรวจเลย์เอาต์ (headless screenshot)
   const lvO = /lv=(\d)/.exec(location.hash); if (lvO) { S.lv = +lvO[1]; applyTheme(); renderAdvice(); }
@@ -1118,13 +1403,46 @@ function ring(v, size = 128) {
 }
 
 // ---------- วันนี้: hero + การ์ดจังหวัด + แผงย้อนหลัง ----------
+
+// ---------- PHEOC: เกณฑ์เดียวกับรายงาน LINE (server /api/pheoc) ----------
+// ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จาก Air4Thai ถึง 75.1 µg/m³ ติดกัน 2 วัน · ไม่ใช้ค่าในชีต (ชีต = ค่ารอบบ่าย)
+const pheocHit = () => S.pheoc?.ok ? S.pheoc.anyHit : null;
+function pheocLabel(yes, no) {
+  if (!S.pheoc) return "กำลังตรวจ…";
+  if (!S.pheoc.ok) return "ตรวจไม่ได้ขณะนี้";
+  return S.pheoc.anyHit ? `${yes} · จ.${S.pheoc.hit.join(", ")}` : no;
+}
+function pheocTitle() {
+  if (!S.pheoc?.ok) return "";
+  const th = d => `${+d.slice(8)} ${TH_M[+d.slice(5, 7) - 1]}`;
+  return "ค่าเฉลี่ย 24 ชม. ณ 07.00 น. (Air4Thai)\n" + S.pheoc.provinces.map(p => `${p.name}: ` + p.days.map(x => `${th(x.date)} ${x.v == null ? "ไม่มีข้อมูล" : x.v}`).join(" · ")).join("\n");
+}
+
+// ---------- สถิติการเข้าชม (นับผู้เข้าชมไม่ซ้ำต่อวัน · ไม่เก็บข้อมูลส่วนบุคคล) ----------
+async function visitStats() {
+  const el = document.getElementById("ftVisit"); if (!el) return;
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+  let seen = null; try { seen = localStorage.getItem("pm25v"); } catch {}
+  const first = seen !== today;
+  let d = null;
+  try { d = await fetch(API + "/api/visit", { method: first ? "POST" : "GET" }).then(r => r.ok ? r.json() : null); } catch {}
+  if (!d?.ok) { el.hidden = true; return; }
+  if (first) { try { localStorage.setItem("pm25v", today); } catch {} }
+  const n = v => Number(v || 0).toLocaleString("th-TH");
+  el.querySelector('[data-v="today"]').textContent = n(d.today);
+  el.querySelector('[data-v="month"]').textContent = n(d.month);
+  el.querySelector('[data-v="total"]').textContent = n(d.total);
+  const s = d.since ? new Date(d.since + "T00:00:00") : null;
+  el.querySelector('[data-v="since"]').textContent = s ? `เริ่มนับ ${s.getDate()} ${TH_M[s.getMonth()]} ${s.getFullYear() + 543}` : "";
+  el.hidden = false;
+}
 function renderToday() {
   const L = LV[S.lv], d = S.prevAvg != null ? r1(S.avg - S.prevAvg) : null;
-  const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
+  const pheoc = pheocHit();
   const maxP = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)[0];
   document.getElementById("facts").innerHTML = `
     <div class="facts">
-      <div class="fact"><span class="fi" style="background:#e7f0fc;color:#1c6ed6"><svg class="ico"><use href="#i-shield"/></svg></span><div><span>เกณฑ์เปิด PHEOC</span><b>${pheoc ? "มีจังหวัดถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></div></div>
+      <div class="fact${pheoc ? " ph-hit" : ""}" title="${esc(pheocTitle())}"><span class="fi" style="background:#e7f0fc;color:#1c6ed6"><svg class="ico"><use href="#i-shield"/></svg></span><div><span>เกณฑ์เปิด PHEOC</span><b>${pheocLabel("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")}</b><small class="fact-s">07.00 น. ≥75.1 ติด 2 วัน</small></div></div>
       <div class="fact"><span class="fi" style="background:#fdeee5;color:#e8590c"><svg class="ico"><use href="#i-fire"/></svg></span><div><span>จุดความร้อน 24 ชม.</span><b>${S.hsOk ? S.hsToday.length + " จุด" : "ดึงข้อมูลไม่ได้"}</b></div></div>
       ${maxP ? `<div class="fact"><span class="fi" style="background:${LV[lvOf(maxP.v)].soft};color:${LV[lvOf(maxP.v)].ink}"><svg class="ico"><use href="#i-pin"/></svg></span><div><span>สูงสุดวันนี้</span><b>${maxP.p.name} ${f1(maxP.v)}</b></div></div>` : ""}
     </div>`;
@@ -1141,28 +1459,60 @@ function renderToday() {
   document.getElementById("mapNote").innerHTML = sorted.length > 1 ? note(sorted[0], "i-up", "ค่าสูงสุด") + note(sorted.at(-1), "i-dn", "ค่าต่ำสุด") : "";
   renderForecast();
 }
-// แผงคาดการณ์ล่วงหน้า 3 วัน — ค่าคาดการณ์ PM2.5 รายจังหวัดจาก GISTDA (pred1–3)
+// แผงคาดการณ์ล่วงหน้า 3 วัน (C5)
+// ช่องตาราง = ค่าคาดการณ์ GISTDA + สีระดับเท่านั้น (คำตอบเดียว)
+// กดช่อง = บทวิเคราะห์ประกอบ: แนวโน้มจากสภาพอากาศ (แบบจำลอง สคร.7) + ปัจจัยเทียบค่าปกติฤดูฝุ่น
+// เตือนใต้ตาราง เฉพาะวันที่ค่าคาดการณ์ ≥ 37.6 และสภาพอากาศเอื้อต่อการสะสม
+const TREND = { "1": ["▲", "เอื้อต่อการสะสม", "bad"], "0": ["●", "ทรงตัว", "mid"], "-1": ["▼", "เอื้อต่อการเจือจาง", "ok"] };
+const SEASON_NORM = { vr: 1830, hs200: 49 };   // ค่ามัธยฐานฤดูฝุ่น 68/69 (การระบายอากาศ m²/s · จุดความร้อนรัศมี 200 กม./วัน)
 function renderForecast() {
   const el = document.getElementById("forecast");
   const head = `<div class="box-h"><span class="bi"><svg class="ico"><use href="#i-cal"/></svg></span>
-    <div><h3>การคาดการณ์ล่วงหน้า 3 วัน</h3><p>ค่าฝุ่น <span class="pm25">PM<sub>2.5</sub></span> คาดการณ์ · µg/m³</p></div></div>`;
+    <div><h3>การคาดการณ์ล่วงหน้า 3 วัน</h3><p>ค่าฝุ่น PM2.5 คาดการณ์ · µg/m³</p></div></div>`;
   const items = PROV.map(p => ({ p, it: S.gpv?.items.find(i => i.code === String(p.code)) })).filter(o => o.it);
   if (!items.length) { el.innerHTML = head + `<div class="pending">ดึงข้อมูลคาดการณ์จาก GISTDA ไม่สำเร็จ ลองใหม่ภายหลัง</div>`; return; }
-  const SC = 50, base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00");
-  const rows = [0, 1, 2].map(k => {
-    const dt = new Date(base.getTime() + (k + 1) * 864e5), vs = items.map(o => o.it.pred[k]).filter(x => x != null);
-    const lab = `${dt.getDate()} ${TH_M[dt.getMonth()]}`, sub = k === 0 ? "พรุ่งนี้" : TH_DS[dt.getDay()];
-    if (!vs.length) return `<div class="fc-row"><div class="d">${lab}<small>${sub}</small></div><span></span><span class="muted" style="font-size:calc(12px*var(--fs,1))">ไม่มีข้อมูล</span><span class="avg muted">–</span></div>`;
-    const mn = Math.min(...vs), mx = Math.max(...vs), av = r1(vs.reduce((a, b) => a + b, 0) / vs.length), l = LV[lvOf(av)];
-    return `<div class="fc-row"><div class="d">${lab}<small>${sub}</small></div><span class="fc-face" style="background:${l.soft}" title="${l.name}">${l.face}</span>
-      <div class="rng" title="ต่ำสุด ${f1(mn)} · สูงสุด ${f1(mx)}"><b style="left:${mn / SC * 100}%;width:${Math.max(2, (mx - mn) / SC * 100)}%;background:linear-gradient(90deg,${LV[lvOf(mn)].c},${LV[lvOf(mx)].c})"></b><em style="left:${Math.min(av, SC) / SC * 100}%"></em></div>
-      <span class="avg" style="color:${l.ink}">${f1(av)}</span></div>`; }).join("");
-  // ตารางรายจังหวัด × 3 วัน สีเต็มตามระดับ (แบบเดียวกับตาราง 7 วัน)
-  const days = [0, 1, 2].map(k => { const d = new Date(base.getTime() + (k + 1) * 864e5); return `${d.getDate()}/${d.getMonth() + 1}`; });
-  const tbl = `<table class="t7 fc-t num"><tr><th>จังหวัด</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>${items.map(({ p, it }) => `<tr><td>${p.name}</td>${it.pred.map(x => x == null
-    ? `<td class="na">–</td>` : `<td class="cell" style="background:${LV[lvOf(x)].c};color:${textOn(LV[lvOf(x)].c)}">${f1(x)}</td>`).join("")}</tr>`).join("")}</table>`;
-  el.innerHTML = head + `<div class="sub">แถบ = ต่ำสุด–สูงสุดของ 4 จังหวัด · จุด = ค่าเฉลี่ย</div>${rows}<div class="fc-scale num"><span>0</span><span>25</span><span>50</span></div>${tbl}
-    <div class="fc-src"><svg class="ico"><use href="#i-sat"/></svg><span>แบบจำลองจากดาวเทียม GISTDA · ประมวลผล ${esc(S.gpv.asOfThai || S.gpv.asOf || "")}<br>เป็นค่าประมาณ อาจต่างจากค่าสถานีตรวจวัด Air4Thai</span></div>`;
+  const base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00");
+  const dayOf = k => new Date(base.getTime() + (k + 1) * 864e5);
+  const hasFx = items.some(o => o.it.fac);
+  const days = [0, 1, 2].map(k => { const d = dayOf(k); return `${d.getDate()} ${TH_M[d.getMonth()]}<small>${k === 0 ? "พรุ่งนี้" : TH_D[d.getDay()]}</small>`; });
+  const tbl = `<table class="t7 fc-t num"><tr><th>จังหวัด</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>${items.map(({ p, it }) => `<tr><td>${p.name}</td>${it.pred.map((x, k) => x == null
+    ? `<td class="na">–</td>`
+    : `<td class="cell${hasFx ? " fc-c" : ""}"${hasFx ? ` tabindex="0" role="button" aria-pressed="false" data-pv="${p.name}" data-k="${k}"` : ""} style="background:${LV[lvOf(x)].c};color:${textOn(LV[lvOf(x)].c)}">${f1(x)}</td>`).join("")}</tr>`).join("")}</table>`;
+  // เตือนเฉพาะ: ค่าคาดการณ์ถึงระดับเริ่มมีผลต่อสุขภาพ และสภาพอากาศเอื้อต่อการสะสม
+  const warn = [0, 1, 2].map(k => {
+    const hit = items.filter(o => o.it.pred[k] != null && o.it.pred[k] > 37.5 && o.it.trend?.[k] === 1);
+    if (!hit.length) return "";
+    const d = dayOf(k);
+    return `<div class="vw"><span class="vw-i" aria-hidden="true"><svg class="ico"><use href="#a-dust"/></svg></span><span><b>${d.getDate()} ${TH_M[d.getMonth()]} · ฝุ่นมีแนวโน้มสะสม</b> ${hit.map(o => `${o.p.name} ${f1(o.it.pred[k])}`).join(" · ")} — ค่าคาดการณ์ถึงระดับเริ่มมีผลต่อสุขภาพ และสภาพอากาศไม่เอื้อต่อการระบาย ควรลดกิจกรรมกลางแจ้ง</span></div>`;
+  }).join("");
+  el.innerHTML = head + (hasFx ? `<p class="fc-hint">กดช่องตัวเลขเพื่อดูสภาพอากาศที่มีผลต่อค่าฝุ่นของวันนั้น</p>` : "") + tbl
+    + `<div id="fcDet" class="fc-det" hidden></div>${warn}`
+    + `<div class="t7-note fc-note">${LV.map(l => `<span><i style="background:${l.c}"></i>${l.name}</span>`).join("")}</div>`
+    + `<div class="fc-src"><svg class="ico"><use href="#i-sat"/></svg><span>ค่าคาดการณ์: แบบจำลองจากดาวเทียม GISTDA · ประมวลผล ${esc(S.gpv.asOfThai || S.gpv.asOf || "")}<br>เป็นค่าประมาณ อาจต่างจากค่าสถานีตรวจวัด Air4Thai</span></div><p class="fc-note2"><b>หมายเหตุ</b>เป็นค่าคาดการณ์ล่วงหน้าจากแบบจำลอง ใช้ประกอบการวางแผนเฝ้าระวังและแจ้งเตือนประชาชน ค่าที่เกิดขึ้นจริงอาจต่างไปตามลม ฝน และการเผาในพื้นที่ · ค่าที่วัดได้จริงดูจากสถานีตรวจวัด Air4Thai</p>`;
+  if (!hasFx) return;
+  const det = el.querySelector("#fcDet");
+  const st = (t, c) => `<span class="st ${c}">${t}</span>`;
+  const cmp = (x, n, hiBad) => { const r = x / n; return r >= 1.5 ? (hiBad ? ["สูงกว่าปกติ", "bad"] : ["ดีกว่าปกติ", "ok"]) : r <= 0.67 ? (hiBad ? ["ต่ำกว่าปกติ", "ok"] : ["แย่กว่าปกติ", "bad"]) : ["ใกล้เคียงปกติ", "mid"]; };
+  const show = td => {
+    const was = td.getAttribute("aria-pressed") === "true";
+    el.querySelectorAll(".fc-c").forEach(c => c.setAttribute("aria-pressed", "false"));
+    if (was) { det.hidden = true; return; }
+    td.setAttribute("aria-pressed", "true");
+    const k = +td.dataset.k, o = items.find(o => o.p.name === td.dataset.pv), f = o.it.fac?.[k] || {}, x = o.it.pred[k], l = LV[lvOf(x)], d = dayOf(k);
+    const tr = TREND[String(o.it.trend?.[k])];
+    const row = (ic, lab, val, tag) => `<div class="fr"><svg class="ico"><use href="#${ic}"/></svg><span>${lab}</span><span class="fr-v"><b>${val}</b>${tag}</span></div>`;
+    const vr = f.vr != null ? cmp(f.vr, SEASON_NORM.vr, false) : null, hs = f.hs200 != null ? cmp(Math.max(f.hs200, 1), SEASON_NORM.hs200, true) : null;
+    det.innerHTML = `<div class="dh"><b>จ.${o.p.name} · ${d.getDate()} ${TH_M[d.getMonth()]}</b><span>ค่าฝุ่นคาดการณ์ <b style="color:${l.ink}">${f1(x)}</b> µg/m³ · ${l.name}</span></div>
+      ${tr ? `<div class="tr-sum ${tr[2]}"><span class="tr-i">${tr[0]}</span><span>สภาพอากาศ<b>${tr[1]}</b><small>ประเมินจากค่าฝุ่นวันก่อน การระบายอากาศ และความชื้น</small></span></div>` : ""}
+      ${f.vr != null ? row("a-dust", "การระบายอากาศ <small>ปกติฤดูฝุ่น ~1,830 m²/s</small>", `${fmt(f.vr)} m²/s`, st(vr[0], vr[2] || vr[1])) : ""}
+      ${f.hs200 != null ? row("i-fire", `จุดความร้อนรัศมี 200 กม. <small>24 ชม. ล่าสุด · เฉพาะในไทย</small>`, `${fmt(f.hs200)} จุด`, st(hs[0], hs[1])) : ""}
+      ${f.wd ? row("i-wind", "ทิศทางลม", `จาก${f.wd}`, "") : ""}
+      ${f.rain != null ? row("i-rain", "ฝน", `${f.rain} มม.`, f.rain >= 1 ? st("ช่วยชะล้างฝุ่น", "ok") : st("ไม่มีฝน", "mid")) : ""}
+      ${f.rh != null ? row("i-drop", "ความชื้นสัมพัทธ์", `${f.rh}%`, f.rh < 55 ? st("อากาศแห้ง", "bad") : st("ปกติ", "ok")) : ""}
+      <p class="fr-note">แบบจำลอง สคร.7 จากข้อมูลฤดูฝุ่น 68/69 (1 ฤดู) · คลาดเคลื่อนเฉลี่ยราว ±5 µg/m³ · ใช้ประกอบการตีความ ไม่ใช่ค่าพยากรณ์แทน GISTDA</p>`;
+    det.hidden = false;
+  };
+  el.querySelectorAll(".fc-c").forEach(td => { td.addEventListener("click", () => show(td)); td.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(td); } }); });
 }
 const countBy = feats => feats.reduce((a, f) => (a[f.properties.changwat] = (a[f.properties.changwat] || 0) + 1, a), {});
 
@@ -1201,7 +1551,7 @@ function renderDrill(pvName, level = "province", amp = null) {
   document.getElementById("aqiLegend").innerHTML = LV.map(l => `<span><i style="background:${l.c};height:10px;width:10px;border-radius:2px"></i>${l.name}</span>`).join("");
   if (level !== "province") return renderArea(pvName, level, amp);
 
-  // แผงรายละเอียดจังหวัด — ค่าสถานี Air4Thai (เฉลี่ย 24 ชม. ณ 07.00 น.)
+  // แผงรายละเอียดจังหวัด — ค่าสถานี Air4Thai (เฉลี่ย 24 ชม. ณ 15.00 น.)
   const v = S.todayRow?.[pvName], l = v != null ? LV[lvOf(v)] : LV[0], pr = S.prevRow?.[pvName];
   const dd = v != null && pr != null ? r1(v - pr) : null;
   const all = S.pm?.allData || {}, series = Object.keys(all).sort().map(d => ({ d, x: all[d]?.[pvName] })).filter(o => o.x != null && o.x > 0);
@@ -1247,13 +1597,42 @@ function renderDrill(pvName, level = "province", amp = null) {
   panel.querySelector("#toDistrict")?.addEventListener("click", () => renderDrill(pvName, "district"));
   panel.querySelector("#pvCard")?.addEventListener("click", e => showProvinceCard(pvName, e.currentTarget));
 }
+// แถบเลือกพื้นที่ในโซน: จังหวัด → อำเภอ → ตำบล (อำเภอ/ตำบลจากรายการ GISTDA ที่ server แคชไว้)
+function drillPick(pvName, level, amp) {
+  return `<div class="dpick" role="group" aria-label="เลือกพื้นที่">
+    <label class="tf">จังหวัด<select data-dp="pv">${PROV.map(p => `<option ${p.name === pvName ? "selected" : ""}>${p.name}</option>`).join("")}</select></label>
+    <label class="tf">อำเภอ<select data-dp="amp"><option value="">ภาพรวมจังหวัด</option>${amp ? `<option value="${esc(amp.code)}" selected>${esc(amp.name)}</option>` : ""}</select></label>
+    <label class="tf">ตำบล<select data-dp="tb" ${level === "subdistrict" ? "" : "disabled"}><option value="">${level === "subdistrict" ? "ทุกตำบล" : "เลือกอำเภอก่อน"}</option></select></label></div>`;
+}
+async function bindPick(panel, pvName, level, amp) {
+  const box = panel.querySelector(".dpick"); if (!box) return;
+  const sp = box.querySelector('[data-dp="pv"]'), sa = box.querySelector('[data-dp="amp"]'), st = box.querySelector('[data-dp="tb"]');
+  sp.addEventListener("change", () => renderDrill(sp.value));
+  sa.addEventListener("change", () => { const o = sa.selectedOptions[0]; sa.value ? renderDrill(pvName, "subdistrict", { code: sa.value, name: o.textContent }) : renderDrill(pvName); });
+  st.addEventListener("change", () => {
+    panel.querySelectorAll("tr.d-hit").forEach(r => r.classList.remove("d-hit"));
+    const row = [...panel.querySelectorAll(".area-t tbody tr")].find(r => r.cells[0]?.textContent.trim() === st.value);
+    if (row) { row.classList.add("d-hit"); row.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  });
+  const pv = PROV.find(p => p.name === pvName);
+  S.dpAmp = S.dpAmp || {};
+  const r = S.dpAmp[pv.code] || (S.dpAmp[pv.code] = await getJSON(`/api/pm25/districts?pv=${pv.code}`));
+  if (!sa.isConnected) return;
+  const list = (r?.items || []).map(i => [i.code, i.name]).sort((a, b) => a[1].localeCompare(b[1], "th"));
+  sa.innerHTML = `<option value="">ภาพรวมจังหวัด</option>` + list.map(([c, n]) => `<option value="${esc(c)}" ${amp && amp.code === c ? "selected" : ""}>${esc(n)}</option>`).join("");
+  if (level === "subdistrict") {
+    const names = [...panel.querySelectorAll(".area-t tbody tr")].map(r => r.cells[0]?.textContent.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b, "th"));
+    if (names.length) st.innerHTML = `<option value="">ทุกตำบล (${names.length})</option>` + names.map(n => `<option>${esc(n)}</option>`).join("");
+  }
+}
 function drillCrumb(pvName, level, amp) {
-  return `<nav class="crumb" aria-label="ระดับพื้นที่"><button data-l="region">เขตสุขภาพที่ 7</button><span class="sep">›</span>
+  return drillPick(pvName, level, amp) + `<nav class="crumb" aria-label="ระดับพื้นที่"><button data-l="region">เขตสุขภาพที่ 7</button><span class="sep">›</span>
     <button ${level === "province" ? "disabled" : ""} data-l="province">จ.${pvName}</button><span class="sep">›</span>
     <button ${level === "district" ? "disabled" : ""} data-l="district">${amp ? "อ." + esc(amp.name) : "อำเภอ"}</button><span class="sep">›</span>
     <button disabled ${level === "subdistrict" ? "" : 'style="color:var(--ink-3)"'}>ตำบล</button></nav>`;
 }
-function bindCrumb(panel, pvName) {
+function bindCrumb(panel, pvName, level = "province", amp = null) {
+  bindPick(panel, pvName, level, amp);
   panel.querySelectorAll(".crumb button[data-l]").forEach(b => b.addEventListener("click", () => {
     if (b.dataset.l === "province") renderDrill(pvName);
     else if (b.dataset.l === "district") renderDrill(pvName, "district");
@@ -1265,7 +1644,7 @@ async function renderArea(pvName, level, amp) {
   const unit = level === "district" ? "อำเภอ" : "ตำบล";
   const title = level === "district" ? `รายอำเภอ · จังหวัด${pvName}` : `รายตำบล · อำเภอ${esc(amp.name)}`;
   panel.innerHTML = drillCrumb(pvName, level, amp) + `<h3 style="font-size:calc(22px*var(--fs,1))">${title}</h3><div class="muted">กำลังโหลดข้อมูลจาก GISTDA…</div>`;
-  bindCrumb(panel, pvName);
+  bindCrumb(panel, pvName, level, amp);
   const tok = (S.areaTok = (S.areaTok || 0) + 1);   // คลิกเร็วๆ หลายครั้ง → แสดงเฉพาะผลของคำขอล่าสุด
   const slow = setTimeout(() => { if (tok === S.areaTok) panel.querySelector(".muted")?.insertAdjacentHTML("beforeend", " ครั้งแรกอาจใช้เวลาราว 10 วินาที"); }, 2500);
   const isD = level === "district";
@@ -1277,7 +1656,7 @@ async function renderArea(pvName, level, amp) {
   if (tok !== S.areaTok) return;
   if (!r?.ok || !r.items?.length) {
     panel.innerHTML = drillCrumb(pvName, level, amp) + `<h3 style="font-size:calc(22px*var(--fs,1))">${title}</h3><div class="pending">ดึงข้อมูลค่าฝุ่นราย${unit}จาก GISTDA ไม่สำเร็จ ลองใหม่ภายหลัง</div>`;
-    return bindCrumb(panel, pvName);
+    return bindCrumb(panel, pvName, level, amp);
   }
   const items = r.items.filter(i => i.avg24 != null).sort((a, b) => b.avg24 - a.avg24);
 
@@ -1327,7 +1706,7 @@ async function renderArea(pvName, level, amp) {
         ${isD ? `<td class="hs-n">${it.hs ? `🔥 ${it.hs}` : `<span class="muted">–</span>`}</td>` : ""}</tr>`).join("")}</tbody>
     </table></div>
     <div class="fc-src"><svg class="ico"><use href="#i-sat"/></svg><span>ค่าฝุ่นราย${unit}: ค่าประมาณจากดาวเทียม GISTDA · ข้อมูล ณ ${esc(r.asOfThai || r.asOf || "")} · ค่าย้อนหลังและสูงสุดฤดูเป็นค่าเฉลี่ยรายวัน${isD ? " · คลิกอำเภอบนแผนที่หรือตารางเพื่อดูรายตำบล" : ""}<br>ค่ารายจังหวัดในส่วนอื่นของหน้ามาจากสถานีตรวจวัด Air4Thai จึงอาจต่างกัน${isD ? " · จุดความร้อน: GISTDA VIIRS 24 ชม." : ""}</span></div>`;
-  bindCrumb(panel, pvName);
+  bindCrumb(panel, pvName, level, amp);
   panel.querySelectorAll("tr.clk, .amp-shape[data-code]").forEach(el => {
     const go = () => renderDrill(pvName, "subdistrict", { code: el.dataset.code, name: el.dataset.name });
     el.addEventListener("click", go); el.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
@@ -1365,7 +1744,7 @@ function weekly() {
 
 // ---------- กราฟแนวโน้ม: รายวัน/รายสัปดาห์ · เลือกช่วงเวลา · ซูม/เลื่อน ----------
 // TR.view = [ตั้งแต่, ถึง] (ISO) เมื่อผู้ใช้ซูม/เลื่อนเอง · null = ใช้ช่วงจากปุ่ม TR.range
-const TR = { mode: "day", range: "season", view: null };   // ค่าเริ่มต้น = ฤดูฝุ่น พ.ย.–พ.ค. (ข้ามปี)
+const TR = { mode: "day", range: "all", view: null, pv: "all" };   // ค่าเริ่มต้น = ทั้งหมด · ทุกจังหวัด
 const addD = (iso, n) => new Date(Date.parse(iso + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const dDiff = (a, b) => (Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 864e5;
 function dailySeries() {
@@ -1383,15 +1762,29 @@ function trendWindow(first, last) {
   let w = TR.view;
   if (!w) {
     const r = TR.range;
-    w = r === "all" ? [first, last] : r === "season" ? dustSeasonOf(last) : [addD(last, -(+r - 1)), last];
+    w = r === "all" ? [first, last] : r === "season" ? dustSeasonOf(last)
+      : r.startsWith("season:") ? [`${r.slice(7)}-11-01`, `${+r.slice(7) + 1}-05-31`]
+      : r.startsWith("year:") ? [`${r.slice(5)}-01-01`, `${r.slice(5)}-12-31`]
+      : [addD(last, -(+r - 1)), last];
   }
   return [w[0] < first ? first : w[0], w[1] > last ? last : w[1]];
 }
+// รายการช่วงเวลา: สร้างจากข้อมูลที่มีจริง (ฤดูฝุ่น/ปีที่ยังไม่เริ่ม = เลือกไม่ได้)
+function trendRangeOpts(first, last) {
+  const be = y => String(y + 543), o = [["all", "ทั้งหมด"]];
+  const y0 = +first.slice(0, 4) - 1, y1 = +last.slice(0, 4);
+  for (let y = y1; y >= y0; y--) { const s = `${y}-11-01`, e = `${y + 1}-05-31`; if (e < first) continue;
+    o.push([`season:${y}`, `ฤดูฝุ่น ${be(y).slice(2)}/${be(y + 1).slice(2)} (พ.ย.–พ.ค.)`, s > last ? `ยังไม่เริ่ม · เริ่ม 1 พ.ย. ${be(y)}` : ""]); }
+  for (let y = y1; y >= +first.slice(0, 4); y--) o.push([`year:${y}`, `ปี ${be(y)} (ม.ค.–ธ.ค.)`, ""]);
+  o.push(["90", "3 เดือนล่าสุด"], ["30", "30 วันล่าสุด"], ["7", "7 วันล่าสุด"]);
+  return o;
+}
 function trendButtons() {
   const D = dailySeries();
-  if (D.length) { const [a, b] = dustSeasonOf(D.at(-1).s); document.querySelector('#trBar [data-range="season"]').textContent = `ฤดูฝุ่น ${String(+a.slice(0, 4) + 543).slice(2)}/${String(+b.slice(0, 4) + 543).slice(2)}`; }
-  document.querySelectorAll("#trBar [data-mode]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === TR.mode));
-  document.querySelectorAll("#trBar [data-range]").forEach(b => b.setAttribute("aria-pressed", !TR.view && b.dataset.range === TR.range));
+  const sp = document.getElementById("trPv"), sm = document.getElementById("trMode"), sr = document.getElementById("trRange");
+  if (sp && sp.options.length === 1) PROV.forEach(p => sp.add(new Option(p.name, p.name)));
+  if (sr && D.length && !sr.options.length) trendRangeOpts(D[0].s, D.at(-1).s).forEach(([v, t, off]) => { const op = new Option(off ? `${t} — ${off}` : t, v); op.disabled = !!off; sr.add(op); });
+  if (sp) sp.value = TR.pv; if (sm) sm.value = TR.mode; if (sr) sr.value = TR.range;
   document.querySelector('#trBar [data-z="reset"]').disabled = !TR.view;
 }
 function renderTrend() {
@@ -1400,16 +1793,17 @@ function renderTrend() {
   const D = dailySeries();
   if (!D.length) { svg.outerHTML = `<p class="muted">ไม่มีข้อมูล</p>`; return; }
   const first = D[0].s, last = D.at(-1).s, [from, to] = trendWindow(first, last);
-  const day = TR.mode === "day", src = day ? D : weekly();
-  let P = src.filter(r => r.e >= from && r.s <= to);
+  const day = TR.mode === "day", mon = TR.mode === "month", src = day ? D : mon ? monthlySeries() : weekly();
+  const SHOW = TR.pv === "all" ? PROV.map((_, k) => k) : [PROV.findIndex(p => p.name === TR.pv)];
+  let P = src.filter(r => r.e >= from && r.s <= to).map(r => ({ ...r, v: r.v.map((x, k) => SHOW.includes(k) ? x : null) }));
   if (P.length < 2) P = src.slice(-2);   // กันช่วงแคบเกิน (เช่น รายสัปดาห์ 7 วัน)
   trendButtons();
-  const season = !TR.view && TR.range === "season";
-  const dom = season ? dustSeasonOf(last) : [P[0].s, P.at(-1).s];
+  const season = !TR.view && (TR.range === "season" || TR.range.startsWith("season:") || TR.range.startsWith("year:"));
+  const dom = season ? (TR.range === "season" ? dustSeasonOf(last) : trendWindow("0000-01-01", "9999-12-31")) : [P[0].s, P.at(-1).s];
   const span = Math.max(1, dDiff(dom[0], dom[1]));
   document.getElementById("trendSub").textContent =
-    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 07.00 น.)" : "ค่าเฉลี่ยรายสัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์)"} · ${season ? "ฤดูฝุ่น " : ""}${thDate(dom[0])} ${+dom[0].slice(0, 4) + 543} – ${thDate(dom[1])} ${+dom[1].slice(0, 4) + 543} · µg/m³`;
-  document.getElementById("legend").innerHTML = PROV.map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
+    `${day ? "ค่ารายวัน (เฉลี่ย 24 ชม. ณ 15.00 น.)" : mon ? "ค่าเฉลี่ยรายเดือน" : "ค่าเฉลี่ยรายสัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์)"} · ${TR.pv !== "all" ? "จ." + TR.pv + " · " : ""}${season ? (TR.range.startsWith("year:") ? "ปี " : "ฤดูฝุ่น ") : ""}${thDate(dom[0])} ${+dom[0].slice(0, 4) + 543} – ${thDate(dom[1])} ${+dom[1].slice(0, 4) + 543} · µg/m³`;
+  document.getElementById("legend").innerHTML = PROV.filter((_, k) => SHOW.includes(k)).map(p => `<span><i style="background:${p.color}"></i>${p.name}</span>`).join("");
 
   // วาดตามความกว้างจริงของกล่อง (1 หน่วย ≈ 1 px) — มือถือตัวอักษรไม่ถูกย่อจนอ่านไม่ออก
   const cwW = Math.round(document.getElementById("cw").clientWidth || 760);
@@ -1450,9 +1844,9 @@ function renderTrend() {
   }
   ticks.forEach(([d, lab]) => { const x = X(d); g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T + ph + 5}" stroke="#e6eaf0"/><line x1="${x}" x2="${x}" y1="${T + ph}" y2="${T + ph + 5}" stroke="#9aa6b6"/><text x="${x}" y="${VH - 12}" text-anchor="middle" ${AX}>${lab}</text>`; });
   // เส้น: ขาดช่วงเมื่อไม่มีข้อมูล หรือวันห่างกันเกินรอบปกติ (เช่น ปลาย มี.ค. ข้อมูลขาด 6 วัน)
-  const gapDays = day ? 1.5 : 10, dotR = P.length <= 45 ? (sm ? 2.5 : 3.5) : 0;
+  const gapDays = day ? 1.5 : mon ? 40 : 10, dotR = P.length <= 45 ? (sm ? 2.5 : 3.5) : 0;
   const lastV = PROV.map((p, k) => { for (let i = P.length - 1; i >= 0; i--) if (P[i].v[k] != null) return P[i]; return null; });
-  const ends = PROV.map((p, k) => ({ k, y: lastV[k] ? Y(lastV[k].v[k]) : T + ph })).sort((a, b) => a.y - b.y);
+  const ends = PROV.map((p, k) => ({ k, y: lastV[k] ? Y(lastV[k].v[k]) : T + ph })).filter(o => lastV[o.k]).sort((a, b) => a.y - b.y);
   for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < EF + 4) ends[i].y = ends[i - 1].y + EF + 4;
   // ถ้าดันลงจนเลยขอบล่างของกราฟ → ดันกลับขึ้นจากล่างสุด
   if (ends.length && ends.at(-1).y > T + ph) { ends.at(-1).y = T + ph; for (let i = ends.length - 2; i >= 0; i--) ends[i].y = Math.min(ends[i].y, ends[i + 1].y - EF - 4); }
@@ -1472,6 +1866,7 @@ function renderTrend() {
   g += `<rect id="sel" y="${T}" height="${ph}" fill="#1c6ed6" opacity="0" pointer-events="none"/>`;
   g += `<line id="xh" y1="${T}" y2="${T + ph}" stroke="#46546a" stroke-width="1" opacity="0"/><g id="dots"></g><rect id="hit" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="transparent" style="cursor:${sm ? "default" : "crosshair"}"/>`;
   svg.innerHTML = g;
+  TRG = { VW, L, pw, first, last };
 
   // ---- tooltip + ลากเมาส์เพื่อซูม + ดับเบิลคลิกรีเซ็ต ----
   const tip = document.getElementById("tip"), xh = svg.querySelector("#xh"), dots = svg.querySelector("#dots"), hit = svg.querySelector("#hit"), sel = svg.querySelector("#sel");
@@ -1485,7 +1880,7 @@ function renderTrend() {
     const i = nearest(sx), r = P[i], x = X(r.s);
     xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.setAttribute("opacity", .5);
     dots.innerHTML = PROV.map((p, k) => r.v[k] == null ? "" : `<circle cx="${x}" cy="${Y(r.v[k])}" r="5.5" fill="${p.color}" stroke="#fff" stroke-width="2"/>`).join("");
-    const when = day ? `วัน${TH_D[new Date(r.s + "T00:00:00").getDay()]}ที่ ${thDate(r.s)} ${+r.s.slice(0, 4) + 543}` : `สัปดาห์ระบาดวิทยาที่ ${r.w}/${r.y + 543} · ${thDate(r.s)} – ${thDate(r.e)}`;
+    const when = day ? `วัน${TH_D[new Date(r.s + "T00:00:00").getDay()]}ที่ ${thDate(r.s)} ${+r.s.slice(0, 4) + 543}` : mon ? `${TH_M[+r.s.slice(5, 7) - 1]} ${+r.s.slice(0, 4) + 543} · เฉลี่ยรายเดือน (${r.n} วันที่มีข้อมูล)` : `สัปดาห์ระบาดวิทยาที่ ${r.w}/${r.y + 543} · ${thDate(r.s)} – ${thDate(r.e)}`;
     tip.innerHTML = `<div class="t">${when}</div>` + PROV.map((p, k) => ({ p, v: r.v[k] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)
       .map(o => `<div class="r"><span><i style="background:${o.p.color}"></i>${o.p.name}</span><b class="num" style="color:${LV[lvOf(o.v)].ink}">${f1(o.v)}</b></div>`).join("");
     const rr = svg.getBoundingClientRect(), px = x / VW * rr.width;
@@ -1505,7 +1900,98 @@ function renderTrend() {
   hit.addEventListener("dblclick", () => { if (TR.view) { TR.view = null; renderTrend(); renderTrendStats(); } });
 }
 // ปุ่มบนแถบเครื่องมือ: ความละเอียด / ช่วงเวลา / ซูมเข้า-ออก / เลื่อน / รีเซ็ต
+// ซูม/เลื่อนกราฟแนวโน้มด้วยท่าทาง (แบบ Google Maps · ไม่แย่งการเลื่อนหน้าเว็บ):
+// Ctrl/⌘ + ล้อเมาส์ หรือถ่างนิ้วบนทัชแพด = ซูมตรงตำแหน่งเคอร์เซอร์ · ล้อเปล่า = เลื่อนหน้าเว็บตามปกติ + ขึ้นคำแนะนำ
+// ทัชแพดปัดซ้าย-ขวา/Shift+ล้อ = เลื่อนช่วง
+// มือถือ: สองนิ้วถ่าง-หุบ = ซูม · นิ้วเดียวปัดแนวนอน = เลื่อน (ปัดแนวตั้งยังเลื่อนหน้าเว็บตามปกติ)
+let TRG = null, TRV = null, trRaf = 0, trStatT = 0;
+const isoMs = iso => Date.parse(iso + "T00:00:00Z"), msIso = ms => new Date(Math.round(ms / 864e5) * 864e5).toISOString().slice(0, 10);
+function trCur() {   // ช่วงปัจจุบันแบบทศนิยม (มิลลิวินาที) เพื่อให้ซูมทีละนิดได้ลื่น
+  const [f, t] = trendWindow(TRG.first, TRG.last);
+  if (!TRV || msIso(TRV[0]) !== f || msIso(TRV[1]) !== t) TRV = [isoMs(f), isoMs(t)];
+  return TRV;
+}
+function trSet(a, b) {
+  const lo = isoMs(TRG.first), hi = isoMs(TRG.last), full = hi - lo;
+  const minW = (TR.mode === "day" ? 6 : TR.mode === "month" ? 120 : 42) * 864e5;
+  let w = Math.min(full, Math.max(minW, b - a));
+  const c = (a + b) / 2; a = c - w / 2; b = c + w / 2;
+  if (a < lo) { b += lo - a; a = lo; } if (b > hi) { a -= b - hi; b = hi; } if (a < lo) a = lo;
+  TRV = [a, b];
+  TR.view = b - a >= full - 864e5 ? null : [msIso(a), msIso(b)];
+  if (!TR.view) TRV = null;
+  if (!trRaf) trRaf = requestAnimationFrame(() => { trRaf = 0; renderTrend(); trendButtons(); });
+  clearTimeout(trStatT); trStatT = setTimeout(renderTrendStats, 180);
+}
+const trFrac = (svg, cx) => { const r = svg.getBoundingClientRect(); return Math.max(0, Math.min(1, ((cx - r.left) / r.width * TRG.VW - TRG.L) / TRG.pw)); };
+const trPwPx = svg => TRG.pw / TRG.VW * svg.getBoundingClientRect().width;
+function trZoomAt(fr, k, base) {   // k < 1 = ซูมเข้า · วันที่ใต้เคอร์เซอร์/นิ้วอยู่กับที่
+  const [a, b] = base || trCur(), at = a + fr * (b - a), w = (b - a) * k;
+  trSet(at - fr * w, at - fr * w + w);
+}
+const TR_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+let trHintT = 0;
+function trCoopHint(svg) {   // คำแนะนำชั่วคราวบนกราฟ เมื่อหมุนล้อโดยไม่กด Ctrl
+  const box = svg.parentElement; if (getComputedStyle(box).position === "static") box.style.position = "relative";
+  let h = box.querySelector(".tr-coop");
+  if (!h) { h = document.createElement("div"); h.className = "tr-coop"; h.setAttribute("aria-hidden", "true"); box.appendChild(h); }
+  h.textContent = `กด ${TR_MAC ? "⌘" : "Ctrl"} ค้างพร้อมหมุนล้อเมาส์เพื่อซูมกราฟ`;
+  document.getElementById("tip")?.classList.remove("on");
+  h.classList.add("on"); clearTimeout(trHintT); trHintT = setTimeout(() => h.classList.remove("on"), 1400);
+}
+function initTrendGestures() {
+  const chartOf = e => TRG && e.target.closest?.("#chart");
+  document.addEventListener("wheel", e => {
+    const svg = chartOf(e); if (!svg) return;
+    const u = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1, dx = (e.shiftKey ? e.deltaY : e.deltaX) * u, dy = e.shiftKey ? 0 : e.deltaY * u;
+    if (Math.abs(dx) > Math.abs(dy)) {   // เลื่อนซ้าย-ขวา
+      if (!TR.view) return;
+      e.preventDefault(); const [a, b] = trCur(), s = dx / trPwPx(svg) * (b - a); trSet(a + s, b + s); return;
+    }
+    if (!(e.ctrlKey || e.metaKey)) { trCoopHint(svg); return; }   // ล้อเปล่า → หน้าเว็บเลื่อนตามปกติ
+    e.preventDefault();   // กันเบราว์เซอร์ซูมทั้งหน้า
+    trZoomAt(trFrac(svg, e.clientX), Math.exp(Math.max(-120, Math.min(120, dy)) * .0022));
+  }, { passive: false });
+  let g = null;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY), midX = t => (t[0].clientX + t[1].clientX) / 2;
+  document.addEventListener("touchstart", e => {
+    const svg = chartOf(e); if (!svg) { g = null; return; }
+    const t = e.touches;
+    if (t.length === 2) { e.preventDefault(); g = { svg, k: 2, d0: dist(t), fr: trFrac(svg, midX(t)), m0: midX(t), v0: [...trCur()] }; }
+    else if (t.length === 1) g = { svg, k: 1, x0: t[0].clientX, y0: t[0].clientY, v0: [...trCur()], dir: null };
+  }, { passive: false });
+  document.addEventListener("touchmove", e => {
+    if (!g) return; const t = e.touches;
+    if (g.k === 2 && t.length === 2) {
+      e.preventDefault();
+      const [a, b] = g.v0, w = (b - a) * g.d0 / Math.max(20, dist(t)), at = a + g.fr * (b - a);
+      const shift = -(midX(t) - g.m0) / trPwPx(g.svg) * w;   // ถ่างพร้อมเลื่อนได้
+      trSet(at - g.fr * w + shift, at - g.fr * w + w + shift);
+    } else if (g.k === 1 && t.length === 1) {
+      const dx = t[0].clientX - g.x0, dy = t[0].clientY - g.y0;
+      if (!g.dir && Math.hypot(dx, dy) > 8) g.dir = Math.abs(dx) > Math.abs(dy) && TR.view ? "h" : "v";
+      if (g.dir !== "h") return;
+      e.preventDefault();
+      const [a, b] = g.v0, s = -dx / trPwPx(g.svg) * (b - a); trSet(a + s, b + s);
+    }
+  }, { passive: false });
+  document.addEventListener("touchend", e => { if (g && e.touches.length === 0) g = null; });
+}
+// ค่าเฉลี่ยรายเดือน (ปฏิทิน) จากค่ารายวัน — ต้องมีอย่างน้อย 10 วันที่มีข้อมูล
+function monthlySeries() {
+  const D = dailySeries(), mm = new Map();
+  for (const r of D) { const k = r.s.slice(0, 7); if (!mm.has(k)) mm.set(k, { s: k + "-01", e: r.s, n: 0, v: PROV.map(() => []) }); const o = mm.get(k); o.e = r.s; o.n++; r.v.forEach((x, i) => { if (x != null) o.v[i].push(x); }); }
+  return [...mm.values()].map(o => ({ s: o.s, e: o.e, n: o.n, v: o.v.map(a => a.length >= 10 ? a.reduce((x, y) => x + y, 0) / a.length : null) }));
+}
 function initTrendBar() {
+  const onSel = () => {
+    TR.pv = document.getElementById("trPv").value; TR.mode = document.getElementById("trMode").value;
+    const r = document.getElementById("trRange").value; if (r !== TR.range) { TR.range = r; TR.view = null; }
+    if (TR.mode === "month" && ["7", "30", "90"].includes(TR.range)) { TR.range = "all"; TR.view = null; }   // รายเดือนในช่วงสั้นมีไม่กี่จุด
+    renderTrend(); renderTrendStats();
+  };
+  ["trPv", "trMode", "trRange"].forEach(id => document.getElementById(id)?.addEventListener("change", onSel));
+  initTrendGestures();
   document.getElementById("trBar").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     const D = dailySeries(); if (!D.length) return;
@@ -1519,7 +2005,7 @@ function initTrendBar() {
       if ((TR.range === "7" || TR.range === "30") && TR.mode === "week") TR.mode = "day";
     } else if (b.dataset.z) {
       const [f, t] = trendWindow(first, last), w = dDiff(f, t), mid = addD(f, Math.round(w / 2)), z = b.dataset.z;
-      const minW = TR.mode === "day" ? 6 : 42, full = dDiff(first, last);
+      const minW = TR.mode === "day" ? 6 : TR.mode === "month" ? 120 : 42, full = dDiff(first, last);
       let nf = f, nt = t;
       if (z === "in") { const h = Math.max(minW, Math.round(w / 2)) / 2; nf = addD(mid, -Math.floor(h)); nt = addD(mid, Math.ceil(h)); }
       if (z === "out") { const h = Math.min(full, w * 2) / 2; nf = addD(mid, -Math.floor(h)); nt = addD(mid, Math.ceil(h)); }
@@ -1542,6 +2028,7 @@ function renderTrendStats() {
   const c = x => { const l = LV[lvOf(x)]; return `style="background:${l.soft};color:${l.ink}"`; };
   let body = "";
   PROV.forEach((p, k) => {
+    if (TR.pv !== "all" && p.name !== TR.pv) return;
     const v = rows.map(r => ({ d: r.s, x: r.v[k] })).filter(o => o.x != null);
     if (!v.length) { body += `<tr><td><i style="background:${p.color}"></i>${p.name}</td><td colspan="3" class="muted">ไม่มีข้อมูล</td></tr>`; return; }
     const mn = v.reduce((a, o) => o.x < a.x ? o : a), mx = v.reduce((a, o) => o.x > a.x ? o : a), ov = v.filter(o => o.x > OVER_TH);
@@ -1602,6 +2089,8 @@ function renderT7() {
 // ---------- Hotspot: Leaflet + tooltip เมื่อชี้ ----------
 let MAP, HS_LAYER;
 const CONF = { high: ["สูง", "#e8192c"], nominal: ["ปานกลาง", "#f07d00"], low: ["ต่ำ", "#f5ce00"] };
+// คำอธิบายระดับความเชื่อมั่นของ VIIRS (NASA FIRMS) แบบภาษาง่าย
+const CONF_TXT = { high: "เกือบแน่ใจว่าเป็นไฟจริง ความร้อนสูงชัดเจน", nominal: "น่าจะเป็นไฟ", low: "อาจเป็นไฟเล็ก หรือแสงสะท้อน/พื้นผิวร้อน ควรตรวจสอบในพื้นที่" };
 function renderHotspot(feats, isSample) {
   if (!MAP) {
     MAP = L.map("map", { attributionControl: true, scrollWheelZoom: false }).setView([16.2, 103.4], 8);
@@ -1629,7 +2118,8 @@ function renderHotspot(feats, isSample) {
     <div class="label">${isSample ? "ข้อมูลตัวอย่าง 7 พ.ค. 2569" : "รวม 4 จังหวัด · 24 ชม."}</div>
     <div class="hot-total num">${feats.length} <span style="font-size:calc(18px*var(--fs,1));color:var(--ink-3)">จุด</span></div>
     <div>${PROV.map(p => `<div class="hot-row"><span>${p.name}</span><b>${by[p.name] || 0}</b></div>`).join("")}</div>
-    <div class="conf"><div class="label">ความเชื่อมั่น (สี) · ขนาดจุดตามความร้อน (FRP)</div>${Object.values(CONF).map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}</div>
+    <div class="conf"><div class="label">สีจุด = ความมั่นใจของดาวเทียมว่าเป็นไฟจริง</div>${Object.entries(CONF).map(([k, [n, c]]) => `<span class="cf-k"><i style="background:${c}"></i><span>${n}<small>${CONF_TXT[k]}</small></span></span>`).join("")}
+      <div class="cf-frp"><span class="dots"><b style="width:7px;height:7px"></b><b style="width:11px;height:11px"></b><b style="width:16px;height:16px"></b></span><span>ขนาดจุด = ความแรงของไฟ<small>วัดจากพลังงานความร้อนที่ดาวเทียมจับได้ (FRP · เมกะวัตต์) จุดใหญ่ = ไฟแรงหรือลุกลามกว้าง</small></span></div></div>
     ${!S.hsOk ? `<div class="note-box">ดึงข้อมูล GISTDA ไม่สำเร็จ</div>` : ""}
     ${!isSample && feats.length === 0 ? `<div class="note-box">วันนี้ไม่พบจุดความร้อนในพื้นที่ 4 จังหวัด<br><button class="btn" id="hsSample" style="margin-top:8px;padding:6px 12px">ดูตัวอย่างจากข้อมูลจริง 7 พ.ค. 2569</button></div>` : ""}
     ${isSample ? `<div class="note-box">กำลังแสดงข้อมูลย้อนหลัง (ไม่ใช่วันนี้)<br><button class="btn" id="hsToday" style="margin-top:8px;padding:6px 12px">กลับไปข้อมูลวันนี้</button></div>` : ""}`;
@@ -1652,41 +2142,62 @@ function monthly(rows, key, upToWk, yearCE) {
 }
 const DZ_PROV_WK = 4;
 function monthlyWk(rows, key, upToWk, yearCE) {
-  const sum = Array(12).fill(0), n = Array(12).fill(0), prov = Array(12).fill(false), wks = Array.from({ length: 12 }, () => []);
+  const sum = Array(12).fill(0), n = Array(12).fill(0), prov = Array(12).fill(false), wks = Array.from({ length: 12 }, () => []), shortD = Array(12).fill(0);
   for (const r of rows || []) {
     const wk = +r.wk; if (!wk || wk > upToWk) continue;
     const k = Object.keys(r).find(x => x.includes(key)); const v = +String(r[k] ?? "").replace(/,/g, "");
     if (!k || isNaN(v)) continue;
     const mo = epiMonth(yearCE, wk);
     sum[mo] += v; n[mo]++; wks[mo].push(wk); if (wk > upToWk - DZ_PROV_WK) prov[mo] = true;
+    const nd = Math.round((epiEnd(yearCE, wk) - epiStart(yearCE, wk)) / 864e5) + 1; if (nd < 7) shortD[mo] = nd;   // สัปดาห์ไม่เต็ม 7 วัน
   }
-  return sum.map((s, i) => n[i] ? { avg: s / n[i], sum: s, n: n[i], prov: prov[i], w0: Math.min(...wks[i]), w1: Math.max(...wks[i]) } : null);
+  return sum.map((s, i) => n[i] ? { avg: s / n[i], sum: s, n: n[i], prov: prov[i], w0: Math.min(...wks[i]), w1: Math.max(...wks[i]), short: shortD[i] } : null);
 }
+// E1 กราฟเส้นรายเดือน: ค่า = ผู้ป่วยเฉลี่ยต่อสัปดาห์ของเดือน (ยอดรวม ÷ จำนวนสัปดาห์ระบาดวิทยา)
+// เหตุผล: เดือนมี 4 หรือ 5 สัปดาห์ ถ้าลากเส้นจากยอดรวม เดือน 5 สัปดาห์จะเป็นยอดแหลมปลอม (ต้องเทียบในช่วงเวลาเท่ากัน)
+// แต่ละกลุ่มโรคแผงของตัวเอง (small multiples) · แกนไม่เริ่มที่ 0 เพื่อเห็นการขึ้นลง (Cleveland 1993: กราฟเส้นไม่จำเป็นต้องเริ่มที่ 0)
+const e1Nice = (v, up) => { if (v <= 0) return 0; const p = 10 ** Math.floor(Math.log10(v)), st = p / (v / p < 2 ? 4 : 2); return (up ? Math.ceil(v / st) : Math.floor(v / st)) * st; };
 function dzMonthSvg(ser, last, W, pid) {
-  const n = last + 1;
-  const fs = 10.5, L = 4, R = 4, pw = W - L - R, slot = pw / n, bw = Math.min(W > 800 ? 64 : 34, slot * .58);
-  const LH = 20, PH = 64, ML = fs + 7, GAP = 12, B = fs * 1.7;   // ML = แถวชื่อเดือนใต้ทุกแผง          // หัวแผง · สูงแผง · ระยะห่าง · แกนเดือน
-  const H = ser.length * (LH + PH + ML + GAP) - GAP + B;
-  let g = `<defs><pattern id="${pid}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-width="2.4" opacity=".75"/></pattern></defs>`;
-  const yAxis = H - B;
+  const n = last + 1, wide = W > 800;
+  const fs = wide ? 11.5 : 11, L = wide ? 52 : 38, R = wide ? 24 : 12, pw = W - L - R, slot = pw / n;
+  const LH = 22, PH = wide ? 92 : 80, ML = fs + 8, GAP = 14;
+  const H = ser.length * (LH + PH + ML + GAP) - GAP, X = i => L + i * slot + slot / 2;
   const provM = ser[0].m.map(o => o?.prov);
-  provM.forEach((p, i) => { if (p) g += `<rect x="${L + i * slot + 1}" y="0" width="${slot - 2}" height="${yAxis}" rx="5" fill="#eef1f5"/>`; });
+  let g = "";
+  provM.forEach((p, i) => { if (p) g += `<rect x="${L + i * slot + 1}" y="0" width="${slot - 2}" height="${H - ML + fs}" rx="6" fill="#eef1f5"/>`; });
   ser.forEach((s, k) => {
-    const top = k * (LH + PH + ML + GAP), base = top + LH + PH, mx = Math.max(...s.m.map(o => o?.sum || 0)) * 1.18 || 1;
-    g += `<circle cx="${L + 5}" cy="${top + 8}" r="5" fill="${s.d.c}"/><text x="${L + 15}" y="${top + 12}" font-size="${fs + 1.5}" font-weight="700" fill="#1f2a3d">${s.d.label}</text>`;
-    g += `<line x1="${L}" x2="${W - R}" y1="${base}" y2="${base}" stroke="rgba(15,27,45,.18)"/>`;
-    for (let i = 0; i < n; i++) g += `<text x="${L + i * slot + slot / 2}" y="${base + fs + 3}" text-anchor="middle" font-size="${fs}" fill="#5f6c80">${TH_M[i]}${provM[i] ? "*" : ""}</text>`;
-    for (let i = 0; i < n; i++) {
-      const o = s.m[i]; if (o == null) continue;
-      const v = o.sum, h = o.sum / mx * PH, x = L + i * slot + (slot - bw) / 2, part = o.prov;
-      g += `<rect class="hb" x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="3" fill="${s.d.c}"${part ? ` opacity=".55"` : ""} data-t="${TH_M[i]} 2569 · ${s.d.label}: รวม ${fmt(o.sum)} ราย · เฉลี่ย ${fmt(Math.round(o.avg))} ราย/สัปดาห์ (${o.n} สัปดาห์ระบาดวิทยา · สัปดาห์ที่ ${o.w0}–${o.w1} · ${epiRange(2026, o.w0, o.w1)})${part ? " · ข้อมูลเบื้องต้น รายงานยังไม่ครบ" : ""}"/>`;
-      if (part) g += `<rect x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="3" fill="url(#${pid})" pointer-events="none"/>`;
-      g += `<text x="${x + bw / 2}" y="${base - h - 4}" text-anchor="middle" font-size="${fs - .5}" font-weight="600" fill="${part ? "#8a96a8" : "#46546a"}">${fmt(v)}</text>`;
-    }
+    const top = k * (LH + PH + ML + GAP), y0 = top + LH + 8, base = top + LH + PH;
+    const vals = s.m.map(o => o?.avg ?? null), ok = vals.filter(v => v != null);
+    const mn = Math.min(...ok), mxv = Math.max(...ok), raw = Math.max((mxv - mn) / 2.5, mxv * .02), p10 = 10 ** Math.floor(Math.log10(raw)), f = raw / p10;
+    const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p10;   // ช่วงเส้นกริดเป็นเลขกลม
+    const lo = Math.max(0, Math.floor(mn * .97 / step) * step), hi = Math.ceil(mxv * 1.04 / step) * step;
+    const Y = v => base - (v - lo) / (hi - lo) * (base - y0), ticks = []; for (let t = lo; t <= hi + 1e-9; t += step) ticks.push(t);
+    g += `<circle cx="${L - 34 + (wide ? 0 : 6)}" cy="${top + 8}" r="5" fill="${s.d.c}"/><text x="${L - 24 + (wide ? 0 : 6)}" y="${top + 12}" font-size="${fs + 1.5}" font-weight="700" fill="#1f2a3d">${s.d.label}<tspan font-size="${fs - .5}" font-weight="600" fill="#6b7689"> · ราย/สัปดาห์</tspan></text>`;
+    ticks.forEach((t, j) => {
+      g += `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="rgba(15,27,45,${j ? .08 : .2})"${j ? ` stroke-dasharray="2 4"` : ""}/>`
+        + `<text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end" font-size="${fs - 1}" fill="#6b7689">${fmt(Math.round(t))}</text>`;
+    });
+    for (let i = 0; i < n; i++) g += `<text x="${X(i)}" y="${base + fs + 5}" text-anchor="middle" font-size="${fs}" fill="#5f6c80">${TH_M[i]}${provM[i] ? "*" : ""}${s.m[i]?.short ? "†" : ""}</text>`;
+    // เส้น: ช่วงข้อมูลครบเป็นเส้นทึบ · ต่อไปยังเดือนข้อมูลเบื้องต้นเป็นเส้นประ
+    let solid = "", dash = "", prev = null;
+    vals.forEach((v, i) => {
+      if (v == null) { prev = null; return; }
+      const pt = `${X(i).toFixed(1)} ${Y(v).toFixed(1)}`;
+      if (s.m[i].prov) dash += prev ? `M${prev}L${pt}` : `M${pt}`;
+      else solid += solid && prev ? `L${pt}` : `M${pt}`;
+      prev = pt;
+    });
+    g += `<path d="${solid}" fill="none" stroke="${s.d.c}" stroke-width="${wide ? 3 : 2.6}" stroke-linejoin="round" stroke-linecap="round"/>`
+      + `<path d="${dash}" fill="none" stroke="${s.d.c}" stroke-width="2.2" stroke-dasharray="5 4" opacity=".6"/>`;
+    vals.forEach((v, i) => {
+      if (v == null) return;
+      const o = s.m[i], part = o.prov, x = X(i), y = Y(v);
+      g += `<circle cx="${x}" cy="${y}" r="${wide ? 5 : 4}" fill="${part ? "#fff" : s.d.c}" stroke="${s.d.c}" stroke-width="${part ? 2.2 : 2}"${o.short && !part ? ` fill-opacity=".45"` : ""}/>`
+        + `<text x="${x}" y="${y - (wide ? 10 : 8)}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${part ? "#8a96a8" : "#1f2a3d"}" stroke="#fff" stroke-width="3" paint-order="stroke">${fmt(Math.round(v))}</text>`
+        + `<rect class="hb" x="${L + i * slot}" y="${top}" width="${slot}" height="${PH + LH}" fill="transparent" data-t="${TH_M[i]} 2569 · ${s.d.label}&#10;เฉลี่ย ${fmt(Math.round(o.avg))} ราย/สัปดาห์ · รวมทั้งเดือน ${fmt(o.sum)} ราย&#10;${o.n} สัปดาห์ระบาดวิทยา (สัปดาห์ที่ ${o.w0}–${o.w1} · ${epiRange(2026, o.w0, o.w1)})${o.short ? `&#10;† รวมสัปดาห์ไม่เต็ม (สัปดาห์ที่ 1 มี ${o.short} วัน) ค่าเฉลี่ยจึงต่ำกว่าจริงเล็กน้อย` : ""}${part ? "&#10;ข้อมูลเบื้องต้น รายงานยังไม่ครบ" : ""}"/>`;
+    });
   });
-  const nWk = ser[0].m.map(o => o?.n);
-  for (let i = 0; i < n; i++) if (nWk[i]) g += `<text x="${L + i * slot + slot / 2}" y="${H - fs * .4}" text-anchor="middle" font-size="${fs - 1.5}" fill="${nWk[i] === 5 ? "#a15c00" : "#8a96a8"}" font-weight="${nWk[i] === 5 ? 700 : 500}">${nWk[i]} สัปดาห์</text>`;
-  return `<svg class="bars ${W > 800 ? "w-w" : "w-n"}" viewBox="0 0 ${W} ${H}" role="img" aria-label="ผู้ป่วยรายเดือน 4 กลุ่มโรค ปี 2569 ทั้งเขตสุขภาพที่ 7 แยกแผงรายกลุ่ม">${g}</svg>`;
+  return `<svg class="bars ${wide ? "w-w" : "w-n"}" viewBox="0 0 ${W} ${H}" role="img" aria-label="ผู้ป่วยเฉลี่ยต่อสัปดาห์รายเดือน 4 กลุ่มโรค ปี 2569 ทั้งเขตสุขภาพที่ 7 แยกแผงรายกลุ่ม">${g}</svg>`;
 }
 // E1 กินเต็มความกว้าง: จอกว้างใช้กราฟ 1100 · จอแคบใช้ 560 (สลับด้วย CSS)
 function dzMonthAll(dz, wkMax) {
@@ -1695,10 +2206,15 @@ function dzMonthAll(dz, wkMax) {
   const asOf = (() => { const p = String(dz.meta?.dataDate || "").split("/"); return p.length === 3 ? `${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ""; })();
   return `<article class="card dz dz-all" style="--dsoft:#eef2f7;--dc:#5f6c80">
     <div class="dz-top"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-chart"/></svg></div>
-      <div><h3>ผู้ป่วย 4 กลุ่มโรค รายเดือน</h3><div class="icd">ทั้งเขตสุขภาพที่ 7 · ปี 2569 (${TH_M[0]}–${TH_M[last]}) · หน่วย: <b>ราย</b> (ยอดรวมรายเดือน) · ผู้ป่วยสัญชาติไทยทุกคนที่รับบริการในเขต รวมผู้อยู่นอกพื้นที่</div></div></div>
-    ${dzMonthSvg(ser, last, 1100, "dzPartW")}${dzMonthSvg(ser, last, 560, "dzPartN")}
-    <ul class="dz-scale"><li>ตัวเลขบนแท่ง = จำนวนผู้ป่วยรวมของเดือน · ชี้ที่แท่งเพื่อดูค่าเฉลี่ยต่อสัปดาห์</li><li>นับตาม<b>สัปดาห์ระบาดวิทยา</b> (อาทิตย์–เสาร์ · สัปดาห์ที่ 1 = 1 ม.ค. ถึงเสาร์แรกของปี) สัปดาห์ที่คร่อมสองเดือนนับเข้าเดือนที่มีวันมากกว่า</li><li>เดือนที่มี <b>5 สัปดาห์</b> (ตัวส้มใต้กราฟล่างสุด) ยอดรวมจะสูงกว่าเดือนที่มี 4 สัปดาห์ · ถ้าจะเทียบระหว่างเดือนให้ดูค่าเฉลี่ยต่อสัปดาห์</li><li>แต่ละกลุ่มโรคใช้สเกลความสูงของตัวเอง · เทียบจำนวนจริงจากตัวเลขบนแท่ง</li></ul>
-    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ <span class="nw">* ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax} · ${epiRange(2026, wkMax - DZ_PROV_WK + 1, wkMax)}) เป็นข้อมูลเบื้องต้น แสดงเป็นแท่งจางลายเส้น ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงไม่ใช้สรุปแนวโน้ม</span></div>
+      <div><h3>ผู้ป่วย 4 กลุ่มโรค รายเดือน</h3><div class="icd">ทั้งเขตสุขภาพที่ 7 · ปี 2569 (${TH_M[0]}–${TH_M[last]}) · หน่วย: <b>ราย/สัปดาห์</b> (ค่าเฉลี่ยต่อสัปดาห์ของแต่ละเดือน) · ผู้ป่วยสัญชาติไทยทุกคนที่รับบริการในเขต รวมผู้อยู่นอกพื้นที่</div></div></div>
+    ${dzMonthSvg(ser, last, 1100, "dzPartW")}${dzMonthSvg(ser, last, 400, "dzPartN")}
+    <details class="pv-guide pg-fold dz-fold"><summary class="pg-h"><svg class="ico"><use href="#i-chart"/></svg><b>วิธีอ่านกราฟ</b><span class="pg-more">กดเพื่อเปิด/ปิด</span></summary>
+    <ul><li><b>จุดและตัวเลข</b> = ผู้ป่วยเฉลี่ยต่อสัปดาห์ของเดือนนั้น (ยอดรวมทั้งเดือน ÷ จำนวนสัปดาห์ระบาดวิทยาในเดือน) · ใช้ค่าเฉลี่ยเพราะแต่ละเดือนมี 4 หรือ 5 สัปดาห์ ถ้าใช้ยอดรวม เดือนที่มี 5 สัปดาห์จะสูงเกินจริง · ชี้ที่จุดเพื่อดูยอดรวมทั้งเดือน</li>
+      <li>นับตาม<b>สัปดาห์ระบาดวิทยา</b> (อาทิตย์–เสาร์ · สัปดาห์ที่ 1 = 1 ม.ค. ถึงเสาร์แรกของปี) สัปดาห์ที่คร่อมสองเดือนนับเข้าเดือนที่มีวันมากกว่า</li>
+      <li>แต่ละกลุ่มโรคมีแกนของตัวเอง และ<b>แกนไม่เริ่มที่ 0</b> เพื่อให้เห็นการขึ้นลงชัด · เทียบขนาดจริงจากตัวเลขบนจุด</li>
+      <li><b>จุดกลวงต่อด้วยเส้นประ</b> และพื้นเทา (เดือนที่มี *) = มีข้อมูลเบื้องต้นรวมอยู่</li>
+      <li><b>จุดจาง (เดือนที่มี †)</b> = มีสัปดาห์ไม่เต็ม 7 วันรวมอยู่ (สัปดาห์ที่ 1 = 1–3 ม.ค. 2569) ค่าเฉลี่ยต่อสัปดาห์ของเดือนนั้นจึงต่ำกว่าจริงเล็กน้อย</li></ul></details>
+    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ <span class="nw">* ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax} · ${epiRange(2026, wkMax - DZ_PROV_WK + 1, wkMax)}) เป็นข้อมูลเบื้องต้น แสดงเป็นจุดกลวงเส้นประ ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงไม่ใช้สรุปแนวโน้ม</span></div>
     <div class="tip"></div></article>`;
 }
 // E2–E5 · การ์ดรายจังหวัด: แถบค่าฝุ่นเฉลี่ยรายสัปดาห์ + อัตราผู้ป่วยต่อแสนประชากร 4 กลุ่มโรค (แกนเวลาเดียวกัน)
@@ -1837,6 +2353,148 @@ function dzPvCard(o, n, lastOk, mx, pi, v) {
     ${dzPvSvg(o, n, lastOk, mx, pi, 560, v)}${dzPvSvg(o, n, lastOk, mx, pi, 380, v)}
     <div class="tip"></div></article>`;
 }
+// ===== E2 มุมมอง "เทียบแนวโน้ม" — อัตราป่วย (หน่วยจริง) กับค่าฝุ่นเฉลี่ยรายสัปดาห์ ± SD =====
+// อัตราป่วย = ต่อแสนประชากร Type area 1+3 (ค่าจริง ไม่แปลง) · ค่าฝุ่น = ค่าเฉลี่ยรายวันในสัปดาห์ระบาดวิทยา ± SD ของค่ารายวัน
+// สองตัวแปรคนละหน่วย จึงมี 2 แบบให้เลือก:
+//   "stack" แยกแผงซ้อนแนวตั้ง แกนเวลาร่วมกัน (แนะนำ — Cleveland 1993; Few 2008: เลี่ยงกราฟสองแกน)
+//   "dual"  แกนคู่ในแผงเดียว (ตามที่ขอ) — ล็อกสเกลคงที่ เริ่มที่ 0 ทุกจังหวัด เพื่อลดการปรับสเกลให้ "ดูซ้อนกัน" (Isenberg et al. 2011)
+window._e2xView = window._e2xView || "x";        // "x" = เทียบแนวโน้ม (ใหม่) · "b" = แท่งอัตราป่วย (เดิม)
+window._e2xMode = "dual";   // เลือกแบบแกนคู่อย่างเดียว (Louis 16 ต.ค. 2569)
+window._e2xK = window._e2xK || DZ[0].key;
+const E2X_PMAX = 100;
+const e2xDays = wk => Math.round((epiEnd(2026, wk) - epiStart(2026, wk)) / 864e5) + 1;   // จำนวนวันในสัปดาห์ระบาดวิทยา (สัปดาห์ที่ 1 อาจไม่ครบ 7)
+function e2xNice(v) { const p = 10 ** Math.floor(Math.log10(v)), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+function e2xPmWeek(PMD, pv, wk) {   // ค่าเฉลี่ยและ SD ของค่าฝุ่นรายวันในสัปดาห์ (ต้องมีค่าอย่างน้อย 4 วัน)
+  const s = epiStart(2026, wk), nd = Math.round((epiEnd(2026, wk) - s) / 864e5) + 1, v = [];
+  for (let i = 0; i < nd; i++) { const d = new Date(s.getTime() + i * 864e5), iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const x = PMD[iso]?.[pv]; if (x != null && x > 0) v.push(x); }
+  if (v.length < Math.min(4, nd)) return null;
+  const m = v.reduce((a, b) => a + b, 0) / v.length, sd = v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1)) : 0;
+  return { m, sd, n: v.length, lo: Math.min(...v), hi: Math.max(...v) };
+}
+const e2xMS = a => { const v = a.filter(x => x != null); if (!v.length) return null; const m = v.reduce((s, x) => s + x, 0) / v.length; return { m, sd: v.length > 1 ? Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1)) : 0, n: v.length }; };
+function e2xData(wkMax) {
+  const src = window.DZPV, n = wkMax, PMD = window.PMREAL || S.pm?.allData || {};
+  return PROV.map(p => {
+    const pop = src.pop[p.name], rows = src.rows.filter(r => r.pv === p.name && r.wk <= n);
+    const pm = Array.from({ length: n }, (_, i) => e2xPmWeek(PMD, p.name, i + 1));
+    const ser = DZ.map(d => { const k = DZPV_COL[d.key], c = Array(n).fill(null); rows.forEach(r => { c[r.wk - 1] = +r[k]; }); return { d, c, rate: c.map(x => x == null ? null : x / pop * 1e5) }; });
+    return { p, pop, pm, ser };
+  });
+}
+function e2xSvg(o, s, n, lastOk, W, mode, RMAX) {
+  const fs = 11, dual = mode === "dual", L = 36, R = dual ? 40 : 12, pw = W - L - R, slot = pw / n;
+  const X = i => L + i * slot + slot / 2;
+  const P1 = { top: dual ? 20 : 26, h: dual ? 150 : 86 };                       // แผงค่าฝุ่น (หรือแผงเดียวเมื่อแกนคู่)
+  const P2 = dual ? P1 : { top: P1.top + P1.h + 26, h: 86 };        // แผงอัตราป่วย
+  const yAx = P2.top + P2.h, H = yAx + fs * 3.2;
+  const YP = v => P1.top + P1.h - Math.min(v, E2X_PMAX) / E2X_PMAX * P1.h;
+  const YR = v => P2.top + P2.h - Math.min(v, RMAX) / RMAX * P2.h;
+  const wkT = i => { const a = epiStart(2026, i + 1), b = epiEnd(2026, i + 1), d = e2xDays(i + 1); return `สัปดาห์ที่ ${i + 1} (${dmy(a)}–${dmy(b)})${d < 7 ? ` · สัปดาห์ไม่เต็ม มี ${d} วัน อัตราจึงต่ำกว่าสัปดาห์ปกติ` : ""}`; };
+  const short = i => e2xDays(i + 1) < 7;
+  const pmC = PM_INK, rC = s.d.c;
+  let g = "";
+  // ช่วงข้อมูลเบื้องต้น + เส้นแนวนอน
+  g += `<rect x="${L + lastOk * slot}" y="${P1.top}" width="${(n - lastOk) * slot}" height="${yAx - P1.top}" fill="#eef1f5"/>`;
+  [0, 25, 50, 75, 100].forEach(t => { g += `<line x1="${L}" x2="${W - R}" y1="${YP(t)}" y2="${YP(t)}" stroke="rgba(15,27,45,${t ? .07 : .25})"/>`
+    + `<text x="${L - 5}" y="${YP(t) + 3.5}" text-anchor="end" font-size="${fs - 1.5}" fill="${pmC}">${t}</text>`; });
+  g += `<line x1="${L}" x2="${W - R}" y1="${YP(37.5)}" y2="${YP(37.5)}" stroke="#c2410c" stroke-dasharray="4 3" stroke-width="1.1"/>`
+    + `<text x="${W - R - 2}" y="${YP(37.5) - 3}" text-anchor="end" font-size="${fs - 2}" font-weight="700" fill="#c2410c" stroke="#fff" stroke-width="3" paint-order="stroke">37.5 เกณฑ์ค่ามาตรฐาน 24 ชม.</text>`;
+  const rt = [0, .25, .5, .75, 1].map(f => f * RMAX);
+  if (!dual) {
+    rt.forEach((t, i) => { g += `<line x1="${L}" x2="${W - R}" y1="${YR(t)}" y2="${YR(t)}" stroke="rgba(15,27,45,${i ? .07 : .25})"/>`
+      + (i % 2 === 0 ? `<text x="${L - 5}" y="${YR(t) + 3.5}" text-anchor="end" font-size="${fs - 1.5}" font-weight="700" fill="${rC}">${t >= 10 ? Math.round(t) : f1(t)}</text>` : ""); });
+    g += `<text x="${L}" y="${P1.top - 7}" font-size="${fs - .5}" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke" fill="${pmC}">ค่าฝุ่น PM<tspan font-size="${fs * .72}" dy="3">2.5</tspan><tspan dy="-3"> เฉลี่ยรายสัปดาห์ ± SD (µg/m³)</tspan></text>`
+      + `<text x="${L}" y="${P2.top - 7}" font-size="${fs - .5}" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke" fill="${rC}">${s.d.label} · ต่อแสนประชากร/สัปดาห์</text>`;
+  } else {
+    rt.forEach((t, i) => { if (i % 2 === 0) g += `<text x="${W - R + 5}" y="${YR(t) + 3.5}" font-size="${fs - 1.5}" font-weight="700" fill="${rC}">${t >= 10 ? Math.round(t) : f1(t)}</text>`; });
+    g += `<text x="${L - 5}" y="${P1.top - 7}" text-anchor="end" font-size="${fs - 1.5}" font-weight="700" fill="${pmC}">µg/m³</text>`
+      + `<text x="${W - R + 5}" y="${P1.top - 7}" font-size="${fs - 1.5}" font-weight="700" fill="${rC}">ต่อแสน</text>`;
+  }
+  HOLI26.filter(h => h.wk <= n).forEach(h => { g += `<line x1="${X(h.wk - 1)}" x2="${X(h.wk - 1)}" y1="${P1.top}" y2="${yAx}" stroke="#8a96a8" stroke-dasharray="2 3"/><text x="${X(h.wk - 1) + 3}" y="${yAx + fs * 2.3}" font-size="${fs - 1.5}" fill="#6b7689">${h.t}</text>`; });
+  // แถบ ± SD ค่าฝุ่น (เป็นช่วงต่อเนื่องเฉพาะสัปดาห์ที่มีค่า)
+  let band = "", seg = [];
+  const flush = () => { if (seg.length > 1) band += `<path d="M${seg.map(([i, q]) => `${X(i).toFixed(1)} ${YP(q.m + q.sd).toFixed(1)}`).join("L")}L${seg.slice().reverse().map(([i, q]) => `${X(i).toFixed(1)} ${YP(Math.max(0, q.m - q.sd)).toFixed(1)}`).join("L")}Z" fill="${pmC}" opacity=".13"/>`; seg = []; };
+  o.pm.forEach((q, i) => { if (q) seg.push([i, q]); else flush(); }); flush();
+  g += band;
+  const line = (vals, Y) => { let d = "", on = false; vals.forEach((v, i) => { if (v == null) { on = false; return; } d += `${on ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`; on = true; }); return d; };
+  g += `<path d="${line(o.pm.map(q => q?.m ?? null), YP)}" fill="none" stroke="${pmC}" stroke-width="2" stroke-dasharray="${dual ? "5 3" : "none"}" stroke-linejoin="round"/>`;
+  o.pm.forEach((q, i) => { if (q) g += `<circle cx="${X(i)}" cy="${YP(q.m)}" r="2.1" fill="${q.m > 37.5 ? "#c2410c" : pmC}"/>`; });
+  // อัตราป่วย: ช่วงครบเป็นเส้นทึบ · 4 สัปดาห์ล่าสุด (เบื้องต้น) เป็นเส้นประจาง
+  // ทึบ = สัปดาห์ครบและข้อมูลครบ · ประจาง = สัปดาห์ไม่เต็ม 7 วัน (ต้นปี) และ 4 สัปดาห์ล่าสุด (ข้อมูลเบื้องต้น)
+  const full = i => !short(i) && i + 1 <= lastOk;
+  const rOk = s.rate.map((v, i) => full(i) ? v : null);
+  const rDash = s.rate.map((v, i) => (!full(i) || (i + 1 < n && !full(i + 1)) || (i > 0 && !full(i - 1))) ? v : null);
+  g += `<path d="${line(rDash, YR)}" fill="none" stroke="${rC}" stroke-width="2" stroke-dasharray="3 3" opacity=".6"/>`
+    + `<path d="${line(rOk, YR)}" fill="none" stroke="${rC}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  s.rate.forEach((v, i) => { if (v != null) g += short(i)
+    ? `<circle cx="${X(i)}" cy="${YR(v)}" r="3" fill="#fff" stroke="${rC}" stroke-width="1.6" opacity=".7"/><text x="${X(i) + 5}" y="${YR(v) + 3.5}" font-size="${fs - 2}" font-weight="700" fill="${rC}" opacity=".85">${e2xDays(i + 1)} วัน</text>`
+    : `<circle cx="${X(i)}" cy="${YR(v)}" r="2.2" fill="${rC}"${i + 1 > lastOk ? ` opacity=".45"` : ""}/>`; });
+  let lm = -1; for (let i = 0; i < n; i++) { const m = epiMonth(2026, i + 1); if (m !== lm) { g += `<text x="${L + i * slot + 3}" y="${yAx + fs + 1}" font-size="${fs - 1.5}" fill="#5f6c80">${TH_M[m]}</text>`; lm = m; } }
+  for (let i = 0; i < n; i++) {
+    const q = o.pm[i], v = s.rate[i];
+    const t = `${wkT(i)}${i + 1 > lastOk ? " · ข้อมูลเบื้องต้น" : ""}&#10;ค่าฝุ่นเฉลี่ย: ${q ? `${f1(q.m)} ± ${f1(q.sd)} µg/m³ (SD จาก ${q.n} วัน · ต่ำสุด ${f1(q.lo)} สูงสุด ${f1(q.hi)})` : "ไม่มีข้อมูลค่าฝุ่น"}&#10;${s.d.label}: ${v == null ? "–" : `${f1(v)} ต่อแสน (${fmt(s.c[i])} ราย)`}`;
+    g += `<rect class="hb wkcol" x="${L + i * slot}" y="${P1.top}" width="${slot}" height="${yAx - P1.top}" data-t="${t}"/>`;
+  }
+  return `<svg class="bars ${W < 500 ? "pv-n" : "pv-w"}" viewBox="0 0 ${W} ${H}" role="img" aria-label="ค่าฝุ่นเฉลี่ยรายสัปดาห์และอัตรา${s.d.label} จังหวัด${o.p.name}">${g}</svg>`;
+}
+function e2xCard(o, s, n, lastOk, mode, RMAX) {
+  // ค่าเฉลี่ย ± SD จาก "สัปดาห์เดียวกัน" ทั้งสองตัวแปร: มีค่าฝุ่นและอัตราป่วยครบ · สัปดาห์เต็ม 7 วัน · พ้นช่วงข้อมูลเบื้องต้น
+  const cw = o.pm.map((q, i) => (q && s.rate[i] != null && e2xDays(i + 1) === 7 && i + 1 <= lastOk) ? i : null).filter(i => i != null);
+  const pmS = e2xMS(cw.map(i => o.pm[i].m)), rS = e2xMS(cw.map(i => s.rate[i]));
+  const cwT = cw.length ? `สัปดาห์ที่ ${cw[0] + 1}–${cw.at(-1) + 1}${cw.length < cw.at(-1) - cw[0] + 1 ? ` (เว้นสัปดาห์ที่ค่าฝุ่นไม่ครบ)` : ""} · ${cw.length} สัปดาห์` : "–";
+  return `<article class="card dz dz-pv dzx" style="--dsoft:#f3f5f9;--dc:${o.p.color}">
+    <div class="dz-top"><div class="dz-icon" style="background:color-mix(in srgb,${o.p.color} 12%,#fff);color:${o.p.color}"><svg><use href="#i-pin"/></svg></div>
+      <div><h3>จ.${o.p.name}</h3><div class="icd">ประชากรกลางปี (Type 1+3) ${fmt(o.pop)} คน</div></div></div>
+    ${e2xSvg(o, s, n, lastOk, 560, mode, RMAX)}${e2xSvg(o, s, n, lastOk, 380, mode, RMAX)}
+    <div class="x-stat">
+      <p class="x-sh">ค่าเฉลี่ย ± SD ช่วงเดียวกัน · ${cwT}</p>
+      <div><span>ค่าฝุ่นเฉลี่ยรายสัปดาห์</span><b class="num">${pmS ? `${f1(pmS.m)} <small>± SD ${f1(pmS.sd)}</small>` : "–"}</b><em>µg/m³</em></div>
+      <div><span>${s.d.label}</span><b class="num" style="color:${s.d.c}">${rS ? `${f1(rS.m)} <small>± SD ${f1(rS.sd)}</small>` : "–"}</b><em>ต่อแสนประชากร/สัปดาห์</em></div>
+    </div>
+    <div class="tip"></div></article>`;
+}
+function e2xAll(wkMax) {
+  const src = window.DZPV; if (!src) return "";
+  const n = wkMax, lastOk = wkMax - DZ_PROV_WK, data = e2xData(wkMax), k = DZ.findIndex(d => d.key === window._e2xK), mode = window._e2xMode;
+  const RMAX = e2xNice(Math.max(...data.flatMap(o => o.ser[k].rate.filter(v => v != null))) * 1.05);   // สเกลเดียวกันทุกจังหวัด (ต่อกลุ่มโรค)
+  const tabs = DZ.map((d, i) => `<button type="button" data-k="${d.key}" aria-pressed="${i === k}" style="--c:${d.c}"><i></i>${d.label}</button>`).join("");
+  const firstPm = (() => { const PMD = window.PMREAL || S.pm?.allData || {}; const ds = Object.keys(PMD).filter(d => d >= "2026-01-01").sort(); if (!ds.length) return ""; const d = new Date(ds[0] + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; })();
+  const guide = `<details class="pv-guide pg-fold">
+    <summary class="pg-h"><svg class="ico"><use href="#i-chart"/></svg><b>วิธีอ่านกราฟ</b><span class="pg-more">กดเพื่อเปิด/ปิด</span></summary>
+    <ul><li><b>ช่วงข้อมูล</b> ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${n} (${epiRange(2026, 1, n)}) · ผู้ป่วยนับเฉพาะผู้อยู่อาศัยจริงในจังหวัด (Type area 1+3) · ค่าฝุ่นจากสถานีตรวจวัด Air4Thai</li>
+      <li><b>แกนซ้าย · เส้นประเทาเข้ม</b> = ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ 0–100 µg/m³ (เฉลี่ยค่ารายวัน 24 ชม. ในสัปดาห์ระบาดวิทยา ต้องมีอย่างน้อย 4 วัน) · <b>แถบเทาจาง</b> = ± 1 SD ของค่ารายวันในสัปดาห์นั้น (กว้าง = ฝุ่นแกว่งมากระหว่างวัน) · <b>จุดส้ม</b> = สัปดาห์ที่ค่าเฉลี่ยเกิน 37.5 µg/m³ (เส้นประส้ม = เกณฑ์ค่ามาตรฐาน 24 ชม.)</li>
+      <li><b>แกนขวา · เส้นทึบสีตามกลุ่มโรค</b> = อัตราผู้ป่วยต่อแสนประชากร Type area 1+3 รายสัปดาห์ · สเกลเดียวกันทั้ง 4 จังหวัด (เปลี่ยนตามกลุ่มโรคที่เลือก) · ${DZ_PROV_WK} สัปดาห์ล่าสุดเป็นเส้นประจาง = ข้อมูลเบื้องต้น</li>
+      <li>ทั้งสองแกนล็อกสเกลคงที่และเริ่มที่ 0 · <u>ระยะห่างหรือการตัดกันของสองเส้นขึ้นกับการตั้งสเกล ไม่ได้บอกความสัมพันธ์</u> ให้ดูที่<b>จังหวะขึ้นลง</b>ว่าตรงกันหรือเหลื่อมกันกี่สัปดาห์</li>
+      <li><b>กล่องตัวเลขใต้กราฟ</b> = ค่าเฉลี่ย ± SD ระหว่างสัปดาห์ของทั้งสองตัวแปร คำนวณจาก<b>สัปดาห์ชุดเดียวกัน</b> (มีค่าฝุ่นและอัตราป่วยครบ เป็นสัปดาห์เต็ม 7 วัน และพ้นช่วงข้อมูลเบื้องต้น) เพื่อให้เทียบกันได้ในช่วงเวลาเดียวกัน</li>
+      <li><b>จุดกลวงต้นปี</b> = สัปดาห์ที่ 1 มีไม่ครบ 7 วัน (1–3 ม.ค. 2569 มี 3 วัน) อัตราผู้ป่วยจึงต่ำกว่าสัปดาห์ปกติ แสดงไว้เพื่อความครบถ้วน แต่ไม่นำมาคิดค่าเฉลี่ย</li>
+      <li>เลือกกลุ่มโรคจากแถบด้านบน · ชี้หรือแตะที่สัปดาห์ใดก็ได้เพื่อดูค่าฝุ่น (เฉลี่ย ± SD, ต่ำสุด–สูงสุด) และอัตราป่วยของสัปดาห์นั้น</li>
+      <li>ค่าฝุ่นสถานีมีตั้งแต่ <b>${firstPm || "–"}</b> · เส้นฝุ่นขาดช่วง = สัปดาห์ที่มีค่าไม่ถึง 4 วัน</li></ul>
+    <p class="pg-ref">อ้างอิง: Bhaskaran K et al. Time series regression studies in environmental epidemiology. <i>Int J Epidemiol</i> 2013;42:1187–95 · Isenberg P et al. A study on dual-scale data charts. <i>IEEE TVCG</i> 2011;17:2469–78</p></details>
+    <p class="pv-note"><b>หมายเหตุ</b> ข้อมูลนี้ใช้ติดตามแนวโน้ม ไม่ใช่หลักฐานว่าฝุ่นเป็นสาเหตุของการป่วย หากพบช่วงที่น่าสนใจ ควรวิเคราะห์ต่อด้วยวิธีอนุกรมเวลา</p>`;
+  const lg = `<div class="lg pv-lg"><span><i class="ma" style="background:${DZ[k].c}"></i>อัตราผู้ป่วยต่อแสน</span><span>${mode === "dual" ? '<i class="ma dash"></i>' : `<i class="ma" style="background:${PM_INK}"></i>`}ค่าฝุ่นเฉลี่ยรายสัปดาห์</span><span><i class="sdb"></i>± SD ค่าฝุ่นรายวัน</span><span><i class="dot"></i>สัปดาห์ที่ฝุ่นเฉลี่ยเกิน 37.5</span><span><i class="hol"></i>สัปดาห์ไม่เต็ม 7 วัน</span><span><i class="pt"></i>สัปดาห์ที่ ${lastOk + 1}–${n} ข้อมูลเบื้องต้น</span><span><i class="hd"></i>วันหยุดยาว</span></div>`;
+  return `<section class="pv-block e2x" aria-labelledby="pvH">
+    <div class="pv-bh"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-map"/></svg></div>
+      <div><h3 id="pvH">ค่าฝุ่นกับผู้ป่วยรายสัปดาห์ แยกรายจังหวัด</h3>
+      <div class="icd">ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ (µg/m³) · อัตราผู้ป่วยต่อแสนประชากร · ปี 2569</div></div>
+</div>
+    <div class="x-bar"><div class="x-tabs" role="group" aria-label="เลือกกลุ่มโรค">${tabs}</div></div>
+    ${lg}
+    <div class="pv-grid">${data.map(o => e2xCard(o, o.ser[k], n, lastOk, mode, RMAX)).join("")}</div>
+    ${guide}</section>`;
+}
+function e2xViewTg() {
+  const v = window._e2xView;
+  return `<div class="seg x-view" role="group" aria-label="มุมมอง"><button type="button" data-v="x" aria-pressed="${v === "x"}">เทียบแนวโน้ม</button><button type="button" data-v="b" aria-pressed="${v === "b"}">แท่งอัตราป่วย (เดิม)</button></div>`;
+}
+function e2xBlock(wkMax) { return e2xAll(wkMax); }   // แทนแผงแท่งอัตราป่วยเดิม
+// ปุ่มเลือกกลุ่มโรค / รูปแบบกราฟ / มุมมอง (event delegation — ผูกครั้งเดียว)
+document.addEventListener("click", e => {
+  const b = e.target.closest(".x-tabs button, .x-view button, .x-mode button"); if (!b) return;
+  if (b.dataset.k) window._e2xK = b.dataset.k; else if (b.dataset.m) window._e2xMode = b.dataset.m; else window._e2xView = b.dataset.v;
+  const y = document.getElementById("pvH")?.getBoundingClientRect().top;
+  renderDisease();
+  const y2 = document.getElementById("pvH")?.getBoundingClientRect().top; if (y != null && y2 != null) window.scrollBy(0, y2 - y);   // คงตำแหน่งหน้าจอ
+});
 
 // E2 ระหว่างรอ /api/disease-pv (โหลดเบื้องหลัง) หรือโหลดไม่สำเร็จ
 function pvWait() {
@@ -1845,6 +2503,290 @@ function pvWait() {
     <div><h3>ค่าฝุ่นกับผู้ป่วยรายสัปดาห์ แยกรายจังหวัด</h3><div class="icd">${f ? "ยังดึงข้อมูลรายจังหวัดจาก HDC ไม่ได้ในรอบนี้ ระบบจะลองใหม่อัตโนมัติ · ลองรีเฟรชอีกครั้งภายหลัง" : "กำลังโหลดข้อมูลรายจังหวัดจาก HDC…"}</div></div></div>
     ${f ? "" : `<div class="pv-grid">${'<div class="pv-sk"></div>'.repeat(4)}</div>`}</section>`;
 }
+
+// ชุดดาวน์โหลด: แปลงข้อมูลรายจังหวัดจาก /api/disease-pv เป็นรูปแบบ DSDATA (s1/s2 = "wk,resp,heart,eye,skin;…")
+Object.defineProperty(window, "DSDATA", { configurable: true, get() {
+  const d = window.DZPV; if (!d?.ok) return {};
+  if (d._ds) return d._ds;
+  const pack = rows => { const o = {}; for (const r of rows || []) (o[r.pv] ||= []).push([r.wk, r.resp, r.heart, r.eye, r.skin].join(",")); for (const k in o) o[k] = o[k].join(";"); return o; };
+  const dc = String(d.dateCom || ""), dateCom = dc.length >= 12 ? `${dc.slice(0, 4)}-${dc.slice(4, 6)}-${dc.slice(6, 8)} ${dc.slice(8, 10)}:${dc.slice(10, 12)}` : (d.meta?.dataDate || "");
+  return d._ds = { s1: pack(d.rows1), s2: pack(d.rows), pop: d.pop || {}, dateCom };
+} });
+// ===== โซน G · ชุดข้อมูลสำหรับเจ้าหน้าที่ (เลือก → กรอง → ตรวจ → ดาวน์โหลด) =====
+// หมายเหตุ: เขียน "PM2\u002E5" แทนตัวอักษรตรงๆ — ขั้น build ของ demo แปลงคำนี้เป็น HTML ตัวห้อย ซึ่งจะทำให้สตริงใน JS พัง
+// หลัก: FAIR (Wilkinson 2016) — ทุกไฟล์มีคำอธิบายตัวแปร แหล่งที่มา วันที่ประมวลผล และข้อความอ้างอิง
+//       Tidy data (Wickham 2014) — 1 แถว = 1 หน่วยวิเคราะห์ (จังหวัด × เวลา × กลุ่มโรค)
+//       เปิดเผยทีละขั้น (progressive disclosure, NN/g) — เห็นเฉพาะตัวเลือกของขั้นนั้น
+// ข้อมูล: window.DSDATA = { s1, s2: "wk,resp,heart,eye,skin;…" รายจังหวัด, pop: {จังหวัด: ประชากรกลางปี}, popRows, dateCom, snapshotAt }
+(function () {
+  const D = () => window.DSDATA || {};
+  const GK = ["resp", "heart", "eye", "skin"];
+  const GKEY = { resp: "ทางเดินหายใจ", heart: "หัวใจ", eye: "ตาอักเสบ", skin: "ผิวหนัง" };
+  const GLABEL = { resp: "ระบบทางเดินหายใจ", heart: "ระบบหัวใจ/หลอดเลือด", eye: "เยื่อบุตาอักเสบ", skin: "กลุ่มโรคผิวหนังอักเสบ" };
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const thD = s => { const d = new Date(s + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; };
+  const r1 = v => v == null || !isFinite(v) ? null : Math.round(v * 10) / 10;
+  const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // ข้อมูลผู้ป่วยรายจังหวัด × สัปดาห์ (ตารางที่ 1 หรือ 2)
+  function cases(tb) {
+    const src = D()[tb] || {}, out = {};
+    for (const pv in src) for (const t of src[pv].split(";")) {
+      const [w, ...v] = t.split(",").map(Number);
+      out[pv + "|" + w] = Object.fromEntries(GK.map((k, i) => [k, v[i]]));
+    }
+    return out;
+  }
+  const wkMax = () => S.wkMax || 39;
+  const prelimFrom = () => wkMax() - (typeof DZ_PROV_WK === "number" ? DZ_PROV_WK : 4) + 1;
+  function pmRange() { const ds = Object.keys(S.pm?.allData || {}).sort(); return [ds[0], ds.at(-1)]; }
+
+  // ── นิยามชุดข้อมูล ───────────────────────────────────────────────
+  const COL = {
+    year_be: ["ปี พ.ศ.", ""], pv_code: ["รหัสจังหวัด (กระทรวงมหาดไทย)", ""], pv_name: ["ชื่อจังหวัด", ""],
+    epi_week: ["สัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์ · สัปดาห์ที่ 1 เริ่ม 1 ม.ค.)", "สัปดาห์"],
+    week_start: ["วันแรกของสัปดาห์ (ค.ศ. ปปปป-ดด-วว)", ""], week_end: ["วันสุดท้ายของสัปดาห์", ""],
+    month: ["เดือนที่สัปดาห์นั้นมีวันอยู่มากกว่า (1–12)", ""], group: ["กลุ่มโรค", ""],
+    cases: ["ผู้ป่วย (รายคน ตัดซ้ำในสัปดาห์)", "ราย"], population: ["ประชากร Type area 1+3 กลางปี (ประมาณ ณ 1 ก.ค.)", "คน"],
+    rate_per_100k: ["อัตราป่วยต่อประชากรแสนคน", "ต่อแสน"], preliminary: ["1 = ข้อมูลเบื้องต้น รายงานยังไม่ครบ (4 สัปดาห์ล่าสุด)", ""],
+    hdc_table: ["ตาราง HDC ต้นทาง", ""], date_com: ["วันที่ HDC ประมวลผล", ""],
+    date: ["วันที่ (ค.ศ. ปปปป-ดด-วว)", ""], pm25_24h: ["ค่า PM2\u002E5 เฉลี่ย 24 ชม. รอบบ่าย (≈15.00 น.)", "µg/m³"], pm25_source: ["แหล่งค่าของวันนั้น: station = สถานีตรวจวัด Air4Thai · satellite = ค่าประมาณจากดาวเทียม GISTDA (ใช้แทนช่วงที่สถานีไม่มีข้อมูล)", ""], pm25_07: ["ค่า PM2\u002E5 เฉลี่ย 24 ชม. ณ 07.00 น. (ใช้ตัดสินเกณฑ์ PHEOC)", "µg/m³"], pheoc_2day: ["1 = ค่า ณ 07.00 น. ≥ 75.1 µg/m³ ทั้งวันนี้และวันก่อนหน้า (เข้าเกณฑ์เปิด PHEOC)", ""], satellite_days: ["จำนวนวันในสัปดาห์ที่ใช้ค่าประมาณจากดาวเทียม GISTDA แทนค่าสถานี", "วัน"], aqi_level: ["ระดับคุณภาพอากาศ (เกณฑ์กรมควบคุมมลพิษ)", ""],
+    pm25_mean: ["ค่า PM2\u002E5 เฉลี่ยของวันที่มีข้อมูลในสัปดาห์", "µg/m³"], pm25_max: ["ค่า PM2\u002E5 รายวันสูงสุดในสัปดาห์", "µg/m³"],
+    days_over_37_5: ["จำนวนวันที่ค่าเฉลี่ย 24 ชม. เกิน 37.5 µg/m³ (ค่ามาตรฐาน)", "วัน"], pm25_days: ["จำนวนวันที่มีค่าฝุ่นในสัปดาห์", "วัน"],
+    type1c: ["ประชากร Type area 1 (หลังตัดซ้ำ) ณ สิ้นปีงบประมาณ", "คน"], type3c: ["ประชากร Type area 3 (หลังตัดซ้ำ) ณ สิ้นปีงบประมาณ", "คน"],
+    pop13_end_fy: ["ประชากร Type 1+3 ณ สิ้นปีงบประมาณ", "คน"], pop13_midyear: ["ประชากรกลางปี = ปีก่อน + 0.75 × (ปีนี้ − ปีก่อน)", "คน"],
+  };
+  for (const k of GK) { COL["cases_" + k] = [`ผู้ป่วย${GLABEL[k]} (Type 1+3)`, "ราย"]; COL["rate_" + k] = [`อัตราป่วย${GLABEL[k]} ต่อแสน`, "ต่อแสน"]; }
+
+  // วันที่ใช้ค่าดาวเทียม GISTDA แทนค่าสถานี (backfillGistda 16 ต.ค. 2569 · ดูแท็บ _backfill_log)
+  const satDay = (d, pv) => (d >= "2026-01-28" && d <= "2026-02-18") || (d === "2026-02-23" && pv === "กาฬสินธุ์");
+  const SRC_HDC = "HDC กระทรวงสาธารณสุข (MOPH Open Data) รายงานโรคที่เกี่ยวข้องกับ PM2\u002E5 รายสัปดาห์";
+  const DS = [
+    { id: "cases", icon: "i-steth", title: "ผู้ป่วย 4 กลุ่มโรค รายสัปดาห์ รายจังหวัด", level: "จังหวัด · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
+      src: SRC_HDC, desc: "ผู้ป่วยโรคที่เกี่ยวข้องกับฝุ่น นับรายคน ตัดซ้ำในสัปดาห์ เลือกได้ว่านับทุกคนที่มารับบริการ หรือเฉพาะผู้อยู่จริงในจังหวัด (มีอัตราต่อแสน)",
+      filters: ["pv", "weeks", "groups", "table"],
+      build(f) {
+        const C = cases(f.table), pop = D().pop || {}, cols = ["year_be", "hdc_table", "pv_code", "pv_name", "epi_week", "week_start", "week_end", "month", "group", "cases"];
+        if (f.table === "s2") cols.push("population", "rate_per_100k");
+        cols.push("preliminary", "date_com");
+        const rows = [];
+        for (const p of PROV.filter(p => f.pv.includes(p.name))) for (let w = f.w0; w <= f.w1; w++) for (const g of f.groups) {
+          const c = C[p.name + "|" + w]; if (!c) continue;
+          const r = { year_be: 2569, hdc_table: f.table === "s2" ? "s_pm25_2_in_week" : "s_pm25_1_in_week", pv_code: p.code, pv_name: p.name, epi_week: w,
+            week_start: iso(epiStart(2026, w)), week_end: iso(epiEnd(2026, w)), month: epiMonth(2026, w) + 1, group: GKEY[g], cases: c[g] };
+          if (f.table === "s2") { r.population = pop[p.name]; r.rate_per_100k = r2(c[g] / pop[p.name] * 1e5); }
+          r.preliminary = w >= prelimFrom() ? 1 : 0; r.date_com = D().dateCom; rows.push(r);
+        }
+        return { cols, rows };
+      },
+      note: f => f.table === "s2"
+        ? "ตัวตั้ง = ผู้ป่วยที่อยู่อาศัยจริงในจังหวัด (Type area 1 และ 3) · ตัวหาร = ประชากร Type 1+3 กลางปี จาก HDC — ตัวตั้งและตัวหารเป็นประชากรกลุ่มเดียวกัน"
+        : "นับผู้ป่วยสัญชาติไทยทุกคนที่มารับบริการในหน่วยบริการของจังหวัด รวมผู้อยู่นอกพื้นที่ (ใช้ดูภาระงาน) จึงไม่มีอัตราต่อแสน" },
+    { id: "pm_daily", icon: "i-chart", title: "ค่าฝุ่น PM2\u002E5 รายวัน รายจังหวัด", level: "จังหวัด · รายวัน", freq: "อัปเดตทุกวัน · ค่ารอบบ่าย ≈15.00 น.",
+      src: "Air4Thai กรมควบคุมมลพิษ (สถานีตรวจวัด) ค่าเฉลี่ย 24 ชม. รอบบ่าย ≈15.00 น. · ช่วง 28 ม.ค.–18 ก.พ. 2569 ใช้ค่าประมาณจากดาวเทียม GISTDA (ระบุในคอลัมน์ pm25_source)", desc: "ค่าเฉลี่ย 24 ชม. ของสถานีตรวจวัดในจังหวัด พร้อมระดับคุณภาพอากาศและเลขสัปดาห์ระบาดวิทยา",
+      filters: ["pv", "dates"],
+      build(f) {
+        const all = S.pm?.allData || {}, rows = [];
+        for (const d of Object.keys(all).sort()) {
+          if (d < f.d0 || d > f.d1) continue;
+          const dt = new Date(d + "T00:00:00");
+          for (const p of PROV.filter(p => f.pv.includes(p.name))) {
+            const v = all[d]?.[p.name]; if (v == null || !(v > 0)) continue;
+            rows.push({ date: d, year_be: dt.getFullYear() + 543, epi_week: epiWeekOf(dt), pv_code: p.code, pv_name: p.name, pm25_24h: r1(v), pm25_source: satDay(d, p.name) ? "satellite" : "station", aqi_level: LV[lvOf(v)].name });
+          }
+        }
+        return { cols: ["date", "year_be", "epi_week", "pv_code", "pv_name", "pm25_24h", "pm25_source", "aqi_level"], rows };
+      },
+      note: () => "ค่าจากสถานีตรวจวัด Air4Thai รอบบ่าย ≈15.00 น. · ช่วง 28 ม.ค.–18 ก.พ. 2569 และ จ.กาฬสินธุ์ 23 ก.พ. ใช้ค่าประมาณจากดาวเทียม GISTDA (pm25_source = satellite · คลาดจากค่าสถานีเฉลี่ยราว 7 µg/m³) · วันที่ไม่มีข้อมูลจะไม่มีแถว · ค่า ณ 07.00 น. ที่ใช้ตัดสิน PHEOC อยู่ในชุด \"ค่าฝุ่น ณ 07.00 น.\"" },
+    { id: "pm07", icon: "i-shield", title: "ค่าฝุ่น ณ 07.00 น. (เกณฑ์ PHEOC)", level: "จังหวัด · รายวัน", freq: "อัปเดตทุกวัน · เริ่ม 2 ส.ค. 2569",
+      src: "Air4Thai กรมควบคุมมลพิษ (ค่ารายชั่วโมงของสถานี) คำนวณค่าเฉลี่ย 24 ชม. สิ้นสุด 07.00 น. · แท็บ PM25_07", desc: "ค่าที่ใช้ตัดสินเกณฑ์เปิด PHEOC (≥ 75.1 µg/m³ ติดกัน 2 วัน) ชุดเดียวกับรายงาน LINE และการ์ด PHEOC บนแดชบอร์ด",
+      filters: ["pv", "dates"],
+      build(f) {
+        const all = S.pm07 || {}, rows = [], ds = Object.keys(all).sort();
+        for (const d of ds) {
+          if (d < f.d0 || d > f.d1) continue;
+          const dt = new Date(d + "T00:00:00"), prev = iso(new Date(dt.getTime() - 864e5));
+          for (const p of PROV.filter(p => f.pv.includes(p.name))) {
+            const v = all[d]?.[p.name]; if (v == null || !(v > 0)) continue;
+            const y = all[prev]?.[p.name];
+            rows.push({ date: d, year_be: dt.getFullYear() + 543, pv_code: p.code, pv_name: p.name, pm25_07: r1(v), pheoc_2day: v >= 75.1 && y >= 75.1 ? 1 : 0, aqi_level: LV[lvOf(v)].name });
+          }
+        }
+        return { cols: ["date", "year_be", "pv_code", "pv_name", "pm25_07", "pheoc_2day", "aqi_level"], rows };
+      },
+      note: () => "เฉลี่ยจากค่ารายชั่วโมง 08.00 น. วันก่อน – 07.00 น. ต้องมีอย่างน้อย 18 จาก 24 ชั่วโมง · Air4Thai เก็บข้อมูลรายชั่วโมงย้อนหลังได้ราว 2–3 เดือน ชุดนี้จึงเริ่ม 2 ส.ค. 2569" },
+    { id: "analysis", icon: "i-layers", star: true, title: "ชุดพร้อมวิเคราะห์ ฝุ่น × ผู้ป่วย", level: "จังหวัด · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
+      src: "Air4Thai (ค่าฝุ่น) + " + SRC_HDC + " ชุดที่ 2 + ประชากร Type 1+3 HDC",
+      desc: "1 แถว = 1 จังหวัด × 1 สัปดาห์ มีค่าฝุ่นเฉลี่ย/สูงสุด/วันเกินมาตรฐาน ผู้ป่วยและอัตราต่อแสนทั้ง 4 กลุ่ม เปิดใน Excel, R หรือ Stata แล้ววิเคราะห์ได้ทันที",
+      filters: ["pv", "weeks"],
+      build(f) {
+        const C = cases("s2"), pop = D().pop || {}, all = S.pm?.allData || {}, rows = [];
+        for (const p of PROV.filter(p => f.pv.includes(p.name))) for (let w = f.w0; w <= f.w1; w++) {
+          const s = epiStart(2026, w), e = epiEnd(2026, w), v = [];
+          for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) { const x = all[iso(d)]?.[p.name]; if (x != null && x > 0) v.push(x); }
+          const c = C[p.name + "|" + w] || {};
+          const r = { year_be: 2569, pv_code: p.code, pv_name: p.name, epi_week: w, week_start: iso(s), week_end: iso(e), month: epiMonth(2026, w) + 1,
+            pm25_mean: v.length ? r1(v.reduce((a, b) => a + b, 0) / v.length) : null, pm25_max: v.length ? r1(Math.max(...v)) : null,
+            days_over_37_5: v.filter(x => x > 37.5).length, pm25_days: v.length, population: pop[p.name] };
+          { let n = 0; for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) if (satDay(iso(d), p.name) && all[iso(d)]?.[p.name] > 0) n++; r.satellite_days = n; }
+          for (const k of GK) { r["cases_" + k] = c[k] ?? null; r["rate_" + k] = c[k] == null ? null : r2(c[k] / pop[p.name] * 1e5); }
+          r.preliminary = w >= prelimFrom() ? 1 : 0; r.date_com = D().dateCom; rows.push(r);
+        }
+        return { cols: ["year_be", "pv_code", "pv_name", "epi_week", "week_start", "week_end", "month", "pm25_mean", "pm25_max", "days_over_37_5", "pm25_days", "satellite_days",
+          ...GK.map(k => "cases_" + k), ...GK.map(k => "rate_" + k), "population", "preliminary", "date_com"], rows };
+      },
+      note: () => "ผู้ป่วย = ผู้อยู่จริงในจังหวัด (Type 1+3) จึงคู่กับประชากรได้ถูกต้อง · ค่าฝุ่นเฉลี่ยคิดเฉพาะวันที่มีข้อมูล ดูจำนวนวันจากคอลัมน์ pm25_days · ใช้ดูความสัมพันธ์ระดับกลุ่มประชากร ไม่ใช่หลักฐานว่าฝุ่นเป็นสาเหตุ (ecological fallacy)" },
+    { id: "gistda", icon: "i-sat", title: "ค่าฝุ่นรายวัน รายอำเภอ/ตำบล", level: "อำเภอ · ตำบล · รายวัน", freq: "อัปเดตทุกวัน", soon: true,
+      src: "GISTDA ระบบเช็คฝุ่น (ค่าประมาณจากดาวเทียม)", desc: "77 อำเภอ 660 ตำบล ตั้งแต่ 1 ม.ค. 2569 — กำลังเก็บข้อมูลย้อนหลัง เปิดให้ดาวน์โหลดเมื่อเก็บครบ", filters: [] },
+  ];
+  const PRESETS = [
+    { id: "analysis", label: "ชุดวิเคราะห์ ฝุ่น × ผู้ป่วย ทั้งปี", ds: "analysis", f: () => ({ w0: 1, w1: wkMax() }) },
+    { id: "weekly", label: "สรุปผู้ป่วย 4 สัปดาห์ล่าสุด (ทำรายงาน)", ds: "cases", f: () => ({ table: "s1", w0: Math.max(1, wkMax() - 3), w1: wkMax() }) },
+    { id: "season", label: "ค่าฝุ่นรายวัน ฤดูฝุ่นล่าสุด", ds: "pm_daily", f: () => { const t = pmRange()[1] || iso(new Date()), y = +t.slice(0, 4), m = +t.slice(5, 7); const sy = m >= 11 ? y : y - 1; return { d0: `${sy}-11-01`, d1: m >= 6 && m <= 10 ? `${y}-05-31` : t }; } },
+  ];
+
+  // ── สถานะ ─────────────────────────────────────────────────────────
+  const st = { ds: "analysis", fmt: "csv", f: {} };
+  function defaults(ds) {
+    const r07 = Object.keys(S.pm07 || {}).sort(), [a, b] = ds === "pm07" && r07.length ? [r07[0], r07.at(-1)] : pmRange();
+    return { pv: PROV.map(p => p.name), w0: 1, w1: wkMax(), groups: [...GK], table: "s2", d0: a || "2026-01-01", d1: b || iso(new Date()) };
+  }
+  function pick(id, over) { st.ds = id; st.f = { ...defaults(id), ...(over || {}) }; render(); }
+
+  // ── ไฟล์ ──────────────────────────────────────────────────────────
+  const cell = v => { if (v == null) return ""; const s = String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const toCsv = (cols, rows) => "﻿" + [cols.join(","), ...rows.map(r => cols.map(c => cell(r[c])).join(","))].join("\r\n");
+  function meta(ds, f, n) {
+    const today = iso(new Date());
+    const scope = ds.filters.includes("weeks") ? `สัปดาห์ระบาดวิทยาที่ ${f.w0}–${f.w1} ปี 2569 (${epiRange(2026, f.w0, f.w1)})` : ds.filters.includes("dates") ? `${thD(f.d0)} – ${thD(f.d1)}` : "ปีงบประมาณ 2568–2569";
+    return [
+      ["ชุดข้อมูล", ds.title], ["พื้นที่", "เขตสุขภาพที่ 7: " + f.pv.join(", ")], ["ช่วงเวลา", scope], ["จำนวนแถว", n],
+      ["แหล่งข้อมูล", ds.src], ["วันที่ประมวลผลต้นทาง", ds.id === "pm_daily" || ds.id === "pop" ? "-" : D().dateCom], ["วันที่ดาวน์โหลด", today],
+      ["หมายเหตุ", ds.note(f)],
+      ["นิยามสัปดาห์", "สัปดาห์ระบาดวิทยา กรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค."],
+      ["รหัสโรค (ICD-10)", "ทางเดินหายใจ J44 (ยกเว้น J44.2), J45, J44.2 · หัวใจ I21, I22, I24 · ตา H10 · ผิวหนัง L30.9, L50 (ประกาศกระทรวงสาธารณสุข พ.ศ. 2565)"],
+      ["การอ้างอิง", `สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${ds.title} [ชุดข้อมูล]. แดชบอร์ด PM2\u002E5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(today)}.`],
+      ["ข้อควรระวัง", "ข้อมูลระดับจังหวัดเป็นข้อมูลรวม ไม่มีข้อมูลรายบุคคล · ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยง"],
+    ];
+  }
+  const dict = cols => cols.map(c => [c, COL[c]?.[0] || "", COL[c]?.[1] || ""]);
+  const fname = (ds, f, ext) => `pm25_r7_${ds.id}_${ds.filters.includes("weeks") ? `wk${f.w0}-${f.w1}` : ds.filters.includes("dates") ? `${f.d0}_${f.d1}` : "2569"}.${ext}`;
+
+  async function save(filename, data) {
+    // ใน claude.ai artifact ต้องผ่าน capability downloads · บนเว็บจริงใช้ลิงก์ดาวน์โหลดปกติ
+    let dl = null;
+    try { if (window.claude?.use) dl = await Promise.race([window.claude.use("downloads"), new Promise(r => setTimeout(() => r(null), 1500))]); } catch {}
+    if (dl) { try { await dl.save({ filename, data }); return "saved"; } catch (e) { if (e?.code === "declined") return "declined"; } }
+    const blob = data instanceof Blob ? data : new Blob([data], { type: filename.endsWith(".csv") ? "text/csv;charset=utf-8" : "application/octet-stream" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: filename });
+    document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    return "saved";
+  }
+  let xlsxP = null;
+  const loadXlsx = () => xlsxP ||= new Promise((ok, no) => {
+    if (window.XLSX) return ok(window.XLSX);
+    const s = Object.assign(document.createElement("script"), { src: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js", onload: () => ok(window.XLSX), onerror: () => { xlsxP = null; no(new Error("โหลดตัวสร้าง Excel ไม่สำเร็จ")); } });
+    document.head.append(s);
+  });
+
+  async function download(what) {
+    const ds = DS.find(d => d.id === st.ds), f = st.f, { cols, rows } = ds.build(f), msg = document.getElementById("dsMsg");
+    msg.textContent = "กำลังเตรียมไฟล์…";
+    try {
+      let r;
+      if (what === "dict") r = await save(`pm25_r7_${ds.id}_คำอธิบายตัวแปร.csv`, toCsv(["column", "description", "unit"], dict(cols).map(([c, d, u]) => ({ column: c, description: d, unit: u }))));
+      else if (st.fmt === "csv") r = await save(fname(ds, f, "csv"), toCsv(cols, rows));
+      else {
+        const X = await loadXlsx(), wb = X.utils.book_new();
+        X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([cols, ...rows.map(r => cols.map(c => r[c] ?? null))]), "ข้อมูล");
+        X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["คอลัมน์", "คำอธิบาย", "หน่วย"], ...dict(cols)]), "คำอธิบายตัวแปร");
+        X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["หัวข้อ", "รายละเอียด"], ...meta(ds, f, rows.length)]), "อ่านก่อน");
+        r = await save(fname(ds, f, "xlsx"), new Blob([X.write(wb, { bookType: "xlsx", type: "array" })]));
+      }
+      msg.textContent = r === "declined" ? "ยกเลิกการดาวน์โหลด" : "✓ ดาวน์โหลดแล้ว";
+    } catch (e) { msg.textContent = "ดาวน์โหลดไม่สำเร็จ: " + (e.message || e.code || e); }
+  }
+
+  // ── หน้าจอ ────────────────────────────────────────────────────────
+  const ico = id => `<svg class="ico"><use href="#${id}"/></svg>`;
+  function filtersHtml(ds) {
+    const f = st.f, wkOpt = sel => Array.from({ length: wkMax() }, (_, i) => `<option value="${i + 1}"${i + 1 === sel ? " selected" : ""}>สัปดาห์ที่ ${i + 1} (${epiRange(2026, i + 1)})</option>`).join(""), [a, b] = pmRange();
+    const h = [];
+    if (ds.filters.includes("pv")) h.push(`<fieldset class="ds-f"><legend>พื้นที่</legend><div class="ds-chips">${PROV.map(p => `<label class="ds-chip"><input type="checkbox" data-k="pv" value="${p.name}"${f.pv.includes(p.name) ? " checked" : ""}><span>${p.name}</span></label>`).join("")}</div></fieldset>`);
+    if (ds.filters.includes("weeks")) h.push(`<fieldset class="ds-f"><legend>ช่วงสัปดาห์ระบาดวิทยา ปี 2569</legend><div class="ds-row"><label>ตั้งแต่<select data-k="w0">${wkOpt(f.w0)}</select></label><label>ถึง<select data-k="w1">${wkOpt(f.w1)}</select></label></div><p class="ds-hint">สัปดาห์ที่ ${prelimFrom()}–${wkMax()} เป็นข้อมูลเบื้องต้น (คอลัมน์ preliminary = 1)</p></fieldset>`);
+    if (ds.filters.includes("dates")) h.push(`<fieldset class="ds-f"><legend>ช่วงวันที่</legend><div class="ds-row"><label>ตั้งแต่<input type="date" data-k="d0" value="${f.d0}" min="${a}" max="${b}"></label><label>ถึง<input type="date" data-k="d1" value="${f.d1}" min="${a}" max="${b}"></label></div><p class="ds-hint">มีข้อมูล ${a ? thD(a) : "-"} – ${b ? thD(b) : "-"}</p></fieldset>`);
+    if (ds.filters.includes("groups")) h.push(`<fieldset class="ds-f"><legend>กลุ่มโรค</legend><div class="ds-chips">${GK.map(k => `<label class="ds-chip"><input type="checkbox" data-k="groups" value="${k}"${f.groups.includes(k) ? " checked" : ""}><span>${GLABEL[k]}</span></label>`).join("")}</div></fieldset>`);
+    if (ds.filters.includes("table")) h.push(`<fieldset class="ds-f"><legend>นับผู้ป่วยแบบไหน</legend><div class="ds-seg">
+      <label><input type="radio" name="dsTb" data-k="table" value="s2"${f.table === "s2" ? " checked" : ""}><span><b>ผู้อยู่จริงในจังหวัด</b><small>Type area 1+3 · มีอัตราต่อแสน</small></span></label>
+      <label><input type="radio" name="dsTb" data-k="table" value="s1"${f.table === "s1" ? " checked" : ""}><span><b>ทุกคนที่มารับบริการ</b><small>ทุก Type area · ดูภาระงาน</small></span></label></div></fieldset>`);
+    return h.join("");
+  }
+  function render() {
+    const el = document.getElementById("dsBody"); if (!el) return;
+    const ds = DS.find(d => d.id === st.ds), f = st.f;
+    const ok = !ds.soon && f.pv?.length && (!ds.filters.includes("groups") || f.groups.length) && (!ds.filters.includes("weeks") || f.w0 <= f.w1) && (!ds.filters.includes("dates") || f.d0 <= f.d1);
+    const out = ok ? ds.build(f) : { cols: [], rows: [] }, csv = ok ? toCsv(out.cols, out.rows) : "";
+    const kb = new Blob([csv]).size / 1024;
+    // ไล่หัวข้อเป็นขั้น 1 → 2 → 3 ในแนวตั้ง (stepper) · รายการที่เลือกเป็นแบบพื้นทึบ (filled)
+    el.innerHTML = `
+      <section class="ds-step"><div class="ds-sh"><span class="ds-n">1</span><h3>เลือกชุดข้อมูล</h3></div>
+        <div class="ds-pre" aria-label="ชุดสำเร็จรูป">${PRESETS.map(p => `<button type="button" class="ds-pbtn" data-preset="${p.id}">${p.label}</button>`).join("")}</div>
+        <div class="ds-list" role="radiogroup" aria-label="ชุดข้อมูล">${DS.map(d => `
+          <button type="button" role="radio" aria-checked="${d.id === st.ds}" class="ds-card${d.id === st.ds ? " on" : ""}${d.soon ? " soon" : ""}" data-ds="${d.id}">
+            <span class="ds-ci">${ico(d.icon)}</span>
+            <span class="ds-ct"><b>${d.title}${d.star ? ` <em class="ds-star">แนะนำ</em>` : ""}${d.soon ? ` <em class="ds-soon">เร็วๆ นี้</em>` : ""}</b>
+              <small>${d.level} · ${d.freq}</small>${d.id === st.ds ? `<span>${d.desc}</span>` : ""}</span></button>`).join("")}</div></section>
+      <section class="ds-step"><div class="ds-sh"><span class="ds-n">2</span><h3>กรองข้อมูล</h3></div>
+        ${ds.soon ? `<p class="ds-empty">ชุดนี้กำลังเก็บข้อมูลย้อนหลัง เมื่อครบจะเลือกจังหวัด อำเภอ และช่วงวันที่ได้ที่นี่</p>` : filtersHtml(ds)}
+        ${ds.soon ? "" : `<p class="ds-note">${esc(ds.note(f))}</p>`}</section>
+      <section class="ds-step ds-last"><div class="ds-sh"><span class="ds-n">3</span><h3>ตรวจแล้วดาวน์โหลด</h3></div>
+        ${ok ? `<div class="ds-stat" aria-live="polite"><span><b class="num">${fmt(out.rows.length)}</b>แถว</span><span><b class="num">${out.cols.length}</b>คอลัมน์</span><span><b class="num">${kb < 1024 ? Math.max(1, Math.round(kb)) + " KB" : (kb / 1024).toFixed(1) + " MB"}</b>ขนาด CSV</span></div>
+        <details class="ds-pv"><summary>ดูตัวอย่าง 8 แถวแรก</summary>
+          <div class="ds-prev" tabindex="0"><table><thead><tr>${out.cols.map(c => `<th title="${esc(COL[c]?.[0] || "")}">${c}</th>`).join("")}</tr></thead>
+          <tbody>${out.rows.slice(0, 8).map(r => `<tr>${out.cols.map(c => `<td>${esc(r[c] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+          <p class="ds-hint">ชี้ที่ชื่อคอลัมน์เพื่อดูความหมาย</p></details>
+        <div class="ds-fmt" role="radiogroup" aria-label="รูปแบบไฟล์">
+          <label><input type="radio" name="dsFmt" value="csv"${st.fmt === "csv" ? " checked" : ""}><span><b>CSV</b><small>Excel/R/Stata · ภาษาไทยไม่เพี้ยน</small></span></label>
+          <label><input type="radio" name="dsFmt" value="xlsx"${st.fmt === "xlsx" ? " checked" : ""}><span><b>Excel</b><small>มีแผ่นอ่านก่อน + คำอธิบายตัวแปร</small></span></label></div>
+        <button type="button" class="ds-dl" id="dsGo">${ico("i-down")}ดาวน์โหลด ${st.fmt === "csv" ? "CSV" : "Excel"}</button>
+        ${st.fmt === "csv" ? `<button type="button" class="ds-sub" id="dsDict">คำอธิบายตัวแปร (CSV)</button>` : ""}<p id="dsMsg" class="ds-msg" aria-live="polite"></p>
+        <details class="ds-cite"><summary>วิธีอ้างอิงและลิงก์ถาวร</summary>
+          <p><b>อ้างอิง:</b> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${esc(ds.title)} [ชุดข้อมูล]. แดชบอร์ด PM2.5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(iso(new Date()))}.</p>
+          <p><b>ลิงก์ถาวร (Power Query/R):</b> <code>/api/dataset/${ds.id}.csv?pv=${f.pv.map(n => PROV.find(p => p.name === n).code).join(",")}${ds.filters.includes("weeks") ? `&wk=${f.w0}-${f.w1}` : ""}${ds.filters.includes("dates") ? `&from=${f.d0}&to=${f.d1}` : ""}</code> <em>(เปิดใช้เมื่อขึ้นเว็บจริง)</em></p></details>`
+        : `<p class="ds-empty">${ds.soon ? "ยังไม่เปิดให้ดาวน์โหลด" : "เลือกอย่างน้อย 1 จังหวัด 1 กลุ่มโรค และช่วงเวลาที่ถูกต้อง"}</p>`}</section>`;
+  }
+  function onChange(e) {
+    const t = e.target, k = t.dataset.k, f = st.f;
+    if (t.name === "dsFmt") { st.fmt = t.value; return render(); }
+    if (!k) return;
+    if (t.type === "checkbox") { const s = new Set(f[k]); t.checked ? s.add(t.value) : s.delete(t.value); f[k] = k === "pv" ? PROV.map(p => p.name).filter(n => s.has(n)) : GK.filter(g => s.has(g)); }
+    else f[k] = /^w[01]$/.test(k) ? +t.value : t.value;
+    render();
+  }
+  function onClick(e) {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.ds) return pick(b.dataset.ds);
+    if (b.dataset.preset) { const p = PRESETS.find(x => x.id === b.dataset.preset); return pick(p.ds, p.f()); }
+    if (b.id === "dsGo") return download("data");
+    if (b.id === "dsDict") return download("dict");
+  }
+  // ── ทางเข้า: ส่วน "ดาวน์โหลดข้อมูล" ท้ายแดชบอร์ด (#zData) — แทนแผงข้างซ้ายเดิม ────────────────
+  // ทางลัดจากการ์ดกราฟ: <button class="ds-jump" data-preset="…"> → เลือกชุดไว้ แล้วเลื่อนลงไปที่ส่วนดาวน์โหลด
+  document.addEventListener("click", e => {
+    const j = e.target.closest(".ds-jump"); if (!j) return;
+    const p = PRESETS.find(x => x.id === j.dataset.preset); if (p) pick(p.ds, p.f());
+    document.getElementById("zData")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  window.dsInit = function () {
+    if (!document.getElementById("dsBody")) return;
+    const el = document.getElementById("dsBody"); if (el.dataset.on) return render();
+    el.dataset.on = 1; el.addEventListener("change", onChange); el.addEventListener("click", onClick);
+    pick("analysis");
+  };
+})();
+
+renderDisease = (f => function () { f.apply(this, arguments); window.dsInit && dsInit(); })(renderDisease);
 function renderDisease() {
   const dz = S.dz; if (!dz) { document.getElementById("dz").innerHTML = `<p class="muted">ดึงข้อมูลโรคไม่ได้</p>`; return; }
   const wkMax = dz.meta?.reportWeek || Math.max(...(dz[2026] || []).map(r => +r.wk)) - 1;
@@ -1855,7 +2797,7 @@ function renderDisease() {
     const a = monthly(dz[2025], d.key, 53, 2025), b = monthly(dz[2026], d.key, wkMax, 2026);
     const t26 = b.reduce((s, x) => s + (x || 0), 0), t25 = monthly(dz[2025], d.key, wkMax, 2025).reduce((s, x) => s + (x || 0), 0);
     const pct = t25 ? (t26 - t25) / t25 * 100 : 0; S.dzTot.push({ ...d, t26, pct }); S.dzData.push({ d, a, b, t26, t25, pct });
-    if (di === 0) return dzMonthAll(dz, wkMax) + (window.DZPV?.ok ? dzPvAll(wkMax) : pvWait());
+    if (di === 0) return dzMonthAll(dz, wkMax) + (window.DZPV?.ok ? e2xBlock(wkMax) : pvWait());
     if (di > 0) return "";
     const W = 560, H = 190, g = dzBars(d, a, b, W, H, 10.5);
     return `<article class="card dz" style="--dsoft:${d.soft};--dc:${d.c}">
@@ -1950,7 +2892,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === S.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === S.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
   const foot = `<div class="ig-f"><span>แหล่งข้อมูล: Air4Thai · GISTDA · HDC กระทรวงสาธารณสุข<br><b>ดูข้อมูลล่าสุด: apps-odpc7.ddc.moph.go.th/pm25</b></span><span style="text-align:right">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น<br>กรมควบคุมโรค</span></div>`;
   const maxP = PROV.map(p => ({ p, v: S.todayRow?.[p.name] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)[0];
-  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC</span><b>${PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
+  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC</span><b>${pheocLabel("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")}</b></span></div>
     <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม.</span><b>${S.hsToday.length} จุด</b></span></div>
     <div><span class="fi" style="background:var(--lv-soft);color:var(--lv-ink)">${inl("i-pin", 26)}</span><span><span class="k">สูงสุดวันนี้</span><b>${maxP ? maxP.p.name + " " + f1(maxP.v) : "–"}</b></span></div></div>`;
   if (size === "social") {
@@ -2054,7 +2996,7 @@ async function showProvinceCard(pvName, btn) {
     document.getElementById("mTitle").textContent = `ภาพสถานการณ์ฝุ่น จ.${pvName}`;
     document.getElementById("mImg").src = url; document.getElementById("mImg").alt = `ภาพสถานการณ์ฝุ่น PM2.5 จังหวัด${pvName}`;
     const a = document.getElementById("mDl"); a.href = url; a.download = `PM25-${pvName}-${S.todayRow?.date || "today"}.png`;
-    document.getElementById("mHint").textContent = `ขนาด 1080×1080 px สำหรับโพสต์ · ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จาก Air4Thai · บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ"`;
+    document.getElementById("mHint").textContent = `ขนาด 1080×1080 px สำหรับโพสต์ · ค่าเฉลี่ย 24 ชม. ณ 15.00 น. จาก Air4Thai · บนมือถือ: กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ"`;
     document.getElementById("modal").classList.add("on"); document.getElementById("mClose").focus();
   } catch (err) { alert("สร้างภาพไม่สำเร็จ: " + err.message); }
   finally { btn.disabled = false; btn.innerHTML = old; }

@@ -17,6 +17,12 @@
  *   5. PHEOC ใช้ค่า 07:00 จาก Air4Thai history ถึง 75.1 ติดกัน 2 วัน
  *      (เดิมเทียบแถวสุดท้ายในชีต = ค่า ณ เวลาที่รัน ซึ่งเป็นบ่าย ไม่ใช่เช้า)
  *   6. เขียนทับแถวของวันนี้แทนการ appendRow ซ้ำทุกรอบ
+ *
+ * แก้ 16/10/2026:
+ *   7. ค่า 07:00 ที่ใช้ตัดสิน PHEOC = "ค่าเฉลี่ย 24 ชม. ที่สิ้นสุด 07:00" (เดิมใช้ค่ารายชั่วโมง 07:00 ชั่วโมงเดียว)
+ *      คำนวณจากค่ารายชั่วโมง 08:00 เมื่อวาน – 07:00 วันนี้ ต้องมีอย่างน้อย 18/24 ชม. · สลับกลับได้ที่ PHEOC_VALUE
+ *      หน้าเว็บ (/api/pheoc ใน server.js) ใช้เกณฑ์เดียวกันจาก config.json → pheoc
+ *   8. บันทึกค่า 07:00 ลงแท็บ PM25_07 ทุกรอบ (แยกจาก PM25_History ที่เป็นค่ารอบบ่าย ≈15:00)
  */
 
 // ── ค่าที่ไม่เป็นความลับ ───────────────────────────────────────────────
@@ -36,6 +42,9 @@ const TARGET_STATIONS = [
 const PHEOC_THRESHOLD = 75.1;   // µg/m³ — "ถึง 75.1 ขึ้นไป" = แถบสีแดงตามเกณฑ์ไทย
 const PHEOC_HOUR      = '07';   // ชั่วโมงที่ใช้ตัดสิน (24 ชม.)
 const AIR4THAI_HISTORY = 'https://air4thai.pcd.go.th/forweb/getHistoryData.php';
+const PHEOC_VALUE     = 'avg24'; // 'avg24' = เฉลี่ย 24 ชม. สิ้นสุด 07:00 · 'hour' = ค่ารายชั่วโมง 07:00 (แบบเดิม) — ต้องตรงกับ config.json → pheoc.value
+const PHEOC_MIN_HOURS = 18;      // avg24 ต้องมีค่าอย่างน้อย 18 จาก 24 ชั่วโมง ไม่ถึง = ถือว่าไม่มีข้อมูลวันนั้น
+const SHEET_07        = 'PM25_07';
 
 /**
  * อ่านค่าลับจาก Script Properties — โยน error ถ้ายังไม่ตั้ง จะได้รู้ทันที ไม่ใช่เงียบ
@@ -323,7 +332,7 @@ function testReportDryRun() {
   // เช็ค PHEOC ได้จริงใน dry run — ตอนนี้มันแค่อ่าน API ไม่เขียนชีต
   // ส่วน recordHistory ยังข้ามอยู่ เพราะอันนั้นเขียนข้อมูลจริง
   Logger.log('── เกณฑ์ PHEOC (ค่า 07:00 ถึง ' + PHEOC_THRESHOLD + ' ติดกัน 2 วัน) ──');
-  const pheocStatus = { provinces: checkPheoc07_() };
+  const pheocStatus = { provinces: checkPheoc07_(true) };
   Logger.log('  สรุป : ' + (pheocStatus.provinces.length
     ? '⚠️ เข้าเกณฑ์ ' + pheocStatus.provinces.join(', ')
     : '🟢 ไม่มีจังหวัดเข้าเกณฑ์'));
@@ -613,25 +622,29 @@ function recordHistoryAndCheckPHEOC(airData) {
 }
 
 /**
- * ดึงค่า PM2.5 เวลา 07:00 ของทุกสถานีเป้าหมาย ย้อนหลัง (days) วันนับรวมวันนี้
+ * ค่า PM2.5 "ณ 07:00" ของทุกสถานีเป้าหมาย ย้อนหลัง (days) วันนับรวมวันนี้
+ *   PHEOC_VALUE = 'avg24' → เฉลี่ย 24 ชม. ที่สิ้นสุด 07:00 (08:00 เมื่อวาน – 07:00 วันนี้)
+ *   PHEOC_VALUE = 'hour'  → ค่ารายชั่วโมง 07:00 ชั่วโมงเดียว
  *
  * ขอทุกสถานีในคำขอเดียว (stationID คั่นด้วยจุลภาค) — ยิงครั้งเดียวพอ
  * ⚠️ stime/etime ของ API นี้ "ไม่ได้" กรองเฉพาะชั่วโมงที่ระบุ แต่คืนทุกชั่วโมง
- *    ตั้งแต่ sdate เวลา stime ถึง edate เวลา etime จึงต้องกรอง 07:00:00 เอง
  * ⚠️ ค่าที่คืนมามี null ปนได้ (ชั่วโมงที่สถานีไม่ส่งข้อมูล)
+ * ⚠️ API นี้เก็บย้อนหลังได้ราว 2–3 เดือนเท่านั้น (ตรวจ 16/10/2026: เริ่มที่ 1/8/2026)
  *
- * คืน { '46t': { '2026-08-17': 14.8, '2026-08-18': 11.5 }, ... }
+ * คืน { '46t': { '2026-08-17': { v: 14.8, n: 24 }, ... }, ... }
  */
 function fetch07Values_(days) {
   const out = {};
   const today = new Date();
-  const from  = new Date(today.getTime() - (days - 1) * 86400000);
   const fmt   = d => Utilities.formatDate(d, 'GMT+7', 'yyyy-MM-dd');
+  const dates = [];
+  for (let i = days - 1; i >= 0; i--) dates.push(fmt(new Date(today.getTime() - i * 86400000)));
+  const from  = fmt(new Date(today.getTime() - days * 86400000));   // เผื่อเมื่อวานของวันแรก (avg24)
 
   const url = AIR4THAI_HISTORY +
     '?stationID=' + TARGET_STATIONS.map(s => s.id).join(',') +
     '&param=PM25&type=hr' +
-    '&sdate=' + fmt(from) + '&edate=' + fmt(today) +
+    '&sdate=' + from + '&edate=' + dates[dates.length - 1] +
     '&stime=00&etime=23';
 
   let res;
@@ -653,18 +666,56 @@ function fetch07Values_(days) {
   }
 
   (json.stations || []).forEach(st => {
-    const byDate = {};
+    const byHour = {};
     (st.data || []).forEach(row => {
       const dt = String(row.DATETIMEDATA || '');          // 'yyyy-MM-dd HH:mm:ss'
-      const hh = dt.slice(11, 13);
-      if (hh !== PHEOC_HOUR) return;
-      const v = row.PM25;
-      if (typeof v === 'number' && !isNaN(v)) byDate[dt.slice(0, 10)] = v;
+      const v = typeof row.PM25 === 'number' ? row.PM25 : parseFloat(row.PM25);
+      if (!isNaN(v) && v >= 0) byHour[dt.slice(0, 13)] = v;   // key 'yyyy-MM-dd HH'
     });
-    out[st.stationID] = byDate;
+    const byDate = {};
+    dates.forEach(d => { const c = value07_(byHour, d); if (c.v !== null) byDate[d] = c; });
+    out[String(st.stationID).toLowerCase()] = byDate;
   });
 
   return out;
+}
+
+/** ค่า ณ 07:00 ของวันที่ d จากค่ารายชั่วโมง → { v, n } (v = null เมื่อข้อมูลไม่พอ) */
+function value07_(byHour, d) {
+  const h7 = parseInt(PHEOC_HOUR, 10);
+  if (PHEOC_VALUE === 'hour') { const v = byHour[d + ' ' + PHEOC_HOUR]; return { v: typeof v === 'number' ? v : null, n: typeof v === 'number' ? 1 : 0 }; }
+  const prev = Utilities.formatDate(new Date(new Date(d + 'T12:00:00+07:00').getTime() - 86400000), 'GMT+7', 'yyyy-MM-dd');
+  const keys = [];
+  for (let h = h7 + 1; h <= 23; h++) keys.push(prev + ' ' + ('0' + h).slice(-2));
+  for (let h = 0; h <= h7; h++) keys.push(d + ' ' + ('0' + h).slice(-2));
+  const v = keys.map(k => byHour[k]).filter(x => typeof x === 'number');
+  if (v.length < PHEOC_MIN_HOURS) return { v: null, n: v.length };
+  return { v: Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10, n: v.length };
+}
+
+/** บันทึกค่า ณ 07:00 ลงแท็บ PM25_07 (เขียนทับแถวของวันเดิม · คอลัมน์เรียงตาม TARGET_STATIONS) */
+function record07Rows_(hist) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sh = ss.getSheetByName(SHEET_07);
+    if (!sh) {
+      sh = ss.insertSheet(SHEET_07);
+      sh.appendRow(['time'].concat(TARGET_STATIONS.map(s => s.name)).concat(['หมายเหตุ']));
+    }
+    const dates = {};
+    TARGET_STATIONS.forEach(st => Object.keys(hist[st.id.toLowerCase()] || {}).forEach(d => dates[d] = true));
+    const last = sh.getLastRow();
+    const col = last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues().map(r => normDate_(r[0])) : [];
+    Object.keys(dates).sort().forEach(d => {
+      const row = [d].concat(TARGET_STATIONS.map(st => { const c = (hist[st.id.toLowerCase()] || {})[d]; return c ? c.v : ''; }))
+                     .concat([PHEOC_VALUE === 'avg24' ? 'เฉลี่ย 24 ชม. สิ้นสุด 07:00 · Air4Thai' : 'ค่ารายชั่วโมง 07:00 · Air4Thai']);
+      const i = col.lastIndexOf(d);
+      if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]);
+      else { sh.appendRow(row); col.push(d); }
+    });
+  } catch (e) {
+    console.log('❌ บันทึก ' + SHEET_07 + ' ไม่สำเร็จ: ' + e.message);
+  }
 }
 
 /**
@@ -674,16 +725,17 @@ function fetch07Values_(days) {
  * วันไหนไม่มีค่า 07:00 ถือว่า "ไม่เข้าเกณฑ์" โดยตั้งใจ — ไม่เดาแทนข้อมูลที่ขาด
  * เพราะการประกาศเปิด PHEOC ผิดพลาดมีต้นทุนสูงกว่าการไม่ประกาศ
  */
-function checkPheoc07_() {
+function checkPheoc07_(dryRun) {
   const hist = fetch07Values_(2);
+  if (!dryRun) record07Rows_(hist);   // dry run ไม่เขียนชีต
   const today = new Date();
   const d1 = Utilities.formatDate(today, 'GMT+7', 'yyyy-MM-dd');                        // วันนี้
   const d0 = Utilities.formatDate(new Date(today.getTime() - 86400000), 'GMT+7', 'yyyy-MM-dd'); // เมื่อวาน
 
   const hit = [];
   TARGET_STATIONS.forEach(st => {
-    const byDate = hist[st.id] || {};
-    const y = byDate[d0], t = byDate[d1];
+    const byDate = hist[st.id.toLowerCase()] || {};
+    const y = byDate[d0] ? byDate[d0].v : undefined, t = byDate[d1] ? byDate[d1].v : undefined;
     const ok = typeof y === 'number' && typeof t === 'number' &&
                y >= PHEOC_THRESHOLD && t >= PHEOC_THRESHOLD;
     console.log('  PHEOC ' + st.name + ' 07:00 → ' + d0 + ': ' + fmtVal_(y) +

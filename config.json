@@ -9,25 +9,29 @@
       "name": "ขอนแก่น",
       "pv_idn": 40,
       "sheet_col": 1,
-      "color": "#e74c3c"
+      "color": "#e74c3c",
+      "air4thai_station": "46t"
     },
     {
       "name": "มหาสารคาม",
       "pv_idn": 44,
       "sheet_col": 2,
-      "color": "#bd2eff"
+      "color": "#bd2eff",
+      "air4thai_station": "114t"
     },
     {
       "name": "ร้อยเอ็ด",
       "pv_idn": 45,
       "sheet_col": 3,
-      "color": "#2980b9"
+      "color": "#2980b9",
+      "air4thai_station": "113t"
     },
     {
       "name": "กาฬสินธุ์",
       "pv_idn": 46,
       "sheet_col": 4,
-      "color": "#27ae60"
+      "color": "#27ae60",
+      "air4thai_station": "107t"
     }
   ],
   "population": {
@@ -54,5 +58,13 @@
         "กาฬสินธุ์": 743710
       }
     }
+  },
+  "pheoc": {
+    "threshold": 75.1,
+    "hour": 7,
+    "days": 2,
+    "value": "avg24",
+    "min_hours": 18,
+    "note": "เกณฑ์เดียวกับ tools/line_report.gs — ค่าเฉลี่ย 24 ชม. ณ 07:00 น. ถึง threshold ติดกัน days วัน · value: avg24 = เฉลี่ย 24 ชม. ที่สิ้นสุด 07:00 | hour = ค่ารายชั่วโมง 07:00"
   }
 }
