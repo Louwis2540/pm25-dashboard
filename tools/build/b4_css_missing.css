@@ -1,0 +1,214 @@
+#ig .pm-tag sub,#ig .pm sub{font-size:.7em;vertical-align:-.25em;line-height:0}
+#ig .pvs .me,#ig .pvrow .me{outline:4px solid var(--lv-ink);outline-offset:-1px}
+#ig .facts3 .k{display:block}
+#ig .dzg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#ig .dzg2>div{border:1px solid var(--line);border-radius:16px;padding:8px 14px 2px}
+#ig .dzg2 .dh .dz-icon{width:34px;height:34px;border-radius:10px}
+#ig .dzg2 .dh .nm{font-size:calc(17px*var(--fs,1))}
+#ig .dzl{display:block;font-size:calc(13.5px*var(--fs,1));margin-top:-4px}
+#ig .fc3{width:100%;border-collapse:separate;border-spacing:4px;font-size:calc(16px*var(--fs,1));margin-top:4px}
+#ig .fc3 th{font-size:calc(14px*var(--fs,1));font-weight:600;color:var(--ink-2);text-align:center;line-height:1.2}
+#ig .fc3 th small{display:block;font-size:calc(12px*var(--fs,1));color:var(--ink-3)}
+#ig .fc3 td{text-align:center;border-radius:8px;padding:5px 4px;font-weight:700}
+#ig .fc3 td:first-child{text-align:left;font-weight:600;padding-left:2px}
+#ig .fc3 tr.me td:first-child{color:var(--lv-ink);font-weight:800}
+#ig .fc3 tr.me td:not(:first-child){outline:3px solid var(--ink-1);outline-offset:-2px}
+#ig .ig-note{font-size:calc(14px*var(--fs,1));color:var(--ink-3)}
+#ig .lvleg{display:flex;gap:6px;flex-wrap:wrap}
+#ig .kpis{display:grid;grid-template-rows:repeat(3,auto);gap:8px;align-content:space-between}
+#ig .kpis.kpis-h{grid-template-rows:none;grid-template-columns:1.3fr 1fr 1fr}
+#ig .kpis .k{white-space:nowrap}
+#ig .pvrow4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+/* อินโฟกราฟิก: html2canvas วาด inset shadow / radial-gradient ไม่ถูก → ใช้ชั้นแบบ linear + เงาด้านนอก ให้ได้ลุคกระจกใกล้เคียงแดชบอร์ด */
+#ig .igt .tiles{background:linear-gradient(120deg,rgba(116,192,252,.35),rgba(177,151,252,.28) 35%,rgba(255,192,120,.32) 68%,rgba(140,233,154,.32))!important}
+#ig .igt .tile{
+  background:linear-gradient(155deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.45) 28%,rgba(255,255,255,.05) 52%,rgba(255,255,255,0) 70%),
+    linear-gradient(0deg,color-mix(in srgb,var(--tc,#ccc) 30%,transparent) 0%,transparent 42%),
+    color-mix(in srgb,var(--tint,#fff) 70%,#fff)!important;
+  border:2px solid rgba(255,255,255,.95)!important;
+  box-shadow:0 2px 6px rgba(15,27,45,.08),0 16px 28px -12px color-mix(in srgb,var(--tc,#ccc) 60%,transparent)!important}
+#ig .igt .tile .ring{background:rgba(255,255,255,.62);box-shadow:0 10px 18px -10px color-mix(in srgb,var(--tc,#ccc) 75%,transparent)}
+#ig .maxbar{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,var(--lv-soft),var(--lv-tint));border:2px solid var(--lv);border-left:10px solid var(--lv);border-radius:14px;padding:2px 18px}
+#ig .maxbar .mk{display:flex;align-items:center;gap:6px;font-size:calc(17px*var(--fs,1));font-weight:700;color:var(--ink-2)}
+#ig .maxbar .mp{font-family:Anuphan;font-size:calc(26px*var(--fs,1));font-weight:700;color:var(--lv-ink);line-height:1.2}
+#ig .maxbar .mv{font-family:Anuphan;font-size:calc(30px*var(--fs,1));font-weight:700;color:var(--ink-1)}
+#ig .maxbar .mv small{font-size:calc(16px*var(--fs,1));color:var(--ink-3)}
+#ig .maxbar .ml{margin-left:auto;font-family:Anuphan;font-size:calc(22px*var(--fs,1));font-weight:700;color:#fff;background:var(--lv-ink);border-radius:999px;padding:2px 16px}
+#ig .igt>.tiles{width:1360px;transform-origin:0 0}
+#ig .ig-date .kl{font-size:calc(15px*var(--fs,1));color:var(--ink-1)}
+#ig .ig-date .kl b{color:var(--lv-ink)}
+#ig .igt .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px}
+#ig .ig-date b{font-weight:700}
+#ig .igt .tile{background:linear-gradient(170deg,color-mix(in srgb,var(--tint,#fff) 45%,#fff),var(--tint,#fff));border:1px solid color-mix(in srgb,var(--tc,#ccc) 30%,#fff);border-radius:18px;cursor:default;transform:none!important}
+#ig .igt .tile.mx{outline:4px solid var(--tc);outline-offset:-2px}
+#ig .kpis.kpis-h>div{padding:3px 12px}
+#ig .pvrow4>div{position:relative;border:1px solid var(--line);border-radius:16px;padding:12px 10px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+#ig .pvrow4>div.mx{outline:4px solid var(--lv-ink);outline-offset:-2px}
+#ig .pvrow4 .mxb{position:absolute;top:-2px;right:10px;background:var(--lv-ink);color:#fff;font-size:calc(13px*var(--fs,1));font-weight:700;border-radius:0 0 8px 8px;padding:1px 9px}
+#ig .pvrow4 .pn{font-family:Anuphan;font-size:calc(26px*var(--fs,1));font-weight:700;color:var(--ink-1);line-height:1.2}
+#ig .pvrow4 .x{font-family:Anuphan;font-size:calc(46px*var(--fs,1));font-weight:700;line-height:1.1;white-space:nowrap}
+#ig .pvrow4 .x small{font-size:calc(16px*var(--fs,1));color:var(--ink-3)}
+#ig .pvrow4 .x .pm{font-style:normal;font-family:"IBM Plex Sans Thai";font-size:calc(14px*var(--fs,1));font-weight:700;color:#fff;border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:middle;position:relative;top:-6px}
+#ig .pvrow4 .chip{font-size:calc(15px*var(--fs,1));font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
+#ig .kpis>div{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:4px 14px;background:var(--subtle)}
+#ig .kpis .fi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+#ig .kpis .k{display:block;font-size:calc(16px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+#ig .kpis b{font-family:Anuphan;font-size:calc(22px*var(--fs,1));display:block;line-height:1.2}
+#ig .kpis small{display:block;font-size:calc(16px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+#ig:not(.social) .ig-note{font-size:calc(16px*var(--fs,1))}
+#ig:not(.social) .lvleg{display:grid;grid-template-columns:repeat(5,auto);gap:5px}
+#ig:not(.social) .lvleg span{font-size:calc(15px*var(--fs,1));padding:3px 8px 3px 5px;white-space:nowrap;gap:5px}
+#ig:not(.social) .lvleg b{font-size:calc(16px*var(--fs,1))}
+#ig:not(.social) .t7{font-size:calc(16.5px*var(--fs,1))}
+#ig:not(.social) .t7 td{padding:2px 5px!important}
+#ig:not(.social) .fc3 td{padding:2px 4px}
+#ig:not(.social) .row1{grid-template-columns:520px 1fr}
+#ig:not(.social) .box h4 small{font-size:calc(15px*var(--fs,1))!important}
+#ig:not(.social) .dzl{font-size:calc(15px*var(--fs,1))}
+#ig:not(.social) .ig-f{font-size:calc(15px*var(--fs,1))}
+#ig:not(.social) .fc3{font-size:calc(17px*var(--fs,1))}
+#ig:not(.social) .fc3 th{font-size:calc(15px*var(--fs,1))}
+#ig .trd{display:flex;align-items:center;gap:4px;font-size:calc(14px*var(--fs,1));font-weight:700;color:var(--ink-2);margin-top:2px}
+#ig .s7{display:flex;gap:4px;justify-content:center;margin-top:8px}
+#ig .ig-date .today-b{font-family:Anuphan;font-weight:700;font-size:calc(26px*var(--fs,1));color:#fff;background:var(--lv-ink);border-radius:12px;padding:2px 16px;line-height:1.35}
+#ig:not(.social) .ig-date .today-b{font-size:calc(21px*var(--fs,1));padding:1px 12px}
+#ig .avg .k{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+#ig .avg .k .hp{font-family:Anuphan;font-weight:700;font-size:calc(30px*var(--fs,1));color:var(--lv-ink);line-height:1.2}
+#ig:not(.social) .avg .k .hp{font-size:calc(24px*var(--fs,1))}
+#ig.social .pvrow .n{font-family:Anuphan;font-size:calc(28px*var(--fs,1));font-weight:700;color:var(--ink-1);line-height:1.3}
+#ig .pvs .pn{font-family:Anuphan;font-size:calc(22px*var(--fs,1));font-weight:700;color:var(--ink-1)}
+#ig .pvs .chip{white-space:nowrap;font-size:calc(13px*var(--fs,1))!important}
+#ig .ig-date .d{white-space:nowrap}
+#ig:not(.social) .ig-date>span:last-child{text-align:right;font-size:calc(16px*var(--fs,1));line-height:1.3;white-space:nowrap}
+#ig .ig-date .ew{display:block;font-size:calc(14px*var(--fs,1));color:var(--ink-2);font-weight:600}
+#ig.social[data-dense] .avg .v{font-size:calc(80px*var(--fs,1))!important}
+#ig.social[data-dense="3"] .avg .wart{width:150px;height:110px}
+#ig.social .pvrow div{padding:8px 10px}
+#ig.social .pvrow .x{line-height:1.2}
+#ig.social .s7{margin-top:6px}
+#ig.social .avg{padding:8px 18px}
+#ig .s7 i{width:22px;height:16px;border-radius:4px}
+#ig .s7 i.td{outline:2.5px solid var(--ink-1);outline-offset:1px}
+#ig .s7k{display:block;font-size:calc(12.5px*var(--fs,1));color:var(--ink-3);margin-top:3px}
+#ig.social .ig-body{justify-content:space-between;padding-bottom:14px}
+#ig.social .avg{flex:1 1 auto}
+#ig.social[data-dense] .avg .v{font-size:calc(96px*var(--fs,1))!important}
+#ig.social .avg .l{font-size:calc(32px*var(--fs,1))}
+#ig .trd.up{color:#c2410c}
+#ig .trd.dn{color:#0e7a3a}
+#ig .ig-act{display:flex;align-items:center;gap:10px;background:#fff1e6;border:2px solid #fdba74;color:#9a3412;border-radius:14px;padding:8px 14px;font-size:calc(18px*var(--fs,1));font-weight:600}
+#ig:not(.social) .ig-act{padding:4px 12px;font-size:calc(16px*var(--fs,1))}
+#ig:not(.social) .ig-act b{font-size:calc(18px*var(--fs,1))}
+#ig .ig-act b{font-family:Anuphan;font-size:calc(20px*var(--fs,1))}
+#ig .ig-note b{color:var(--ink-1)}
+.modal .cap{display:flex;gap:10px;align-items:flex-start;padding:0 16px 12px}
+.modal .cap textarea{flex:1;min-height:96px;font:13px/1.5 "IBM Plex Sans Thai",sans-serif;border:1px solid var(--line-strong);border-radius:10px;padding:8px 10px;resize:vertical;color:var(--ink-1)}
+#ig .fcs{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:10px;align-items:stretch}
+#ig .fcs .t{display:flex;align-items:center;gap:8px;font-family:Anuphan;font-weight:700;font-size:calc(20px*var(--fs,1));color:var(--lv-ink);padding-right:4px}
+#ig .fcs .c{border:3px solid;border-radius:14px;padding:6px 12px;display:flex;flex-direction:column;line-height:1.25}
+#ig .fcs .c small{font-size:calc(15px*var(--fs,1));font-weight:600}
+#ig .fcs .c b{font-family:Anuphan;font-size:calc(21px*var(--fs,1))}
+#ig .lvleg span{display:flex;align-items:center;gap:6px;border-radius:999px;padding:3px 12px 3px 6px;font-size:calc(14px*var(--fs,1));border:2px solid transparent}
+#ig .lvleg span.cur{border-color:var(--ink-1)}
+#ig .lvleg i{width:14px;height:14px;border-radius:50%}
+#ig .lvleg b{font-family:Anuphan;font-size:calc(15px*var(--fs,1))}
+#ig:not(.social) .avg .l{font-size:calc(28px*var(--fs,1))}
+#ig:not(.social) .avg .k{font-size:calc(17px*var(--fs,1))}
+#ig:not(.social) .facts3 div{padding:8px 14px}
+#ig:not(.social) .facts3 b{font-size:calc(20px*var(--fs,1))}
+#ig:not(.social) .facts3 .fi{width:40px;height:40px}
+#ig .fc3 td{padding:3px 4px}
+#ig[data-dense="2"] .facts3 .k,#ig[data-dense="3"] .facts3 .k{font-size:calc(13px*var(--fs,1))}
+#ig[data-dense="3"]:not(.social) .ig-body{gap:4px}
+#ig[data-dense="3"]:not(.social) .advice .w{padding:6px 14px;gap:5px}
+#ig[data-dense="3"]:not(.social) .advice .w h4{margin:0}
+#ig:not(.social) .advice{grid-template-columns:150px 1fr 1fr}
+#ig:not(.social) .advice .lv b{font-size:calc(24px*var(--fs,1))!important}
+#ig:not(.social) .advice .lv .f{font-size:calc(40px*var(--fs,1))}
+#ig[data-dense="3"]:not(.social) .facts3 div{padding:4px 12px}
+#ig[data-dense="3"]:not(.social) .facts3 .fi{width:34px;height:34px}
+#ig[data-dense="3"]:not(.social) .facts3 b{font-size:calc(18px*var(--fs,1))}
+#ig[data-dense="3"] .dzg2>div{padding:4px 12px 0}
+#ig[data-dense="3"] .dzg2{gap:8px}
+#ig[data-dense="3"] .ig-date{padding:6px 44px}
+#ig[data-dense="3"] .ig-f{padding:8px 44px}
+#ig .ig-f{align-items:center;font-size:calc(13.5px*var(--fs,1));line-height:1.5}
+#ig .ig-f .qr{flex:none;display:block;line-height:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+#ig .ig-f b{color:var(--ink-1)}
+/* ================= iOS LOOK — อินโฟกราฟิก (html2canvas: ไม่มี blur/inset/radial → ใช้ linear + เงาด้านนอก) ================= */
+#ig{background:linear-gradient(165deg,var(--lv-tint) 0%,#f2f5fa 38%,#f4f1fa 70%,#eef6f2 100%)!important}
+#ig .ig-date{background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.35))!important;border-bottom:1px solid rgba(255,255,255,.9)}
+#ig .ig-date .today-b,#ig .ig-date em{border-radius:999px!important;background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--lv-ink)!important;box-shadow:0 4px 10px -4px var(--lv-ink)}
+/* การ์ด/กล่องทั้งหมด = กระจกขาวใส ขอบสว่าง เงานุ่ม มุม 22 */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .avg,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .maxbar,#ig .scale>div,#ig .fcs .c{
+  border-radius:22px!important;border:1.5px solid rgba(255,255,255,.95)!important;
+  box-shadow:0 1px 2px rgba(15,27,45,.05),0 10px 24px -12px rgba(15,27,45,.22)!important}
+#ig .box,#ig .kpis>div,#ig .facts3>div,#ig .pvrow>div{background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(255,255,255,.62) 45%,rgba(255,255,255,.5))!important}
+#ig .dzg2>div{background:linear-gradient(160deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.55) 40%,rgba(255,255,255,0) 70%),var(--dzs,#f3f6fa)!important}
+#ig .avg{background:linear-gradient(160deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.4) 40%,rgba(255,255,255,0) 70%),var(--lv-tint)!important;border:2px solid color-mix(in srgb,var(--lv) 45%,#fff)!important;box-shadow:0 14px 30px -14px var(--lv)!important}
+#ig .maxbar{background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.1) 60%),var(--lv-soft)!important;border-left:1.5px solid rgba(255,255,255,.95)!important;box-shadow:0 10px 24px -12px var(--lv)!important}
+#ig .maxbar .ml{background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--lv-ink)!important}
+/* หัวข้อส่วน = แคปซูลกระจกย้อมสีตามระดับ */
+#ig .ig-sec{border-radius:999px!important;padding:6px 18px 6px 7px!important;background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 55%),linear-gradient(100deg,var(--lv-ink),color-mix(in srgb,var(--lv) 75%,#fff))!important;box-shadow:0 10px 22px -12px var(--lv-ink)!important}
+#ig .ig-sec span{border-radius:999px!important}
+/* คำแนะนำ: แผงสีระดับเป็นกระจกย้อมสี · รายการเป็นแถวแบบ iOS list */
+#ig .advice{background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(255,255,255,.7))!important;border:2px solid color-mix(in srgb,var(--lv) 40%,#fff)!important}
+#ig .advice .lv{background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 45%),linear-gradient(160deg,var(--lv),var(--lv-ink))!important}
+#ig .do{border-radius:14px!important;background:linear-gradient(180deg,#fff,rgba(255,255,255,.7))!important;border:1px solid rgba(15,27,45,.06)!important;box-shadow:0 2px 6px -3px rgba(15,27,45,.18)!important}
+#ig .do span{border-radius:12px!important}
+/* ตาราง: ช่องสีโค้งมนมีประกายด้านบน */
+#ig .t7 td,#ig .fc3 td:not(:first-child){border-radius:10px!important;background-image:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 55%)!important}
+#ig .t7 td:first-child,#ig .fc3 td:first-child{background-image:none!important}
+/* เกณฑ์ระดับ: แคปซูล */
+#ig .lvleg span{border:1.5px solid rgba(255,255,255,.95)!important;box-shadow:0 4px 10px -6px rgba(15,27,45,.25)}
+#ig .ig-f{background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(255,255,255,.85))!important;border-top:1px solid rgba(255,255,255,.95)!important}
+#ig .ig-f .qr{border-radius:14px!important;box-shadow:0 6px 14px -8px rgba(15,27,45,.35)}
+/* อินโฟกราฟิก */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .scale>div,#ig .fcs .c{
+  box-shadow:0 0 0 1px rgba(15,27,45,.10),0 2px 4px rgba(15,27,45,.08),0 14px 28px -12px rgba(15,27,45,.30)!important}
+#ig .igt .tile{box-shadow:0 0 0 1px rgba(15,27,45,.10),0 2px 4px rgba(15,27,45,.08),0 16px 28px -12px color-mix(in srgb,var(--tc,#ccc) 75%,transparent)!important}
+#ig .avg{box-shadow:0 0 0 1px rgba(15,27,45,.08),0 2px 4px rgba(15,27,45,.08),0 16px 32px -14px var(--lv)!important}
+#ig .maxbar{box-shadow:0 0 0 1px rgba(15,27,45,.08),0 2px 4px rgba(15,27,45,.08),0 12px 24px -12px var(--lv)!important}
+#ig .ig-sec{box-shadow:0 2px 4px rgba(15,27,45,.14),0 12px 24px -10px var(--lv-ink)!important}
+#ig .do{box-shadow:0 0 0 1px rgba(15,27,45,.06),0 3px 8px -3px rgba(15,27,45,.22)!important}
+#ig .t7 td:not(:first-child),#ig .fc3 td:not(:first-child){box-shadow:0 0 0 1px rgba(15,27,45,.06),0 3px 6px -3px rgba(15,27,45,.35)}
+#ig .lvleg span{box-shadow:0 0 0 1px rgba(15,27,45,.07),0 4px 10px -5px rgba(15,27,45,.3)!important}
+/* html2canvas: เส้นขอบจริง (border) แสดงผลแน่นอนกว่าเงาแบบ spread */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .ig-act,#ig .scale>div,#ig .fcs .c,#ig .igt .tile{border:1.5px solid rgba(15,27,45,.13)!important;border-top-color:rgba(255,255,255,.95)!important}
+#ig .advice{border:2px solid color-mix(in srgb,var(--lv) 55%,#fff)!important}
+#ig .do{border:1px solid rgba(15,27,45,.10)!important}
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .ig-act,#ig .scale>div,#ig .fcs .c{box-shadow:0 2px 4px rgba(15,27,45,.12),0 16px 30px -12px rgba(15,27,45,.40)!important}
+#ig .igt .tile{box-shadow:0 2px 4px rgba(15,27,45,.12),0 18px 30px -12px color-mix(in srgb,var(--tc,#ccc) 90%,transparent)!important}
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .ig-act,#ig .scale>div,#ig .fcs .c,#ig .igt .tile{border-color:rgba(15,27,45,.17)!important;border-top-color:rgba(255,255,255,.95)!important}
+#ig .ig-sec{box-shadow:0 3px 6px rgba(15,27,45,.18),0 14px 26px -10px var(--lv-ink)!important}
+/* อินโฟกราฟิก: ใช้หลักเดียวกัน — การ์ดจังหวัด/ค่าสูงสุด เด่น · กล่องเนื้อหา เงากลาง · ช่องตารางและรายการคำแนะนำ แบน */
+#ig .box,#ig .dzg2>div,#ig .kpis>div,#ig .pvrow>div,#ig .facts3>div,#ig .advice,#ig .scale>div,#ig .fcs .c{box-shadow:0 1px 2px rgba(15,27,45,.08),0 10px 22px -12px rgba(15,27,45,.30)!important}
+#ig .igt .tile{box-shadow:0 2px 4px rgba(15,27,45,.12),0 18px 30px -12px color-mix(in srgb,var(--tc,#ccc) 90%,transparent)!important}
+#ig .t7 td:not(:first-child),#ig .fc3 td:not(:first-child){box-shadow:none!important;background-image:none!important}
+#ig .do{box-shadow:none!important;border:1px solid rgba(15,27,45,.08)!important}
+#ig .lvleg span{box-shadow:none!important;border:1px solid rgba(15,27,45,.08)!important}
+#ig .ig-act{box-shadow:none!important}
+/* ================= แผงดาวน์โหลด Infographic: ชัดเจน ไม่กลืนพื้นหลัง =================
+   หลัก: ช่องกรอกต้องมีขอบเขตมองเห็นได้ (ความต่างของขอบ ≥ 3:1 ตาม WCAG 1.4.11) + ป้ายชื่อช่องที่มองเห็น (ไม่ใช่ placeholder)
+   ปุ่มหลัก = สีทึบ ไม่ใช้กระจก (การกระทำหลักต้องเด่นและชัดที่สุด) */
+.hdr-in .meta .dl-panel{margin-left:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px;background:#fff;border:1.5px solid rgba(15,27,45,.16);border-radius:18px;padding:12px 14px;box-shadow:0 1px 2px rgba(15,27,45,.06),0 10px 24px -14px rgba(15,27,45,.28)}
+.dl-panel .dl-h{display:flex;align-items:center;gap:10px;margin-right:6px;align-self:center}
+.dl-panel .dl-i{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--brand);color:#fff;flex:none}
+.dl-panel .dl-h b{display:block;font-size:calc(15px*var(--fs,1));line-height:1.25;color:var(--ink-1)}
+.dl-panel .dl-h small{display:block;font-size:calc(12px*var(--fs,1));font-weight:600;color:var(--ink-2)}
+.dl-panel .dl-f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dl-panel .dl-f>span{font-size:calc(12px*var(--fs,1));font-weight:700;color:var(--ink-2);padding-left:4px}
+.dl-panel select.size{-webkit-appearance:none;appearance:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%232f3b4e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center!important;
+  border:1.5px solid #8a96a8!important;border-radius:12px!important;padding:9px 40px 9px 14px!important;font-size:calc(14.5px*var(--fs,1));font-weight:600;color:var(--ink-1);min-height:42px;box-shadow:0 1px 2px rgba(15,27,45,.06)!important;cursor:pointer;max-width:100%}
+.dl-panel select.size:hover{border-color:var(--ink-2)!important}
+.dl-panel select.size:focus-visible{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)!important}
+.dl-panel .dl-go{min-height:42px;padding:9px 18px!important;font-size:calc(15px*var(--fs,1))}
+@media (max-width:680px){
+  .hdr-in .meta .dl-panel{width:100%;flex-direction:column;align-items:stretch;padding:12px}
+  .dl-panel .dl-f,.dl-panel select.size,.dl-panel .dl-go{width:100%}
+  .dl-panel .dl-go{justify-content:center}
+  .dl-panel .dl-h{align-self:flex-start;margin:0 0 2px}
+}
+#ig{--fs:1}
+.cap[hidden]{display:none!important}
