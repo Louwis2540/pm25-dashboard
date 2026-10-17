@@ -162,7 +162,7 @@ sub(OLD_WS, NEW_WS)
 # กรอบโหลดระหว่างรอข้อมูล (skeleton) — เดโม่หน่วงข้อมูล 3.5 วินาทีให้เห็น
 sys.path.insert(0, str(SCR)); import sk_apply
 SK_CSS = sk_apply.apply(html, sub)
-import tip_fix; tip_fix.apply(sub)   # tooltip กราฟโรคไม่ถูกบีบ/บังที่ขอบการ์ด
+import tip_fix; tip_fix.apply(sub); import load_fix; load_fix.apply(sub)   # tooltip กราฟโรคไม่ถูกบีบ/บังที่ขอบการ์ด · โหลดค่าฝุ่นลองใหม่
 
 OLD_HERO_START = '  document.getElementById("hero").innerHTML = `\n    <div class="art">${weatherArt(S.lv)}</div>'
 i0 = html.index(OLD_HERO_START)

@@ -425,15 +425,21 @@ app.get('/api/sheet-pm25', async (req, res) => {
     `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`,
     `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`,
   ]);
-  if (!csv) return res.status(403).json({
-    ok: false,
-    message: 'กรุณาเปิดการแชร์ Google Sheet: File → Share → Publish to web → CSV',
-  });
+  if (!csv) {
+    const stale = _lastGood.get('sheet-pm25');   // ดึง Sheet ไม่ได้ชั่วคราว → ตอบชุดล่าสุดที่เคยได้ แทนที่จะให้กราฟว่าง
+    if (stale) return res.json(stale);
+    return res.status(403).json({
+      ok: false,
+      message: 'กรุณาเปิดการแชร์ Google Sheet: File → Share → Publish to web → CSV',
+    });
+  }
   try {
     const data = { ok: true, ...parseSheetData(csv, provinces) };
     setCached('sheet-pm25', data, 5 * 60 * 1000); // 5 นาที
     res.json(data);
   } catch (e) {
+    const stale = _lastGood.get('sheet-pm25');
+    if (stale) return res.json(stale);
     res.status(500).json({ ok: false, message: 'CSV parse error: ' + e.message });
   }
 });
