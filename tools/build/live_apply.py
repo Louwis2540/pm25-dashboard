@@ -48,6 +48,8 @@ css_z = zbc_apply.apply(sub)
 html = zbc_apply.apply_area_bind(html)
 sub(zbc_apply.FC_OLD, zbc_apply.FC_NEW)
 
+import load_fix; load_fix.apply(sub)   # โหลดค่าฝุ่นลองใหม่ + ข้อความแจ้งเมื่อโหลดไม่สำเร็จ
+
 # ---- 3) PHEOC เกณฑ์ LINE + ป้ายเวลา 15.00 น. ----
 import pheoc_apply
 html = pheoc_apply.apply(html)
