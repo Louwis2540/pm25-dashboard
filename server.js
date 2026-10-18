@@ -298,12 +298,21 @@ const kmBetween = (a, b) => { const r = Math.PI / 180, dl = (b[0] - a[0]) * r, d
 const c5Retry = { n: 0, until: 0 };
 const jittered = ms => ms * (0.5 + Math.random() * 0.5);
 
-async function c5Weather() {
-  const cached = getCached('c5-wx'); if (cached) return cached;
-  if (Date.now() < c5Retry.until) {          // ยังอยู่ในช่วงพัก → ใช้ค่าล่าสุดที่เคยดึงสำเร็จ
-    if (_lastGood.has('c5-wx')) return _lastGood.get('c5-wx');
-    throw new Error('Open-Meteo อยู่ในช่วงพัก (429 ก่อนหน้า)');
-  }
+/* เก็บข้อมูลดิบ Open-Meteo ลงไฟล์ — รีสตาร์ท/ดีพลอยแล้วยังมีปัจจัยอากาศใช้ได้ระหว่างรอ API (ไม่เกิน 24 ชม.) */
+const C5_FILE = process.env.C5_LAST_FILE || path.join(__dirname, 'c5-wx-lastgood.json');
+const C5_MAX_AGE = 24 * 3600e3;
+let c5RawLast = null;
+function saveC5Raw(raw) {
+  c5RawLast = raw;
+  try { fs.writeFileSync(C5_FILE, JSON.stringify({ savedAt: Date.now(), raw })); }
+  catch (e) { console.warn('บันทึก c5-wx ลงไฟล์ไม่ได้:', e.message); }
+}
+function loadC5Raw() {
+  try { const f = JSON.parse(fs.readFileSync(C5_FILE, 'utf8')); return Date.now() - f.savedAt <= C5_MAX_AGE ? f.raw : null; }
+  catch { return null; }
+}
+
+async function c5Fetch() {   // ดึงข้อมูลดิบจาก Open-Meteo (ไม่มี cache)
   const names = Object.keys(C5_CENT);
   const q = new URLSearchParams({ latitude: names.map(n => C5_CENT[n][0]).join(','), longitude: names.map(n => C5_CENT[n][1]).join(','),
     hourly: 'boundary_layer_height,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation',
@@ -318,7 +327,29 @@ async function c5Weather() {
   }
   if (!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
   c5Retry.n = 0; c5Retry.until = 0;
-  let j = await r.json(); if (!Array.isArray(j)) j = [j];
+  const j = await r.json();
+  return Array.isArray(j) ? j : [j];
+}
+
+async function c5Weather() {
+  const cached = getCached('c5-wx'); if (cached) return cached;
+  let raw;
+  try {
+    if (Date.now() < c5Retry.until) throw new Error('Open-Meteo อยู่ในช่วงพัก (429 ก่อนหน้า)');
+    raw = await c5Fetch();
+    saveC5Raw(raw);
+  } catch (e) {   // ดึงไม่ได้ → ใช้ค่าล่าสุดที่เก็บไว้ (หน่วยความจำ หรือไฟล์) ถ้ามี
+    raw = c5RawLast ?? loadC5Raw();
+    if (!raw) throw e;
+    console.warn('C5 อากาศ: ใช้ค่าล่าสุดที่เก็บไว้ —', e.message);
+  }
+  const out = buildC5(raw);
+  setCached('c5-wx', out, 65 * 60 * 1000);   // 65 นาที > รอบ warmer (60 ±5) เพื่อไม่ให้ cache หมดก่อนรอบถัดไป
+  return out;
+}
+
+function buildC5(j) {
+  const names = Object.keys(C5_CENT);
   const out = {};
   names.forEach((n, i) => {
     const h = j[i]?.hourly || {}, idx = {};
@@ -339,7 +370,6 @@ async function c5Weather() {
       return { vr: Math.round(vr), rh: Math.round(rh), rain: Math.round(rain * 10) / 10, wd: WD_TH[Math.round(from / 45) % 8] };
     };
   });
-  setCached('c5-wx', out, 65 * 60 * 1000);   // 65 นาที > รอบ warmer (60 ±5) เพื่อไม่ให้ cache หมดก่อนรอบถัดไป
   return out;
 }
 
