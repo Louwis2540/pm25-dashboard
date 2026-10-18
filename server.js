@@ -294,14 +294,30 @@ const WD_TH = ['เหนือ', 'ตะวันออกเฉียงเห
 const kmBetween = (a, b) => { const r = Math.PI / 180, dl = (b[0] - a[0]) * r, dn = (b[1] - a[1]) * r;
   return 2 * 6371 * Math.asin(Math.sqrt(Math.sin(dl / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dn / 2) ** 2)); };
 
+// กันยิงซ้ำตอนโดน 429: พักแบบ exponential backoff + jitter (ฐาน 15 นาที เพดาน 60 นาที)
+const c5Retry = { n: 0, until: 0 };
+const jittered = ms => ms * (0.5 + Math.random() * 0.5);
+
 async function c5Weather() {
   const cached = getCached('c5-wx'); if (cached) return cached;
+  if (Date.now() < c5Retry.until) {          // ยังอยู่ในช่วงพัก → ใช้ค่าล่าสุดที่เคยดึงสำเร็จ
+    if (_lastGood.has('c5-wx')) return _lastGood.get('c5-wx');
+    throw new Error('Open-Meteo อยู่ในช่วงพัก (429 ก่อนหน้า)');
+  }
   const names = Object.keys(C5_CENT);
   const q = new URLSearchParams({ latitude: names.map(n => C5_CENT[n][0]).join(','), longitude: names.map(n => C5_CENT[n][1]).join(','),
     hourly: 'boundary_layer_height,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation',
     wind_speed_unit: 'ms', timezone: 'Asia/Bangkok', past_days: '1', forecast_days: '5' });
   const r = await fetch('https://api.open-meteo.com/v1/forecast?' + q, { signal: AbortSignal.timeout(12000) });
+  if (r.status === 429) {
+    c5Retry.n++;
+    const wait = Math.min(60 * 60e3, jittered(15 * 60e3 * 2 ** (c5Retry.n - 1)));
+    c5Retry.until = Date.now() + wait;
+    console.warn(`Open-Meteo 429 (ครั้งที่ ${c5Retry.n}) retry-after=${r.headers.get('retry-after') ?? '-'} พัก ${Math.round(wait / 60e3)} นาที`);
+    throw new Error('Open-Meteo HTTP 429');
+  }
   if (!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
+  c5Retry.n = 0; c5Retry.until = 0;
   let j = await r.json(); if (!Array.isArray(j)) j = [j];
   const out = {};
   names.forEach((n, i) => {
@@ -323,7 +339,7 @@ async function c5Weather() {
       return { vr: Math.round(vr), rh: Math.round(rh), rain: Math.round(rain * 10) / 10, wd: WD_TH[Math.round(from / 45) % 8] };
     };
   });
-  setCached('c5-wx', out, 60 * 60 * 1000);
+  setCached('c5-wx', out, 65 * 60 * 1000);   // 65 นาที > รอบ warmer (60 ±5) เพื่อไม่ให้ cache หมดก่อนรอบถัดไป
   return out;
 }
 
@@ -348,7 +364,7 @@ async function c5Hotspots200() {
 // เติม trend/fac ให้รายการจังหวัด (ถ้าดึงปัจจัยไม่ได้ ก็คืนค่าคาดการณ์ GISTDA ตามเดิม)
 async function withC5(data) {
   const base = String(data.asOf || '').slice(0, 10) || bkkDate();
-  const [wx, hs] = await Promise.allSettled([c5Weather(), c5Hotspots200()]);
+  const [wx, hs] = await Promise.allSettled([singleFlight('c5-wx', c5Weather), c5Hotspots200()]);
   if (wx.status !== 'fulfilled') { console.warn('C5 อากาศ:', wx.reason?.message); return data; }
   return { ...data, c5: { model: 'สคร.7 ฤดูฝุ่น 68/69', hsNote: 'จุดความร้อน 24 ชม. ล่าสุด รัศมี 200 กม. (เฉพาะในไทย)' }, items: data.items.map(it => {
     const fn = wx.value[it.name]; if (!fn) return it;
@@ -1230,6 +1246,14 @@ app.listen(PORT, () => {
   };
   setTimeout(warmDistricts, 15 * 1000);
   setInterval(warmDistricts, 3 * 60 * 60 * 1000);
+
+  // อุ่น cache อากาศ (Open-Meteo) ทุก 60 ±5 นาที — สุ่มเวลาเริ่มและสุ่มรอบ เพื่อไม่ให้หลาย instance ยิงพร้อมกัน
+  const warmC5 = async () => {
+    try { await singleFlight('c5-wx', c5Weather); }
+    catch (e) { console.warn('warm c5-wx:', e.message); }
+    setTimeout(warmC5, (60 + (Math.random() * 10 - 5)) * 60e3);
+  };
+  setTimeout(warmC5, Math.random() * 60e3);
 });
 
 async function warmDiseaseCache() {
