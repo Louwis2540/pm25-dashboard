@@ -512,7 +512,7 @@ section .ws-v2 .tile .th .chip,#ig .igt .tile .th .chip{background:rgba(255,255,
 #ig[data-dense="3"] .dzg2>div{padding:4px 12px 0}#ig[data-dense="3"] .dzg2{gap:8px}#ig[data-dense="3"] .ig-date{padding:6px 44px}#ig[data-dense="3"] .ig-f{padding:8px 44px}
 #ig .ig-f{align-items:center;font-size:13.5px;line-height:1.5}
 #ig .ig-f .qr{flex:none;display:block;line-height:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-#ig .ig-f b{color:var(--ink-1)}
+#ig .ig-f b{color:var(--ink-1)}#ig{position:relative}#ig .ig-f{position:absolute;left:0;right:0;bottom:0}#ig .ig-body{padding-bottom:130px}
 .hdr-in .meta .btns{flex-wrap:wrap}
 .mock-b{display:inline-block;vertical-align:middle;font-size:11px;font-weight:700;color:#9a3412;background:#ffedd5;border:1px solid #fdba74;border-radius:999px;padding:1px 8px;margin-left:4px}
 .dz-note{font-size:12px;font-weight:600;color:#6b4a00;background:#fff7e6;border:1px solid #f3dca8;border-radius:10px;padding:7px 10px;line-height:1.5}
