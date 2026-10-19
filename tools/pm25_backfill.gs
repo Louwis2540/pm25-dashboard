@@ -177,11 +177,11 @@ function backfill07() {
  * เติมค่าประมาณจากดาวเทียม GISTDA (ค่าเฉลี่ยรายวันรายจังหวัด จาก pm25.gistda.or.th/download แบบ "รายวัน (1 เดือน)")
  *   1–27 ม.ค. 2569 = ไฟล์ PM25_Province_1m_2026-01-31.csv ที่ Louis ส่งมา (เพิ่ม 16 ต.ค. 2569 · กรมควบคุมมลพิษยังไม่เผยแพร่ค่ารายวันปี 2569)
  *   28 ม.ค.–28 ก.พ. 2569 = ไฟล์ PM25_Province_1m_2026-02-28.csv
- *   25–30 มี.ค. 2569 = ไฟล์ pm2.5_history.xlsx ที่ Louis ส่งมาจาก IT หน่วยงาน (เพิ่ม 19 ต.ค. 2569 · ชีต air_quality_forcast)
- * ลงแท็บ PM25_History ตรง ๆ — Louis ตัดสินใจ 16 ต.ค. 2569 (ไม่มีค่าสถานี Air4Thai ช่วงนี้)
+ *   25–30 มี.ค. 2569 = ค่าสถานี Air4Thai จากไฟล์ pm2.5_history.xlsx ที่ Louis ส่งมาจาก IT หน่วยงาน (เพิ่ม 19 ต.ค. 2569 แก้ไข — เป็นค่าสถานีจริง ไม่ใช่ดาวเทียม GISTDA ตามที่เข้าใจไว้แรก)
+ * ลงแท็บ PM25_History ตรง ๆ — Louis ตัดสินใจ 16 ต.ค. 2569 (ไม่มีค่าสถานี Air4Thai ช่วงนี้ในระบบปัจจุบัน — Air4Thai API ย้อนหลังรายชั่วโมงได้ถึง 1 ส.ค. 2569 เท่านั้น ไฟล์จาก IT คือค่ารายวันที่ดึงเก็บไว้ก่อนหน้า)
  *   - เติมเฉพาะวันที่ไม่มีแถว / ช่องว่าง / ช่องที่เป็น 0 (0 = สถานีไม่มีข้อมูล จากโค้ดเวอร์ชันเก่า)
  *   - ไม่เขียนทับค่าสถานีที่มีอยู่
- *   - บันทึกทุกค่าใน _backfill_log วิธี = 'gistda' เพื่อให้ย้อนตรวจได้ว่าค่าไหนเป็นค่าดาวเทียม
+ *   - บันทึกทุกค่าใน _backfill_log วิธี = 'gistda' (ม.ค.–ก.พ. ดาวเทียม) หรือ 'air4thai-file' (25–30 มี.ค. ค่าสถานีจากไฟล์ IT)
  *   - เทียบกับค่าสถานี 19–28 ก.พ.: MAE 6.9 µg/m³ · r 0.66 · ลำเอียง +1.2
  *   - ช่องที่เป็น 0 แต่ไม่มีค่า GISTDA ให้เติม (30 มี.ค. 2569) → เปลี่ยนเป็นช่องว่าง (CLEAR_ZEROS)
  */
@@ -212,8 +212,9 @@ function backfillGistda() {
       const v = GISTDA_FILL[d][st.name];
       if (have || typeof v !== 'number') return;
       vals[st.name] = v; filled++;
-      const src = d >= '2026-03-25' ? 'ไฟล์ pm2.5_history.xlsx จาก IT หน่วยงาน (สคร.7, 19 ต.ค. 2569)' : 'GISTDA ดาวเทียม (PM25_Province_1m_' + (d < '2026-01-28' ? '2026-01-31' : '2026-02-28') + ')';
-      logRows.push([stamp, d, st.name, v, 'gistda', '', src]);
+      const isAir4Thai = d >= '2026-03-25';
+      const src = isAir4Thai ? 'Air4Thai สถานี — ไฟล์ pm2.5_history.xlsx จาก IT หน่วยงาน (สคร.7, 19 ต.ค. 2569)' : 'GISTDA ดาวเทียม (PM25_Province_1m_' + (d < '2026-01-28' ? '2026-01-31' : '2026-02-28') + ')';
+      logRows.push([stamp, d, st.name, v, isAir4Thai ? 'air4thai-file' : 'gistda', '', src]);
     });
     if (!Object.keys(vals).length) return;
     if (rowOf[d]) Object.keys(vals).forEach(n => sh.getRange(rowOf[d], colOf[n]).setValue(vals[n]));
