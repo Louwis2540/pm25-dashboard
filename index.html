@@ -3242,7 +3242,7 @@ function fitInfographic(size) {
 // - เลือก "ทั้งเขต" หรือรายจังหวัดก่อนดาวน์โหลด (tailored) · ธีมสีและคำแนะนำตามระดับของจังหวัดที่เลือก
 //   ทั้งเขต → ใช้ระดับของจังหวัดที่ค่าสูงสุด (หลักป้องกันไว้ก่อน แบบ EPA รายงานค่าสูงสุดของพื้นที่)
 // - ตัดการเทียบปี 2568 ออก · โรคใช้แบบ E1 (เฉลี่ยราย/สัปดาห์ในแต่ละเดือน) · เพิ่มคาดการณ์ 3 วัน + QR ไปแดชบอร์ด
-const IG_URL = "https://apps-odpc7.ddc.moph.go.th/pm25";
+const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 S.igPv = "";
 function igQR(size) {
   try { const q = qrcode(0, "M"); q.addData(IG_URL); q.make();
