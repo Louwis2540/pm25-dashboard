@@ -29,7 +29,7 @@
 | 19 ก.พ.–1 ส.ค. | สถานี Air4Thai (บันทึกรายวันโดย `line_report.gs`) |
 | ตั้งแต่ 2 ส.ค. | สถานี Air4Thai ค่าเฉลี่ย 24 ชม. ณ 07:00 (`historyTo07` + บันทึกทุกวัน) |
 
-25–30 มี.ค. 2569 เติมจากไฟล์ `pm2.5_history.xlsx` ที่ Louis ส่งมาจาก IT หน่วยงาน (19 ต.ค. 2569 · `backfillGistda` — ใช้คอลัมน์ pm2_5 จากชีต air_quality_forcast)
+25–30 มี.ค. 2569 เติมด้วยค่าสถานี Air4Thai จากไฟล์ `pm2.5_history.xlsx` ที่ Louis ส่งมาจาก IT หน่วยงาน (19 ต.ค. 2569 · `backfillGistda` — log วิธี `air4thai-file` · ใช้คอลัมน์ pm2_5 จากชีต air_quality_forcast)
 
 ## Apps Script
 
