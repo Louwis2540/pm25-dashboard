@@ -166,7 +166,7 @@ function buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, tim
        `${pheocText}\n\n` +
        `${healthText}\n\n` +
        `ข้อเสนอแนะการปฏิบัติตน :\n${buildAdviceSectionForText(airData)}\n` +
-       `ท่านสามารถดูค่าฝุ่นแบบเรียลไทม์ในแผนที่ กดลิงก์เพื่อดู: https://apps-odpc7.ddc.moph.go.th/pm25/\n\n` +
+       `ท่านสามารถดูค่าฝุ่นแบบเรียลไทม์ในแผนที่ กดลิงก์เพื่อดู: https://pm25-dashboard-ex8l.onrender.com\n\n` +
        `       จึงเรียนมาเพื่อโปรดทราบ  ขอบพระคุณครับ\n\n` +
        `(แหล่งข้อมูล: Air4thai, GISTDA PM2.5 Monitoring System, กระทรวงสาธารณสุข HDC)`;
 
@@ -286,7 +286,7 @@ function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, 
       },
       "footer": { "type": "box", "layout": "vertical", "spacing": "sm",
         "contents": [
-          { "type": "button", "style": "primary", "color": "#1976D2", "height": "sm", "action": { "type": "uri", "label": "📍 ดูแผนที่ฝุ่นแบบเรียลไทม์", "uri": "https://apps-odpc7.ddc.moph.go.th/pm25/" } },
+          { "type": "button", "style": "primary", "color": "#1976D2", "height": "sm", "action": { "type": "uri", "label": "📍 ดูแผนที่ฝุ่นแบบเรียลไทม์", "uri": "https://pm25-dashboard-ex8l.onrender.com" } },
           { "type": "text", "text": "ข้อมูล: Air4thai, HDC สธ., GISTDA", "size": "xxs", "align": "center", "color": "#BDBDBD", "wrap": true, "margin": "md" }
         ]
       }
