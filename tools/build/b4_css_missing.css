@@ -211,4 +211,8 @@
   .dl-panel .dl-h{align-self:flex-start;margin:0 0 2px}
 }
 #ig{--fs:1}
+/* กันขอบท้ายอินโฟกราฟิก (QR/แหล่งข้อมูล/ผู้รายงาน) ไม่ให้โดน overflow:hidden ตัด แม้วันที่เนื้อหายาวจนบีบ dense สุด (3) แล้วยังไม่พอ — ปักท้ายให้เห็นเต็มเสมอ เนื้อหาด้านบนจะโดนตัดแทนถ้าล้นจริง ๆ */
+#ig{position:relative}
+#ig .ig-f{position:absolute;left:0;right:0;bottom:0}
+#ig .ig-body{padding-bottom:130px}
 .cap[hidden]{display:none!important}
