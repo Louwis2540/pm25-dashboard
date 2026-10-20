@@ -143,6 +143,31 @@ function syncMophDisease() {
     out.push(line);
   }
 
+  // ── ชั้นที่ 1.5: ดึงได้ (HTTP 200) แต่ไม่มีข้อมูลรายสัปดาห์เลย ─────
+  // out มีแต่หัวตาราง = ต้นทางส่งข้อมูลว่าง/รูปแบบเปลี่ยน → ห้ามล้างแท็บเดิม
+  // (ของเดิม: นับว่า "สำเร็จ" แล้ว clearContents() เขียนทับด้วยหัวตารางอย่างเดียว)
+  if (out.length < 2) {
+    var streakEmpty = bumpFailStreak_();
+    var reasonEmpty = 'MOPH ตอบสำเร็จ ' + okCount + '/' + PROVINCES.length +
+      ' จังหวัด แต่ไม่มีข้อมูลรายสัปดาห์ของปี ' + BE_YEAR + ' เลย';
+    writeStatus_(started, false, '', reasonEmpty, streakEmpty);
+    Logger.log('⛔ ' + reasonEmpty + ' — ข้อมูลเดิมในชีตยังอยู่ครบ (ไม่ถูกล้าง)');
+
+    alertOnce_('sync_empty',
+      '[PM2.5 สคร.7] ⛔ ข้อมูลกลุ่มโรคจาก MOPH ว่างเปล่า',
+      'syncMophDisease ดึง MOPH ได้ แต่ไม่พบข้อมูลรายสัปดาห์เลย\n\n' +
+      'เวลาที่รัน   : ' + fmtTime_(started) + '\n' +
+      'ล้มต่อเนื่อง : ' + streakEmpty + ' ครั้ง\n' +
+      'ปีที่ขอ      : ' + BE_YEAR + '\n\n' +
+      '── ผลกระทบ ──\n' +
+      'ชีตแท็บ "' + TAB_NAME + '" ยังเก็บข้อมูลเดิมไว้ครบ (ไม่ถูกล้างทิ้ง)\n' +
+      'LINE และหน้าเว็บจะรายงานตัวเลขเดิมจนกว่าจะดึงใหม่สำเร็จ\n\n' +
+      '── แนวทางตรวจสอบ ──\n' +
+      '• ดู Execution log: "• province N → X แถว" ถ้า X = 0 แปลว่าต้นทางว่าง\n' +
+      '• เช็กว่า MOPH เปลี่ยนค่าพารามิเตอร์ year / tableName หรือไม่\n');
+    return;
+  }
+
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var sh = ss.getSheetByName(TAB_NAME) || ss.insertSheet(TAB_NAME);
   sh.clearContents();
@@ -342,6 +367,7 @@ function resetFailStreak_() {
   props.setProperty('failStreak', '0');
   props.deleteProperty('alert_sync_fail');   // สำเร็จแล้ว → ให้เตือนได้ทันทีถ้าล้มอีก
   props.deleteProperty('alert_partial');
+  props.deleteProperty('alert_sync_empty');
 }
 
 /** เขียนผลการรันล่าสุดลงแท็บ _sync_status (ไว้ย้อนดูว่าค้างตั้งแต่เมื่อไร) */
@@ -406,6 +432,6 @@ function testDiseaseNote() {
 /** ล้าง cooldown ทั้งหมด — ใช้ตอนอยากให้เตือนใหม่ทันทีโดยไม่ต้องรอ 24 ชม. */
 function resetAlertCooldown() {
   var props = PropertiesService.getScriptProperties();
-  ['alert_sync_fail', 'alert_stale', 'alert_partial'].forEach(function (k) { props.deleteProperty(k); });
+  ['alert_sync_fail', 'alert_stale', 'alert_partial', 'alert_sync_empty'].forEach(function (k) { props.deleteProperty(k); });
   Logger.log('🔄 ล้าง cooldown การแจ้งเตือนแล้ว');
 }
