@@ -45,7 +45,9 @@
 var SHEET_ID   = '1bBOvPusSvh7R0AXG5ej9CxagtRkJXLaaJo79I4s9PX8'; // Sheet ปลายทาง (จาก config.json)
 var TAB_NAME   = '2026';        // แท็บที่ server.js อ่านสำหรับปี 2569
 var BE_YEAR    = '2569';        // ปีงบ พ.ศ. ที่ดึงจาก MOPH
-var PROVINCES  = [40, 44, 45, 46];  // เขตสุขภาพ 7: ขอนแก่น มหาสารคาม ร้อยเอ็ด กาฬสินธุ์
+// ตั้งชื่อเฉพาะ (ไม่ใช้ PROVINCES) เพราะไฟล์อื่นในโปรเจกต์ Apps Script มี PROVINCES เป็น object
+// ซึ่งทับตัวนี้ → PROVINCES.length = undefined → ลูปไม่ทำงานเลย → "ดึงไม่สำเร็จเลยสักจังหวัด"
+var MOPH_PROVINCES = [40, 44, 45, 46];  // เขตสุขภาพ 7: ขอนแก่น มหาสารคาม ร้อยเอ็ด กาฬสินธุ์
 var MOPH_URL   = 'https://opendata.moph.go.th/api/report_data';
 
 // MOPH แบ่งหน้า: ถ้าไม่ส่ง limit จะได้แค่ 1000 แถวแรก (ขอนแก่นมี ~1,085 แถว/ปี → ตกหล่น)
@@ -75,8 +77,8 @@ function syncMophDisease() {
   var okCount = 0;
   var errors  = [];      // เก็บสาเหตุรายจังหวัด ไว้ใส่ในอีเมลแจ้งเตือน
 
-  for (var i = 0; i < PROVINCES.length; i++) {
-    var pv  = PROVINCES[i];
+  for (var i = 0; i < MOPH_PROVINCES.length; i++) {
+    var pv  = MOPH_PROVINCES[i];
     var res = fetchProvinceRows_(pv);
     if (res.error) {
       errors.push('จังหวัด ' + pv + ' → ' + res.error);
@@ -148,7 +150,7 @@ function syncMophDisease() {
   // (ของเดิม: นับว่า "สำเร็จ" แล้ว clearContents() เขียนทับด้วยหัวตารางอย่างเดียว)
   if (out.length < 2) {
     var streakEmpty = bumpFailStreak_();
-    var reasonEmpty = 'MOPH ตอบสำเร็จ ' + okCount + '/' + PROVINCES.length +
+    var reasonEmpty = 'MOPH ตอบสำเร็จ ' + okCount + '/' + MOPH_PROVINCES.length +
       ' จังหวัด แต่ไม่มีข้อมูลรายสัปดาห์ของปี ' + BE_YEAR + ' เลย';
     writeStatus_(started, false, '', reasonEmpty, streakEmpty);
     Logger.log('⛔ ' + reasonEmpty + ' — ข้อมูลเดิมในชีตยังอยู่ครบ (ไม่ถูกล้าง)');
@@ -176,7 +178,7 @@ function syncMophDisease() {
   resetFailStreak_();
   var partial = errors.length ? errors.join('\n') : '';
   writeStatus_(started, true, upd, partial, 0);
-  Logger.log('✅ เขียนแท็บ "' + TAB_NAME + '" ' + (out.length - 1) + ' สัปดาห์ (อัพเดท ' + upd + ') จาก ' + okCount + '/' + PROVINCES.length + ' จังหวัด');
+  Logger.log('✅ เขียนแท็บ "' + TAB_NAME + '" ' + (out.length - 1) + ' สัปดาห์ (อัพเดท ' + upd + ') จาก ' + okCount + '/' + MOPH_PROVINCES.length + ' จังหวัด');
 
   // ── ชั้นที่ 2: ดึงได้ แต่ต้นทางหยุดอัปเดต ────────────────────────
   var age = dataAgeDays_(upd);
@@ -195,9 +197,9 @@ function syncMophDisease() {
   }
 
   // บางจังหวัดพลาด แต่ไม่ทั้งหมด → ยอดรวมขาด ต้องรู้ด้วย
-  if (okCount < PROVINCES.length) {
+  if (okCount < MOPH_PROVINCES.length) {
     alertOnce_('partial',
-      '[PM2.5 สคร.7] ⚠️ ดึงข้อมูลโรคได้ไม่ครบ ' + okCount + '/' + PROVINCES.length + ' จังหวัด',
+      '[PM2.5 สคร.7] ⚠️ ดึงข้อมูลโรคได้ไม่ครบ ' + okCount + '/' + MOPH_PROVINCES.length + ' จังหวัด',
       'ยอดรวมรายสัปดาห์ที่เขียนลงชีตรอบนี้ "ขาดบางจังหวัด" จึงต่ำกว่าความจริง\n\n' +
       'เวลาที่รัน : ' + fmtTime_(started) + '\n\n' +
       'จังหวัดที่พลาด:\n' + errors.join('\n') + '\n');
