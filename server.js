@@ -1038,10 +1038,22 @@ const MOPH_CATS = ['ทางเดินหายใจ', 'หัวใจ', '�
 const MOPH_PAGE_SIZE = 1000;
 const MOPH_MAX_PAGES = 200;            // กันลูปไม่รู้จบถ้า total ที่ MOPH ส่งมาเพี้ยน (เกินนี้ = ล้มทั้งจังหวัด ไม่ตัดเงียบ)
 const MOPH_MAX_RETRY = 3;              // จำนวนครั้งที่ลองใหม่เมื่อโดน 429 / 5xx
-const MOPH_GAP_MS    = 300;            // เว้นจังหวะระหว่างคำขอ ไม่ยิงรัวใส่ MOPH
+const MOPH_GAP_MS    = 3000;           // เว้นจังหวะระหว่างคำขอ 3 วินาที ไม่ยิงรัวใส่ MOPH (เดิม 0.3 วิ → โดน 429 แทบทุกคำขอ)
+const MOPH_BACKOFF_BASE_MS = 5000;     // โดน 429/5xx: รอ 5s → 10s → 20s (เพดาน 60s) + สุ่มเพิ่ม 0–1s กันยิงพร้อมกัน
+const MOPH_BACKOFF_CAP_MS  = 60000;
+const MOPH_429_LIMIT       = 2;        // โดน 429 ติดกันครบกี่ครั้งถึงหยุดทั้งรอบ (circuit breaker)
+const MOPH_BREAKER_MS      = 60 * 60 * 1000;  // หยุดยิง MOPH นานเท่านี้ ระหว่างนั้นใช้ข้อมูลเดิม
+const mophBreaker = { until: 0, streak429: 0 };
+const mophPaused  = () => Date.now() < mophBreaker.until;
 
 // ยิง 1 คำขอ พร้อมลองใหม่เมื่อโดน rate-limit (429) หรือปลายทางไม่พร้อม (5xx)
+// • ถอยแบบ exponential backoff + jitter (RFC 6585 §4; Brooker, AWS Architecture Blog 2015)
+// • circuit breaker: 429 ติดกัน MOPH_429_LIMIT ครั้ง → หยุดทั้งรอบ พัก MOPH_BREAKER_MS (Nygard, Release It! 2007)
+//   ระหว่างพักไม่ยิงเลย → ผู้เรียกใช้ข้อมูลชุดเดิม (_lastGood / ชีต) แทน ลดโอกาสโดนบล็อก IP
 async function mophPost(payload) {
+  if (mophPaused()) {
+    throw new Error(`MOPH พักการเรียก (โดน 429 ติดกัน) ถึง ${new Date(mophBreaker.until).toLocaleTimeString('th-TH')}`);
+  }
   let last;
   for (let attempt = 0; attempt < MOPH_MAX_RETRY; attempt++) {
     try {
@@ -1058,12 +1070,24 @@ async function mophPost(payload) {
       await sleep(2000 * 2 ** attempt);
       continue;
     }
+
+    if (last.status === 429) {
+      if (++mophBreaker.streak429 >= MOPH_429_LIMIT) {
+        mophBreaker.until     = Date.now() + MOPH_BREAKER_MS;
+        mophBreaker.streak429 = 0;
+        console.warn(`MOPH ตอบ 429 ติดกัน ${MOPH_429_LIMIT} ครั้ง — หยุดยิงรอบนี้ พัก ${MOPH_BREAKER_MS / 60000} นาที (ใช้ข้อมูลเดิมไปก่อน)`);
+        throw new Error('MOPH ตอบ 429 ติดกัน — หยุดเพื่อไม่ให้โดนบล็อก');
+      }
+    } else {
+      mophBreaker.streak429 = 0;
+    }
     if (last.ok || (last.status !== 429 && last.status < 500)) return last;
 
-    // เคารพ Retry-After ถ้า MOPH บอกมา ไม่งั้นถอยเป็นขั้น 2s → 4s → 8s (สูงสุด 30s)
+    // เคารพ Retry-After ถ้า MOPH บอกมา ไม่งั้นถอยเป็นขั้น 5s → 10s → 20s (สูงสุด 60s) + jitter
     const hinted = Number(last.headers.get('retry-after'));
-    const wait   = Math.min(hinted > 0 ? hinted * 1000 : 2000 * 2 ** attempt, 30000);
-    console.warn(`MOPH ตอบ ${last.status} — รอ ${wait / 1000}s แล้วลองใหม่`);
+    const wait   = Math.min(hinted > 0 ? hinted * 1000 : MOPH_BACKOFF_BASE_MS * 2 ** attempt, MOPH_BACKOFF_CAP_MS)
+                 + Math.floor(Math.random() * 1000);
+    console.warn(`MOPH ตอบ ${last.status} — รอ ${(wait / 1000).toFixed(1)}s แล้วลองใหม่`);
     await sleep(wait);
   }
   return last;
@@ -1125,6 +1149,7 @@ async function fetchMophAllProvinces(beYear, table) {
   for (let round = 0; round < 2; round++) {
     for (const pv of provinces) {
       if (got.has(pv.pv_idn)) continue;
+      if (mophPaused()) break;                       // circuit breaker เปิดอยู่ → ไม่ยิงต่อ
       if (got.size || Object.keys(errs).length) await sleep(round ? 3000 : MOPH_GAP_MS);
       try {
         const agg = await fetchMophAgg(beYear, pv.pv_idn, table);
@@ -1135,12 +1160,12 @@ async function fetchMophAllProvinces(beYear, table) {
         errs[pv.name] = e.message;
       }
     }
-    if (got.size === provinces.length) break;
+    if (got.size === provinces.length || mophPaused()) break;
   }
   if (got.size < provinces.length) {
     const why = Object.entries(errs).map(([n, m]) => `${n}: ${m}`).join(' · ');
     console.warn(`MOPH ${table} ดึงได้ไม่ครบ ${got.size}/${provinces.length} จังหวัด (${why}) — ไม่ใช้ข้อมูลรอบนี้`);
-    return { got: null, missing: Object.keys(errs) };
+    return { got: null, missing: provinces.filter(p => !got.has(p.pv_idn)).map(p => p.name) };
   }
   return { got, missing: [] };
 }
@@ -1260,10 +1285,10 @@ app.listen(PORT, () => {
   warmSheetCache();
   setInterval(warmSheetCache, 5 * 60 * 1000);
 
-  // โซน F — อุ่น cache ไว้ก่อนผู้ใช้เข้ามา แล้วรีเฟรชทุก 3 ชม. (cache อยู่ได้ 6 ชม.)
-  // เท่ากับยิง MOPH วันละ ~8 รอบ (2 ตาราง × 4 จังหวัด = 8 คำขอ/รอบ) ไม่ว่าจะมีคนเปิดแดชบอร์ดกี่คน
+  // โซน F — อุ่น cache ไว้ก่อนผู้ใช้เข้ามา แล้วรีเฟรชทุก 6 ชม. (cache MOPH อยู่ได้ 6 ชม.)
+  // เท่ากับยิง MOPH วันละ ~4 รอบ ไม่ว่าจะมีคนเปิดแดชบอร์ดกี่คน (เดิมทุก 3 ชม. = ~8 รอบ)
   warmDiseaseCache();
-  setInterval(warmDiseaseCache, 3 * 60 * 60 * 1000);
+  setInterval(warmDiseaseCache, 6 * 60 * 60 * 1000);
 
   // เจาะลึกรายอำเภอ — สถิติทั้งฤดูต้องดึง CSV ~8 ไฟล์/จังหวัด (ครั้งแรก ~10 วินาที)
   // อุ่นไว้ทีละจังหวัดตอนเปิด server และทุก 3 ชม. คนกดดูจะได้ไม่ต้องรอ
