@@ -824,7 +824,8 @@ app.get('/api/pheoc', async (req, res) => {
    ไม่ได้ตั้ง env → นับในหน่วยความจำอย่างเดียว (หายเมื่อ deploy ใหม่)
 ══════════════════════════════════════════ */
 const crypto = require('crypto');
-const VISIT = { base: { total: 0, month: 0, today: 0, since: null, day: null }, pending: 0, loaded: false, recent: new Map() };
+const VISIT = { base: { total: 0, month: 0, today: 0, since: null, day: null }, pending: new Map(), loaded: false, recent: new Map() };
+const VISIT_PERSIST = () => !!process.env.VISIT_HOOK_URL;
 async function visitHook(body) {
   const url = process.env.VISIT_HOOK_URL; if (!url) return null;
   const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, redirect: 'follow',
@@ -841,15 +842,38 @@ async function visitLoad() {
   try { const j = await visitHook({ action: 'get', date: bkkDate() }); if (j) Object.assign(VISIT.base, j.stats, { day: bkkDate() }); VISIT.loaded = true; }
   catch (e) { console.warn('โหลดสถิติการเข้าชมไม่สำเร็จ:', e.message); }
 }
-async function visitFlush() {
-  if (!VISIT.pending || !process.env.VISIT_HOOK_URL) return;
-  const n = VISIT.pending; VISIT.pending = 0;
-  try { const j = await visitHook({ action: 'add', date: bkkDate(), n }); if (j) Object.assign(VISIT.base, j.stats, { day: bkkDate() }); }
-  catch (e) { VISIT.pending += n; console.warn('บันทึกสถิติการเข้าชมไม่สำเร็จ:', e.message); }
+// ยอดที่ยังไม่ส่งเข้าชีต แยกตามวัน — ผู้เข้าชม 23:58 ที่ถูกส่งตอน 00:03 ต้องลงวันเดิม ไม่ใช่วันใหม่
+const visitPendingSum = pred => { let t = 0; for (const [d, n] of VISIT.pending) if (!pred || pred(d)) t += n; return t; };
+let visitFlushing = null;
+function visitFlush() {
+  if (!VISIT_PERSIST() || !VISIT.pending.size) return Promise.resolve();
+  if (visitFlushing) return visitFlushing;                 // กันส่งซ้อน (timer ชนกับ SIGTERM)
+  visitFlushing = (async () => {
+    let sent = false;
+    for (const [date, n] of [...VISIT.pending]) {
+      VISIT.pending.delete(date);
+      try { await visitHook({ action: 'add', date, n }); sent = true; }
+      catch (e) { VISIT.pending.set(date, (VISIT.pending.get(date) || 0) + n); console.warn('บันทึกสถิติการเข้าชมไม่สำเร็จ:', e.message); break; }
+    }
+    if (sent) {   // รีเฟรชยอดรวมจากชีตเป็น "วันนี้" เสมอ (ไม่ใช่วันของแถวที่เพิ่งส่ง)
+      try { const j = await visitHook({ action: 'get', date: bkkDate() }); if (j) Object.assign(VISIT.base, j.stats, { day: bkkDate() }); }
+      catch (e) { console.warn('รีเฟรชสถิติการเข้าชมไม่สำเร็จ:', e.message); }
+    }
+  })().finally(() => { visitFlushing = null; });
+  return visitFlushing;
 }
 setInterval(visitFlush, 5 * 60 * 1000).unref();
-const visitOut = () => { visitRoll(); const p = process.env.VISIT_HOOK_URL ? VISIT.pending : 0;
-  return { ok: true, today: VISIT.base.today + p, month: VISIT.base.month + p, total: VISIT.base.total + p, since: VISIT.base.since }; };
+// Render ส่ง SIGTERM ก่อนปิดเครื่อง (deploy / restart / spin-down) → ส่งยอดค้างเข้าชีตก่อนดับ ไม่งั้นหายสูงสุด 5 นาทีทุกครั้ง
+process.once('SIGTERM', async () => {
+  try { await Promise.race([visitFlush(), sleep(8000)]); } catch {}
+  process.exit(0);
+});
+if (!VISIT_PERSIST()) console.warn('⚠️ ไม่ได้ตั้ง VISIT_HOOK_URL — สถิติการเข้าชมนับในหน่วยความจำอย่างเดียว จะรีเซ็ตทุกครั้งที่ server restart/deploy');
+const visitOut = () => {
+  visitRoll(); const d = bkkDate(), m = d.slice(0, 7), persist = VISIT_PERSIST();
+  const pt = persist ? visitPendingSum(x => x === d) : 0, pm = persist ? visitPendingSum(x => x.slice(0, 7) === m) : 0, pa = persist ? visitPendingSum() : 0;
+  return { ok: true, today: VISIT.base.today + pt, month: VISIT.base.month + pm, total: VISIT.base.total + pa, since: VISIT.base.since, persistent: persist };
+};
 
 app.get('/api/visit', async (req, res) => { await visitLoad(); res.set('Cache-Control', 'no-store'); res.json(visitOut()); });
 app.post('/api/visit', async (req, res) => {
@@ -859,7 +883,7 @@ app.post('/api/visit', async (req, res) => {
   for (const [kk, t] of VISIT.recent) if (now - t > 10 * 60 * 1000) VISIT.recent.delete(kk);
   if (!VISIT.recent.has(k)) {
     VISIT.recent.set(k, now);
-    if (process.env.VISIT_HOOK_URL) VISIT.pending++; else { VISIT.base.today++; VISIT.base.month++; VISIT.base.total++; }
+    if (VISIT_PERSIST()) VISIT.pending.set(bkkDate(), (VISIT.pending.get(bkkDate()) || 0) + 1); else { VISIT.base.today++; VISIT.base.month++; VISIT.base.total++; }
   }
   res.set('Cache-Control', 'no-store'); res.json(visitOut());
 });
