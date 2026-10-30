@@ -125,6 +125,7 @@ async function fetchCSV(urls) {
 app.use(cors());
 app.use(express.static(__dirname));
 app.get('/near', (req, res) => res.sendFile(path.join(__dirname, 'near.html')));   // เช็คฝุ่นตามพิกัด (เปิดจาก Rich menu LINE)
+app.get('/assess', (req, res) => res.sendFile(path.join(__dirname, 'assess.html')));   // ประเมินความเสี่ยงจากฝุ่น (คำตอบสุขภาพประมวลผลบนเครื่องผู้ใช้ ไม่ส่งมา server)
 
 /* ══════════════════════════════════════════
    PUBLIC API
