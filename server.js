@@ -124,6 +124,7 @@ async function fetchCSV(urls) {
 /* ── Middleware ── */
 app.use(cors());
 app.use(express.static(__dirname));
+app.get('/near', (req, res) => res.sendFile(path.join(__dirname, 'near.html')));   // เช็คฝุ่นตามพิกัด (เปิดจาก Rich menu LINE)
 
 /* ══════════════════════════════════════════
    PUBLIC API
@@ -437,6 +438,57 @@ app.get('/api/pm25/subdistricts', async (req, res) => {
     res.json(await areaDetail(`getPm25byTambonPred3?ap_idn=${amp}`, 'gistda-tb-' + amp, 'Tambon', amp));
   } catch (e) {
     res.status(502).json({ ok: false, message: 'GISTDA PM2.5 error: ' + e.message });
+  }
+});
+
+/* ── เช็คฝุ่นตามพิกัดผู้ใช้ (หน้า /near) ──────────────────────────────────
+   แหล่ง: GISTDA getPm25byLocation?lat=&lng= (สาธารณะ ไม่ใช้ key ไม่มีเอกสารทางการ) — ค่าประมาณจากดาวเทียม รายชั่วโมง
+   ความเป็นส่วนตัว (ตรงกับประกาศในหน้า /near): รับพิกัดทาง POST body เท่านั้น ไม่ใส่ใน URL
+   · ไม่เขียนพิกัดลง log / ไฟล์ / ฐานข้อมูล · ไม่ cache ตามพิกัด · ตอบ no-store
+   · จำกัดจำนวนคำขอด้วยตัวนับในหน่วยความจำ คีย์เป็น hash ของ IP + salt สุ่มต่อรอบ (ไม่เก็บ IP จริง) หายเองใน 1 นาที
+   ไม่จำกัดพื้นที่ (ตัดสินใจ 30 ต.ค. 2569): GISTDA ไม่มีค่าที่ตำแหน่งไหน → ตอบ empty:true */
+const NEAR_SALT = require('crypto').randomBytes(16).toString('hex');
+const NEAR_WIN = 60e3, NEAR_PER_CLIENT = 30, NEAR_GLOBAL = 600;
+const _nearHits = new Map();   // คีย์ → { n, reset }
+function nearAllow(req) {
+  const now = Date.now();
+  for (const [k, v] of _nearHits) if (now > v.reset) _nearHits.delete(k);
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const key = require('crypto').createHash('sha256').update(NEAR_SALT + ip).digest('hex').slice(0, 16);
+  let ok = true;
+  for (const [k, max] of [[key, NEAR_PER_CLIENT], ['*', NEAR_GLOBAL]]) {
+    const e = _nearHits.get(k) || { n: 0, reset: now + NEAR_WIN };
+    e.n++; _nearHits.set(k, e);
+    if (e.n > max) ok = false;
+  }
+  return ok;
+}
+
+app.post('/api/pm25/near', express.json({ limit: '1kb' }), async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const lat = Number(req.body?.lat), lng = Number(req.body?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
+    return res.status(400).json({ ok: false, message: 'พิกัดไม่ถูกต้อง' });
+  if (!nearAllow(req)) return res.status(429).json({ ok: false, message: 'ส่งคำขอถี่เกินไป ลองใหม่ในอีกสักครู่' });
+  try {
+    const r = await fetch(`${GISTDA_PM25}/getPm25byLocation?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`, { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (j.status !== 200 || !j.data) throw new Error(j.errMsg || 'รูปแบบข้อมูลไม่ถูกต้อง');
+    const d = j.data;
+    const hist = (Array.isArray(d.graphHistory24hrs) ? d.graphHistory24hrs : [])
+      .filter(h => Array.isArray(h) && typeof h[0] === 'number' && typeof h[1] === 'string')
+      .map(h => [Math.round(h[0] * 100) / 100, h[1]]);   // เวลาเป็นเวลาไทยที่ติด Z มา (ดู gistdaTime)
+    if (typeof d.pm25 !== 'number' || !hist.length) return res.json({ ok: true, empty: true });
+    const l = d.loc || {}, nm = v => (typeof v === 'string' && v !== '-' ? v : null);
+    res.json({
+      ok: true, empty: false, source: 'GISTDA (ค่าประมาณจากดาวเทียม)',
+      pm25: round1(d.pm25), avg: round1(d.pm25Avg24hrs), hist,
+      loc: { tb: nm(l.tb_tn), ap: nm(l.ap_tn), pv: nm(l.pv_tn) },
+    });
+  } catch (e) {
+    console.warn('near:', e.name === 'TimeoutError' ? 'GISTDA timeout' : e.message);   // ไม่ log พิกัด
+    res.status(502).json({ ok: false, message: 'ดึงข้อมูลจาก GISTDA ไม่สำเร็จ' });
   }
 });
 
