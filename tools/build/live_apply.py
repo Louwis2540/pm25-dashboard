@@ -66,6 +66,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
 } });
 '''
 sub("function renderDisease() {", DS_ADAPT + (SCR / "ds_module.js").read_text(encoding="utf-8") + "\nrenderDisease = (f => function () { f.apply(this, arguments); window.dsInit && dsInit(); })(renderDisease);\nfunction renderDisease() {")
+sub('<h2>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น</h2>', '<h2>โรคที่เฝ้าระวังในช่วงฝุ่น</h2>')   # ไม่สื่อว่าฝุ่นเป็นสาเหตุ
 import nav_apply
 html = nav_apply.apply(html)
 # หมายเหตุตารางสรุปช่วงที่เลือก (แนวโน้ม): ค่า ณ 07.00 น. จากสถานี + ดาวเทียม

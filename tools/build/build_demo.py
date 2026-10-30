@@ -666,6 +666,7 @@ _a = html.index("// แผงคาดการณ์ล่วงหน้า 3 
 html = html[:_a] + (SCR / "c5_final.js").read_text(encoding="utf-8") + html[_b:]
 # E1: กราฟรายเดือน 4 กลุ่มโรค ปี 2569 ทั้งเขต + หมายเหตุ HDC
 sub('<p id="dzSub">ผู้ป่วยรายเดือน เทียบปี 2568 กับ 2569</p>', '<p id="dzSub">ผู้ป่วย 4 กลุ่มโรค ปี 2569 · ข้อมูล HDC</p>')
+sub('<h2>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น</h2>', '<h2>โรคที่เฝ้าระวังในช่วงฝุ่น</h2>')   # ไม่สื่อว่าฝุ่นเป็นสาเหตุ (เฝ้าระวังเชิงสถานการณ์)
 sub("`ผู้ป่วยรายเดือน · ปี 2569 สะสมสัปดาห์ที่ 1–${wkMax} เทียบช่วงเดียวกันปี 2568 · ข้อมูล HDC`", "`ผู้ป่วย 4 กลุ่มโรค · ปี 2569 สัปดาห์ที่ 1–${wkMax} · ทั้งเขตสุขภาพที่ 7 · ข้อมูล HDC${(() => { const p = String(dz.meta?.dataDate || '').split('/'); return p.length === 3 ? ` ณ ${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ''; })()}`")
 _POPROWS = [{"year_be": int(r["year_be"]), "pv_code": int(r["code"]), "pv_name": r["province"], "type1c": int(r["type1c"]), "type3c": int(r["type3c"]), "pop13_end_fy": int(r["pop13"]), "pop13_midyear": int(r["midyear_interp_1jul"])} for r in csv.DictReader(open(SCR / "pop_r7_type13.csv", encoding="utf-8-sig")) if r["code"] != "0"]
 # ค่าฝุ่นจริงจากสถานี (ชีต PM25_History ผ่าน API แดชบอร์ด) — ใช้เฉพาะแผงวิเคราะห์ E2 (โซนอื่นในเดโม่ยังเป็นค่าจำลอง)
