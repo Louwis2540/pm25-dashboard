@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="color-scheme" content="light">
 <title>ประเมินความเสี่ยงจากฝุ่น · สคร.7 ขอนแก่น</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +12,7 @@
 <style>
 /* Layout: คอลัมน์เดียวแบบมือถือ · ประกาศความเป็นส่วนตัวมาก่อนเสมอ แล้วถามทีละขั้น (4 ขั้น) จบที่ผลประเมินบนหน้าจอ ไม่ส่ง ไม่เก็บ */
 :root{
+  color-scheme:light;
   --bg:#c9e0f0; --bg2:#e0efe6; --surface:#ffffff; --ink:#0f1b2d; --ink2:#3e4c62; --ink3:#5d6b80; --line:#b4c8dd;
   --shadow:0 10px 26px rgba(14,42,71,.13),0 1px 3px rgba(14,42,71,.10); --h1:#0e2a47; --h2:#1c6ed6;
   --accent:#1c6ed6; --accent-ink:#ffffff; --ok:#128a2f; --ok-ink:#ffffff; --danger:#c62828; --chip:#eef3f9; --chip-on:#dbe9fb;
@@ -19,16 +21,6 @@
   --font-body:"IBM Plex Sans Thai","Sarabun",system-ui,-apple-system,"Segoe UI",sans-serif;
   --r-c:#0e8a00; --r-on:#ffffff;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#09121e; --bg2:#0e1c2e; --surface:#142235; --ink:#eaf1fa; --ink2:#b4c2d6; --ink3:#8c9bb0; --line:#2a4060;
-  --shadow:0 10px 26px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.4); --h1:#10304f; --h2:#1d5db5;
-  --accent:#5aa2ff; --accent-ink:#06101d; --ok:#3fbf62; --ok-ink:#04170b; --danger:#ff8a80; --chip:#1b2c44; --chip-on:#21406b;
-  --warn-bg:#3a2a0b; --warn-ink:#ffd9a0; --mixer:#ffffff; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#09121e; --bg2:#0e1c2e; --surface:#142235; --ink:#eaf1fa; --ink2:#b4c2d6; --ink3:#8c9bb0; --line:#2a4060;
-  --shadow:0 10px 26px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.4); --h1:#10304f; --h2:#1d5db5;
-  --accent:#5aa2ff; --accent-ink:#06101d; --ok:#3fbf62; --ok-ink:#04170b; --danger:#ff8a80; --chip:#1b2c44; --chip-on:#21406b;
-  --warn-bg:#3a2a0b; --warn-ink:#ffd9a0; --mixer:#ffffff; color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:var(--bg);background-image:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);background-attachment:fixed;color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 28px}
