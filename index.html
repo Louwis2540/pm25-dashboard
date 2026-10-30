@@ -1467,7 +1467,7 @@ body.dp-open{overflow:hidden}
   <!-- 5) โรค -->
   <section id="zDisease" style="--sec:#c2255c">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-steth"/></svg></div>
-      <div><h2>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น</h2><p id="dzSub">ผู้ป่วย 4 กลุ่มโรค ปี 2569 · ข้อมูล HDC</p></div></div>
+      <div><h2>โรคที่เฝ้าระวังในช่วงฝุ่น</h2><p id="dzSub">ผู้ป่วย 4 กลุ่มโรค ปี 2569 · ข้อมูล HDC</p></div></div>
     <div class="dz-grid" id="dz"></div>
   </section>
 
@@ -2593,7 +2593,7 @@ function dzMonthAll(dz, wkMax) {
       <li>แต่ละกลุ่มโรคมีแกนของตัวเอง และ<b>แกนไม่เริ่มที่ 0</b> เพื่อให้เห็นการขึ้นลงชัด · เทียบขนาดจริงจากตัวเลขบนจุด</li>
       <li><b>จุดกลวงต่อด้วยเส้นประ</b> และพื้นเทา (เดือนที่มี *) = มีข้อมูลเบื้องต้นรวมอยู่</li>
       <li><b>จุดจาง (เดือนที่มี †)</b> = มีสัปดาห์ไม่เต็ม 7 วันรวมอยู่ (สัปดาห์ที่ 1 = 1–3 ม.ค. 2569) ยอดรวมของเดือนนั้นจึงต่ำกว่าจริงเล็กน้อย</li></ul></details>
-    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ <span class="nw">* ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax} · ${epiRange(2026, wkMax - DZ_PROV_WK + 1, wkMax)}) เป็นข้อมูลเบื้องต้น แสดงเป็นจุดกลวงเส้นประ ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงไม่ใช้สรุปแนวโน้ม</span></div>
+    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ <span class="nw">* ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax} · ${epiRange(2026, wkMax - DZ_PROV_WK + 1, wkMax)}) เป็นข้อมูลเบื้องต้น แสดงเป็นจุดกลวงเส้นประ ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงไม่ใช้สรุปแนวโน้ม</span><span class="nw"><b>การอ่านผล</b> เปรียบเทียบเชิงสถานการณ์เพื่อเฝ้าระวัง ไม่ได้ทดสอบความสัมพันธ์เชิงสาเหตุกับฝุ่น</span></div>
     <div class="tip"></div></article>`;
 }
 // E2–E5 · การ์ดรายจังหวัด: แถบค่าฝุ่นเฉลี่ยรายสัปดาห์ + อัตราผู้ป่วยต่อแสนประชากร 4 กลุ่มโรค (แกนเวลาเดียวกัน)
@@ -3367,7 +3367,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, 2026) }));
   const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
   const CH = [104, 94, 80, 66][dense];
-  const dzSec = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น · ${F.region ? "ทั้งเขต" : `จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}<small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)${F.region ? "" : " · เฉพาะผู้อยู่จริงในจังหวัด"} · HDC ณ ${dzAsOf()} · อัปเดตรายสัปดาห์</small></div>
+  const dzSec = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span>โรคที่เฝ้าระวังในช่วงฝุ่น · ${F.region ? "ทั้งเขต" : `จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}<small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)${F.region ? "" : " · เฉพาะผู้อยู่จริงในจังหวัด"} · HDC ณ ${dzAsOf()} · อัปเดตรายสัปดาห์</small></div>
     <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${s.d.label}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, 16)}</div>`).join("")}</div>
     <div class="dzl">ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)}) · * ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax}) เป็นข้อมูลเบื้องต้น รายงานยังไม่ครบ (แท่งจาง) · แต่ละกลุ่มใช้สเกลของตัวเอง ${(() => { const f = ser[0].m.map((o, i) => o?.n === 5 ? TH_M[i] : "").filter(Boolean); return f.length ? ` · ${f.join(" ")} มี 5 สัปดาห์ ยอดรวมจึงสูงกว่าเดือนอื่น` : ""; })()}</div>`;
   ig.innerHTML = head + `
