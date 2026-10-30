@@ -127,8 +127,8 @@ ul.tick svg{width:22px;height:22px;color:var(--accent);margin-top:1px}
 </div>
 
 <script>
-// ใส่ลิงก์ LIFF ของหน้าประเมินความเสี่ยงเมื่อพร้อม เช่น https://liff.line.me/<LIFF_ID> — ว่างไว้ = ไม่แสดงปุ่ม
-const ASSESS_URL = "";
+// ลิงก์ไปหน้าประเมินความเสี่ยง (ว่างไว้ = ไม่แสดงปุ่ม)
+const ASSESS_URL = "/assess";
 const LV = [
   { max: 15, name: "ดีมาก", c: "#009ede", summary: "ทำกิจกรรมกลางแจ้งได้ตามปกติ ไม่มีข้อจำกัด",
     pub: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"], risk: ["ทำกิจกรรมกลางแจ้งและท่องเที่ยวได้ตามปกติ"] },
@@ -262,6 +262,8 @@ function result(d) {
     <div class="stat"><span class="k">เฉลี่ย 24 ชม.</span><span class="n num">${f1(d.avg)}</span><span class="l"><i style="background:${LV[la].c}"></i>${LV[la].name}</span></div>
     <div class="stat"><span class="k">สูงสุดใน 24 ชม.</span><span class="n num">${f1(mx[0])}</span><span class="l"><i style="background:${mxL.c}"></i>เวลา ${mxHour}</span></div>
   </section>
+  ${ASSESS_URL ? `<a class="btn primary" href="${ASSESS_URL}">${I.clip}ทำแบบประเมินความเสี่ยงของฉัน</a>
+  <p class="note" style="text-align:center;margin-top:-6px">2 ขั้น ประมาณ 1 นาที คำตอบสุขภาพไม่ถูกส่งหรือบันทึก</p>` : ""}
   <section class="card">
     <h2>ย้อนหลัง 24 ชั่วโมง</h2>
     ${chart(d.hist, lv)}
@@ -273,7 +275,6 @@ function result(d) {
     <div class="adv"><h3>กลุ่มเสี่ยง*</h3><ul>${L.risk.map(x => `<li>${x}</li>`).join("")}</ul></div>
     <p class="note">* เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</p>
   </section>
-  ${ASSESS_URL ? `<a class="btn primary" href="${ASSESS_URL}">${I.clip}ประเมินความเสี่ยงของฉัน</a>` : ""}
   <a class="card" href="tel:1422" style="gap:6px;text-decoration:none;color:inherit">
     <div style="display:flex;gap:10px;align-items:center">${I.phone.replace("<svg", '<svg style="width:22px;height:22px;flex:none;color:var(--accent)"')}<span><b style="font-weight:600">สายด่วนกรมควบคุมโรค 1422</b><br><span class="note">ปรึกษาปัญหาสุขภาพ · แตะเพื่อโทร</span></span></div>
   </a>
