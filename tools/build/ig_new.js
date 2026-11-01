@@ -147,6 +147,7 @@ function igComboSec(H) {
     <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}ใช้ดูแนวโน้มร่วมกัน ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง · ที่มา: HDC กระทรวงสาธารณสุข · Air4Thai ร่วมกับ GISTDA</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
+const IG_NAME = "R7_PM" + "2.5_dashboard";   // ชื่อที่แสดงท้ายหน้า (QR ยังชี้ไปที่ IG_URL) · แยกสตริงกันตัวแทนที่ชื่อสารมลพิษตอน build
 S.igPv = "";
 function igQR(size) {
   try { const q = qrcode(0, "M"); q.addData(IG_URL); q.make();
@@ -254,7 +255,7 @@ function buildInfographic(size = "a4", dense = 0) {
       <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
       <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
   const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === F.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
-  const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span style="margin-right:auto"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_URL.replace("https://", "")}<br>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span style="text-align:right">${size === "social" ? "" : "ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม<br>"}สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น · กรมควบคุมโรค</span></div>`;
+  const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span style="margin-right:auto"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_NAME}<br>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span style="text-align:right">${size === "social" ? "" : "ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม<br>"}สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น · กรมควบคุมโรค</span></div>`;
   const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
   const fc1 = (() => { const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); const x = it?.pred?.[0]; return x == null ? null : x; })();
   const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (&gt;75 µg/m³)</span><b>${pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
