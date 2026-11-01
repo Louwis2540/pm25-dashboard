@@ -3,6 +3,33 @@
 // - เลือก "ทั้งเขต" หรือรายจังหวัดก่อนดาวน์โหลด (tailored) · ธีมสีและคำแนะนำตามระดับของจังหวัดที่เลือก
 //   ทั้งเขต → ใช้ระดับของจังหวัดที่ค่าสูงสุด (หลักป้องกันไว้ก่อน แบบ EPA รายงานค่าสูงสุดของพื้นที่)
 // - ตัดการเทียบปี 2568 ออก · โรคใช้แบบ E1 (เฉลี่ยราย/สัปดาห์ในแต่ละเดือน) · เพิ่มคาดการณ์ 3 วัน + QR ไปแดชบอร์ด
+// ---- แก้ซ้อนทับส่วนท้าย / หัวข้อโรคตัดบรรทัด (ฉีด CSS ชุดเดียว ใช้ร่วมเดโม่และเว็บจริง) ----
+(function () {
+  if (document.getElementById("igfix")) return;
+  const st = document.createElement("style"); st.id = "igfix";
+  st.textContent = `
+#ig .ig-sec em.tt{font-style:normal;white-space:nowrap}
+#ig .ig-sec em.tt+small{flex:1 1 0;min-width:0;text-align:right;line-height:1.25}
+#ig[data-dx="1"]:not(.social) .ig-body{gap:3px;padding-top:8px}
+#ig[data-dx="1"]:not(.social) .ig-sec{padding-top:3px;padding-bottom:3px}
+#ig[data-dx="1"] .dzg2{gap:6px}#ig[data-dx="1"] .dzg2>div{padding:3px 10px 0}
+#ig[data-dx="1"] .ig-date{padding:4px 44px}#ig[data-dx="1"] .ig-f{padding:6px 44px}
+#ig[data-dx="1"]:not(.social) .advice .w{padding:4px 12px;gap:4px}
+#ig[data-dx="1"] .dzl{font-size:13px;margin-top:-6px}
+#ig.social[data-dense="3"] .scale{gap:6px}
+#ig.social[data-dense="3"] .scale div{padding:4px 6px;font-size:13px;line-height:1.25}
+#ig.social[data-dense="3"] .scale b{font-size:15px}
+`;
+  document.head.appendChild(st);
+})();
+// ส่วนท้ายเป็น position:absolute → เว้นที่ด้านล่างเนื้อหาเท่าความสูงจริงของส่วนท้าย (เดิมโซเชียลเว้นแค่ 14px จึงซ้อนทับ)
+function igPad(ig) { const f = ig.querySelector(".ig-f"), b = ig.querySelector(".ig-body"); if (f && b) b.style.paddingBottom = (f.offsetHeight + 10) + "px"; }
+// ย่อทีละขั้น (0–4) จนไม่ล้น — ล้นตรวจจากส่วนที่เว้นไว้เหนือส่วนท้ายด้วย
+function fitInfographic(size) {
+  const ig = document.getElementById("ig");
+  for (let d = 0; d <= 4; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) return d; }
+  return 4;
+}
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 S.igPv = "";
 function igQR(size) {
@@ -80,7 +107,7 @@ function igFitTiles(ig) {
 function igEpiWk() { return epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
 function buildInfographic(size = "a4", dense = 0) {
   const F = igFocus(), L = LV[F.lv], ig = document.getElementById("ig");
-  ig.className = size; ig.dataset.dense = dense;
+  ig.className = size; ig.dataset.dense = Math.min(dense, 3); ig.dataset.dx = dense >= 4 ? "1" : "";   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
   [["--lv", L.c], ["--lv-soft", L.soft], ["--lv-tint", L.tint], ["--lv-ink", L.ink]].forEach(([k, v]) => ig.style.setProperty(k, v));
   const pmTag = `<b class="pm-tag">ค่าฝุ่น PM<sub>2.5</sub></b>`;
   const heroK = F.region ? `${pmTag}สูงสุดในเขต <b class="hp">จ.${F.f?.p.name ?? "–"}</b>` : `${pmTag}<b class="hp">จ.${S.igPv}</b>`;
@@ -116,15 +143,15 @@ function buildInfographic(size = "a4", dense = 0) {
       ${F.region ? maxBar + igTiles() : `<div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = p.name === S.igPv;
         return `<div class="${me ? "me" : ""}" style="border-top:6px solid ${l ? l.c : "#ccc"}"><span class="n">${p.name}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM<sub>2.5</sub></em>${v != null ? f1(v) : "–"}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}${igTrendHtml(p.name, true)}${igStrip7(p.name)}</div>`; }).join("")}</div>`}
       ${facts3}${adviceBox}${igFcStrip(F)}${act}${scaleBox}${riskNote}</div>` + foot;
-    igFitTiles(ig);
+    igFitTiles(ig); igPad(ig);
     return;
   }
   // โรค: แบบ E1 ย่อ (เฉลี่ยราย/สัปดาห์ในแต่ละเดือน) — ไม่เทียบปี 2568
   const wkMax = S.wkMax || 0, rows = igDzRows();
   const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, 2026) }));
   const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
-  const CH = [104, 94, 80, 66][dense];
-  const dzSec = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span>ข้อมูลผู้ป่วยกลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ${F.region ? "ทั้งเขต" : `จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}<small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)${F.region ? "" : " · เฉพาะผู้อยู่จริงในจังหวัด"} · HDC ณ ${dzAsOf()} · อัปเดตรายสัปดาห์</small></div>
+  const CH = [104, 94, 80, 66, 54][dense];
+  const dzSec = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ข้อมูลผู้ป่วยกลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ${F.region ? "ทั้งเขต" : `จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}</em><small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)${F.region ? "" : " · เฉพาะผู้อยู่จริงในจังหวัด"} · HDC ณ ${dzAsOf()} · อัปเดตรายสัปดาห์</small></div>
     <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${s.d.label}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, 16)}</div>`).join("")}</div>
     <div class="dzl">ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)}) · * ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax}) เป็นข้อมูลเบื้องต้น รายงานยังไม่ครบ (แท่งจาง) · แต่ละกลุ่มใช้สเกลของตัวเอง ${(() => { const f = ser[0].m.map((o, i) => o?.n === 5 ? TH_M[i] : "").filter(Boolean); return f.length ? ` · ${f.join(" ")} มี 5 สัปดาห์ ยอดรวมจึงสูงกว่าเดือนอื่น` : ""; })()}</div>`;
   ig.innerHTML = head + `
@@ -141,5 +168,5 @@ function buildInfographic(size = "a4", dense = 0) {
     <div class="lvleg">${LV.map((l, i) => `<span class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><i style="background:${l.c}"></i><b>${l.name}</b> ${l.range}</span>`).join("")}</div>
     ${riskNote}${F.region && F.lv >= 3 ? `<div class="ig-note"><b style="color:#9a3412">ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : ""}
   </div>${foot}`;
-  igFitTiles(ig);
+  igFitTiles(ig); igPad(ig);
 }
