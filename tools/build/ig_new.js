@@ -32,7 +32,7 @@
 #ig .cbk{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--ink-2)}
 #ig .cbk span{display:flex;align-items:center;gap:6px}
 #ig .cbk i{display:block;flex:none}#ig .cbk .bar{width:12px;height:12px;border-radius:2px;background:linear-gradient(90deg,#2980b9 25%,#e74c3c 25% 50%,#27ae60 50% 75%,#f39c12 75%)}
-#ig .cbk em{font-style:normal}#ig .cbk .ln{width:20px;height:2.5px;background:#1f2a3d}#ig .cbk .dsh{width:20px;height:2px!important;background:repeating-linear-gradient(90deg,#b84a00 0 4px,transparent 4px 7px)}
+#ig .cbk em{font-style:normal}#ig .cbk .ssn{width:14px;height:12px;border-radius:2px;background:rgba(232,89,12,.18)}#ig .cbk .ln{width:20px;height:2.5px;background:#1f2a3d}#ig .cbk .dsh{width:20px;height:2px!important;background:repeating-linear-gradient(90deg,#b84a00 0 4px,transparent 4px 7px)}
 #ig .cbg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 #ig .cbg>div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px 6px 0}
 #ig .cbh{display:flex;align-items:center;gap:5px;font-family:Anuphan;font-weight:700;font-size:14px;line-height:1.3;white-space:nowrap}
@@ -87,9 +87,17 @@ function fitInfographic(size) {
 // ชื่อกลุ่มโรคบนอินโฟกราฟิก (ใช้คำว่า "โรคระบบ…" ตามที่ขอ)
 const IG_DZ_NAME = { "ทางเดินหายใจ": "โรคระบบทางเดินหายใจ", "หัวใจ": "โรคระบบหัวใจและหลอดเลือด", "ตาอักเสบ": "โรคเยื่อบุตาอักเสบ", "ผิวหนัง": "โรคผิวหนังอักเสบ" };
 const igDzName = d => IG_DZ_NAME[d.key] || d.label;
-// ช่วงกราฟผู้ป่วยย้อนหลังเทียบค่าฝุ่น: ม.ค. 2568 – พ.ค. 2569
-const IG_CB = { y0: 2025, m0: 0, y1: 2026, m1: 4 };
-function igCbMonths() { const a = []; for (let y = IG_CB.y0, m = IG_CB.m0; y < IG_CB.y1 || (y === IG_CB.y1 && m <= IG_CB.m1); m === 11 ? (y++, m = 0) : m++) a.push({ y, m }); return a; }
+// ช่วงกราฟผู้ป่วยย้อนหลังเทียบค่าฝุ่น: ย้อนหลัง N เดือน นับถึงเดือนล่าสุดที่มีข้อมูลผู้ป่วย (เลื่อนเองทุกเดือน)
+// ฤดูฝุ่น = 1 พ.ย. – 31 พ.ค. (แรเงาในกราฟ) · N = 12 / 16 / 18 (รอเลือก · ค่าเริ่มต้น 18)
+let IG_CB_N = 18;
+const IG_SEASON = m => m >= 10 || m <= 4;   // พ.ย.–พ.ค.
+function igCbMonths() {
+  const ys = Object.keys(S.dz || {}).map(Number).filter(Boolean), cy = Math.max(...ys);
+  if (!isFinite(cy) || !S.wkMax) return [];
+  let y = cy, m = epiMonth(cy, S.wkMax); const a = [];
+  for (let i = 0; i < IG_CB_N; i++) { a.unshift({ y, m }); m === 0 ? (y--, m = 11) : m--; }
+  return a;
+}
 // ค่าฝุ่นรายเดือนทั้งเขต = ค่าเฉลี่ยรายวันของ 4 จังหวัด แล้วเฉลี่ยทั้งเดือน (เฉพาะวันที่มีค่า)
 function igPmMonthly(months) {
   const all = S.pm?.allData || {}, acc = {};
@@ -98,7 +106,7 @@ function igPmMonthly(months) {
   return months.map(({ y, m }) => { const a = acc[`${y}-${String(m + 1).padStart(2, "0")}`]; return a?.length ? a.reduce((x, z) => x + z, 0) / a.length : null; });
 }
 // กราฟผสม: แท่ง = ผู้ป่วยรวมรายเดือน (สเกลซ้ายของกลุ่มนั้น) · เส้น = ค่าฝุ่นรายเดือน (สเกลขวาเท่ากันทุกแผง) · เส้นประ 37.5
-function igCombo(d, bars, pm, pmMax, W, H) {
+function igCombo(d, bars, pm, pmMax, W, H, months) {
   const F = "font-family=\"'IBM Plex Sans Thai',Anuphan,sans-serif\"", n = bars.length, L = 34, R = 26, T = 10, B = 30, pw = W - L - R, ph = H - T - B, slot = pw / n, bw = Math.max(4, slot * .68);
   const bMax = e1Nice(Math.max(...bars.map(o => o?.sum || 0)) * 1.05, true) || 1, yb = v => T + ph - v / bMax * ph, yp = v => T + ph - v / pmMax * ph, X = i => L + i * slot + slot / 2;
   const k = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v);
@@ -106,26 +114,29 @@ function igCombo(d, bars, pm, pmMax, W, H) {
     + `<text x="${L - 4}" y="${T + 4}" text-anchor="end" font-size="10.5" fill="${d.c}" font-weight="700" ${F}>${k(bMax)}</text><text x="${L - 4}" y="${T + ph}" text-anchor="end" font-size="10.5" fill="#5f6c80" ${F}>0</text>`
     + `<text x="${W - R + 4}" y="${T + 4}" font-size="10.5" fill="#33415c" font-weight="700" ${F}>${pmMax}</text>`;
   const y37 = yp(37.5); if (37.5 < pmMax) g += `<line x1="${L}" x2="${W - R}" y1="${y37}" y2="${y37}" stroke="#b84a00" stroke-dasharray="4 3" stroke-width="1.2"/><text x="${W - R + 4}" y="${y37 + 4}" font-size="10.5" fill="#b84a00" font-weight="700" ${F}>37.5</text>`;
-  const yi = bars.findIndex((_, i) => i > 0 && igCbMonths()[i].m === 0); if (yi > 0) g += `<line x1="${L + yi * slot}" x2="${L + yi * slot}" y1="${T}" y2="${T + ph + 26}" stroke="rgba(15,27,45,.22)" stroke-dasharray="2 2"/>`;
+  months.forEach(({ m }, i) => { if (IG_SEASON(m)) g += `<rect x="${(L + i * slot).toFixed(1)}" y="${T}" width="${(slot + .3).toFixed(1)}" height="${ph}" fill="rgba(232,89,12,.09)"/>`; });   // ฤดูฝุ่น
+  const yi = bars.findIndex((_, i) => i > 0 && months[i].m === 0); if (yi > 0) g += `<line x1="${L + yi * slot}" x2="${L + yi * slot}" y1="${T}" y2="${T + ph + 26}" stroke="rgba(15,27,45,.22)" stroke-dasharray="2 2"/>`;
   bars.forEach((o, i) => { if (!o) return; const y = yb(o.sum); g += `<rect x="${X(i) - bw / 2}" y="${y}" width="${bw}" height="${T + ph - y}" rx="2" fill="${d.c}" opacity="${o.prov ? .38 : .8}"/>`; });
   const pts = pm.map((v, i) => v == null ? null : [X(i), yp(Math.min(v, pmMax))]);
   let path = "", on = false; pts.forEach(p => { if (!p) { on = false; return; } path += `${on ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`; on = true; });
   g += `<path d="${path}" fill="none" stroke="#1f2a3d" stroke-width="2.2" stroke-linejoin="round"/>` + pts.map(p => p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.4" fill="#fff" stroke="#1f2a3d" stroke-width="1.6"/>` : "").join("");
-  igCbMonths().forEach(({ y, m }, i) => { if (m % 3 !== 0 && i !== n - 1) return;
-    g += `<text x="${X(i)}" y="${T + ph + 13}" text-anchor="middle" font-size="10.5" fill="#5f6c80" ${F}>${TH_M[m]}</text>`;
-    if (i === 0 || m === 0) g += `<text x="${X(i)}" y="${T + ph + 26}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
+  months.forEach(({ y, m }, i) => {   // ป้ายเดือนเว้นระยะ (เดือนสุดท้ายแสดงเสมอ) · ป้ายปีที่ต้นปี/ช่องแรก
+    if (i === n - 1 || (!(n > 12 ? m % 3 !== 1 : m % 2 !== 0) && i < n - 2)) g += `<text x="${X(i)}" y="${T + ph + 13}" text-anchor="middle" font-size="10.5" fill="#5f6c80" ${F}>${TH_M[m]}</text>`;
+    if (i === 0 || m === 0) g += `<text x="${i === 0 ? L : X(i)}" y="${T + ph + 26}" text-anchor="${i === 0 ? "start" : "middle"}" font-size="10.5" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
 }
 function igComboSec(H) {
-  const months = igCbMonths(), r25 = S.dz?.[2025] || [], r26 = S.dz?.[2026] || [];
-  if (!r25.length && !r26.length) return "";
+  const months = igCbMonths(); if (!months.length) return "";
+  const cy = Math.max(...Object.keys(S.dz).map(Number).filter(Boolean));
+  const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(S.dz?.[y] || [], d.key, y === cy ? S.wkMax : 99, y)]));
   const pm = igPmMonthly(months), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(v => v != null), 0) / 10) * 10);
-  const ser = DZ.map(d => { const a = monthlyWk(r25, d.key, 99, 2025), b = monthlyWk(r26, d.key, S.wkMax || 0, 2026);
-    return { d, bars: months.map(({ y, m }) => (y === 2025 ? a : b)[m] || null) }; });
-  return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">ผู้ป่วยย้อนหลัง เทียบค่าฝุ่น PM<sub>2.5</sub> รายเดือน</em><small style="margin-left:auto">ม.ค. ${IG_CB.y0 + 543} – ${TH_M[IG_CB.m1]} ${IG_CB.y1 + 543} · ทั้งเขต</small></div>
-    <div class="cbk"><span><i class="bar"></i><em>แท่ง = จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>เส้น = ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 = ค่ามาตรฐาน</em></span></div>
-    <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H)}</div>`).join("")}</div>
-    <div class="dzl">ใช้ดูแนวโน้มร่วมกัน ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง · ที่มา: HDC กระทรวงสาธารณสุข · Air4Thai ร่วมกับ GISTDA</div>`;
+  const ser = DZ.map(d => ({ d, bars: months.map(({ y, m }) => byY[y]?.[d.key]?.[m] || null) }));
+  const f = months[0], l = months.at(-1), rng = `${TH_M[f.m]} ${String(f.y + 543).slice(2)} – ${TH_M[l.m]} ${String(l.y + 543).slice(2)}`;
+  const prov = ser[0].bars.some(o => o?.prov);
+  return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">ผู้ป่วยย้อนหลัง ${months.length} เดือน เทียบค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ทั้งเขต</small></div>
+    <div class="cbk"><span><i class="bar"></i><em>แท่ง = จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>เส้น = ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 = ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
+    <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H, months)}</div>`).join("")}</div>
+    <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}ใช้ดูแนวโน้มร่วมกัน ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง · ที่มา: HDC กระทรวงสาธารณสุข · Air4Thai ร่วมกับ GISTDA</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 S.igPv = "";
