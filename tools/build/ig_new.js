@@ -309,3 +309,96 @@ function buildInfographic(size = "a4", dense = 0) {
   </div>${foot}`;
   igFitTiles(ig); igPad(ig);
 }
+
+// ================= สร้างภาพ / บันทึกรูป (1 พ.ย. 2569) =================
+// 1) กด "สร้างภาพ" → เปิดหน้าต่างพร้อมข้อความ "กำลังสร้างภาพ…" ทันที (เดิมเห็นแค่ปุ่มเปลี่ยนข้อความ ดูเหมือนค้าง)
+// 2) เร็วขึ้น: html2canvas คัดลอกเฉพาะส่วนที่ใช้วาด (ไม่คัดลอกแผนที่/กราฟทั้งหน้า) · ใช้ Blob แทน data URL ขนาดหลาย MB
+// 3) ปุ่ม "บันทึกรูป": มือถือที่รองรับ → แผ่นแชร์ของระบบ (บันทึกลงคลังรูป/ส่ง LINE ได้) · อื่น ๆ → ดาวน์โหลดไฟล์
+//    แทนตัวจัดการเดิมด้วยตัวดักแบบ capture ที่ document (ตัวเดิมผูกอยู่ในหน้าแล้ว ลบตรง ๆ ไม่ได้)
+(function () {
+  const $ = id => document.getElementById(id);
+  const st = document.createElement("style");
+  st.textContent = `
+.modal .ig-wait{display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:48px 16px;text-align:center;color:var(--ink-2)}
+.modal.busy .ig-wait{display:flex}.modal.busy .img,.modal.busy .cap,.modal.busy .hint,.modal.busy #mDl{display:none!important}
+.modal .ig-wait i{width:44px;height:44px;border-radius:50%;border:5px solid #e3e8ef;border-top-color:var(--accent,#1c6ed6);animation:igspin .8s linear infinite}
+.modal .ig-wait b{font-size:16px;color:var(--ink-1)}.modal .ig-wait small{font-size:13px}
+@keyframes igspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.modal .ig-wait i{animation-duration:2.4s}}
+#mDl[aria-busy="true"]{opacity:.6;pointer-events:none}
+.modal .bar #mDl,.modal .bar #mClose{white-space:nowrap;flex:none}.modal .bar h3{min-width:0}`;
+  document.head.appendChild(st);
+  let wait = null, curUrl = null, curBlob = null, curName = "PM25.png";
+  const ensureWait = () => { if (wait) return wait; const box = document.querySelector("#modal .box"); if (!box) return null;
+    wait = document.createElement("div"); wait.className = "ig-wait"; wait.setAttribute("role", "status"); wait.setAttribute("aria-live", "polite");
+    wait.innerHTML = `<i aria-hidden="true"></i><b>กำลังสร้างภาพ…</b><small>ใช้เวลาประมาณ 3–10 วินาที ขึ้นกับเครื่อง</small>`;
+    box.insertBefore(wait, box.querySelector(".hint")); return wait; };
+  const step = t => { const w = ensureWait(); if (w) w.querySelector("small").textContent = t; };
+  const paint = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));   // ให้หน้าวาดข้อความก่อนเริ่มงานหนัก
+  const toBlob = c => new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error("แปลงภาพไม่สำเร็จ")), "image/png"));
+  const inApp = /\bLine\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent);
+  const touch = matchMedia("(pointer:coarse)").matches;
+  function setResult(blob, name, hint) {
+    if (curUrl) URL.revokeObjectURL(curUrl);
+    curUrl = URL.createObjectURL(blob); curBlob = blob; curName = name;
+    $("mImg").src = curUrl;
+    const a = $("mDl"); a.href = curUrl; a.download = name;
+    $("mHint").textContent = hint + (inApp ? " · ถ้ากดบันทึกไม่ได้ (เปิดในแอป LINE/Facebook) ให้กดค้างที่รูป หรือเปิดหน้านี้ในเบราว์เซอร์" : "");
+  }
+  // ---- ปุ่ม "สร้างภาพ" ----
+  document.addEventListener("click", async e => {
+    const btn = e.target.closest && e.target.closest("#btnIg"); if (!btn) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (btn.disabled) return;
+    const old = btn.innerHTML, m = $("modal"); btn.disabled = true; btn.textContent = "กำลังสร้างภาพ…";
+    ensureWait(); step("กำลังเตรียมข้อมูล…"); $("mTitle").textContent = "กำลังสร้าง Infographic";
+    $("mCap").hidden = true; m.classList.add("on", "busy"); await paint();
+    try {
+      const size = $("igSize").value; S.igPv = $("igPv").value;
+      await document.fonts.ready; if (typeof lsFontReady === "function") await lsFontReady();
+      fitInfographic(size); step("กำลังวาดภาพ…"); await paint();
+      let canvas;
+      if (size === "social" && S.igPv && typeof provinceSocial === "function") canvas = await provinceSocial(S.igPv);
+      else {
+        if (typeof html2canvas !== "function") throw new Error("ไม่พบ html2canvas — เปิดหน้านี้ผ่าน server");
+        const ig = $("ig");
+        canvas = await html2canvas(ig, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", windowWidth: 1400, windowHeight: 1000, logging: false,
+          // คัดลอกเฉพาะ head (สไตล์/ฟอนต์), บรรพบุรุษของ #ig และเนื้อหาใน #ig — ส่วนอื่นของหน้าไม่ต้องคัดลอก (เร็วขึ้นมาก)
+          ignoreElements: el => !(el === ig || el.contains(ig) || ig.contains(el) || el.closest("head") || el.tagName === "STYLE" || el.tagName === "LINK"),
+          onclone: doc => { const c = doc.getElementById("ig"); if (typeof canvasSafeColors === "function") canvasSafeColors(c); if (typeof igSvgFonts === "function") igSvgFonts(c); } });
+      }
+      step("เกือบเสร็จ…"); await paint();
+      const blob = await toBlob(canvas);
+      $("mTitle").textContent = "Infographic พร้อมดาวน์โหลด";
+      setResult(blob, `PM25-${S.igPv || "เขต7"}-${S.todayRow?.date || "today"}-${size}.png`,
+        `ขนาด ${canvas.width}×${canvas.height} px · ${size === "social" ? "สำหรับโพสต์ Facebook/LINE" : "A4 สำหรับพิมพ์"} · กด "บันทึกรูป" เพื่อบันทึกลงเครื่อง`);
+      if (size === "social" && typeof igCaption === "function") { $("mCap").hidden = false; $("mCapT").value = igCaption(); }
+      m.classList.remove("busy"); $("mDl").focus();
+    } catch (err) { m.classList.remove("on", "busy"); alert("สร้าง Infographic ไม่สำเร็จ: " + err.message); }
+    finally { btn.disabled = false; btn.innerHTML = old; }
+  }, true);
+  // ---- ปุ่ม "บันทึกรูป" (ใช้กับภาพทุกแบบในหน้าต่างนี้ รวมภาพการ์ดจังหวัด) ----
+  document.addEventListener("click", async e => {
+    const a = e.target.closest && e.target.closest("#mDl"); if (!a || !a.href) return;
+    // ชื่อไฟล์ภาษาไทยถูกเบราว์เซอร์บางตัวเปลี่ยนเป็น "download" (ไม่มีนามสกุล) → ใช้ชื่ออังกฤษ
+    const EN = { "เขต7": "R7", "ขอนแก่น": "KhonKaen", "มหาสารคาม": "MahaSarakham", "ร้อยเอ็ด": "RoiEt", "กาฬสินธุ์": "Kalasin" };
+    let name = String(a.download || curName); Object.keys(EN).forEach(k => { name = name.split(k).join(EN[k]); });
+    name = name.replace(/[^\w.\-]+/g, "-"); if (!/\.png$/i.test(name)) name += ".png";
+    // ได้ไฟล์แบบ "ทันที" (ไม่ await) — iOS ยอมเปิดแผ่นแชร์เฉพาะเมื่อเรียกต่อจากการกดโดยตรง
+    let blob = null;
+    if (a.href === curUrl && curBlob) blob = curBlob;
+    else if (a.href.startsWith("data:")) { try { const [h, d] = a.href.split(","), bin = atob(d), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); blob = new Blob([u8], { type: (h.match(/data:([^;]+)/) || [])[1] || "image/png" }); } catch { blob = null; } }
+    if (!blob) return;   // ไม่รู้จักลิงก์ → ปล่อยให้ลิงก์ทำงานตามปกติ
+    e.preventDefault(); e.stopImmediatePropagation();
+    const file = new File([blob], name, { type: blob.type || "image/png" });
+    // มือถือ: แผ่นแชร์ของระบบ (iOS/Android) → บันทึกรูป / ส่ง LINE ได้
+    if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: name }); return; }
+      catch (err) { if (err && err.name === "AbortError") return; }   // ผู้ใช้กดยกเลิก
+    }
+    // คอมพิวเตอร์ / เบราว์เซอร์ที่ไม่รองรับแชร์ไฟล์: ดาวน์โหลดผ่านลิงก์ Blob ชั่วคราว
+    const u = URL.createObjectURL(blob), t = document.createElement("a");
+    t.href = u; t.download = name; t.rel = "noopener"; t.style.display = "none"; document.body.appendChild(t); t.click();
+    setTimeout(() => { URL.revokeObjectURL(u); t.remove(); }, 4000);
+  }, true);
+})();
