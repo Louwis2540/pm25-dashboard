@@ -209,11 +209,11 @@ function igPmMonthly(months, pv) {
 }
 // กราฟผสม: แท่ง = ผู้ป่วยรวมรายเดือน (สเกลซ้ายของกลุ่มนั้น) · เส้น = ค่าฝุ่นรายเดือน (สเกลขวาเท่ากันทุกแผง) · เส้นประ 37.5
 function igCombo(d, bars, pm, pmMax, W, H, months) {
-  const F = "font-family=\"'IBM Plex Sans Thai',Anuphan,sans-serif\"", n = bars.length, L = 36, R = 36, T = 10, B = 32, pw = W - L - R, ph = H - T - B, slot = pw / n, bw = Math.max(4, slot * .68);
+  const F = "font-family=\"'IBM Plex Sans Thai',Anuphan,sans-serif\"", n = bars.length, L = 36, R = 36, T = 10, B = 41, pw = W - L - R, ph = H - T - B, slot = pw / n, bw = Math.max(4, slot * .68);
   const bMax = e1Nice(Math.max(...bars.map(o => o?.sum || 0)) * 1.05, true) || 1, yb = v => T + ph - v / bMax * ph, yp = v => T + ph - v / pmMax * ph, X = i => L + i * slot + slot / 2;
   const k = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v);
   let g = `<line x1="${L}" x2="${W - R}" y1="${T + ph}" y2="${T + ph}" stroke="rgba(15,27,45,.25)"/>`
-    + `<text x="${L - 4}" y="${T + 4}" text-anchor="end" font-size="13" fill="${d.c}" font-weight="700" ${F}>${k(bMax)}</text><text x="${L - 4}" y="${T + ph}" text-anchor="end" font-size="13" fill="#5f6c80" ${F}>0</text>`
+    + `<text x="${L - 4}" y="${T + 4}" text-anchor="end" font-size="13" fill="${d.c}" font-weight="700" ${F}>${k(bMax)}</text><text x="${L - 4}" y="${T + ph - 3}" text-anchor="end" font-size="13" fill="#5f6c80" ${F}>0</text>`
     + (yp(37.5) - T >= 16 ? `<text x="${W - R + 4}" y="${T + 4}" font-size="13" fill="#33415c" font-weight="700" ${F}>${pmMax}</text>` : "");
   const y37 = yp(37.5); if (37.5 < pmMax) g += `<line x1="${L}" x2="${W - R}" y1="${y37}" y2="${y37}" stroke="#b84a00" stroke-dasharray="4 3" stroke-width="1.2"/><text x="${W - R + 4}" y="${y37 + 4}" font-size="13" fill="#b84a00" font-weight="700" ${F}>37.5</text>`;
   months.forEach(({ m }, i) => { if (IG_SEASON(m)) g += `<rect x="${(L + i * slot).toFixed(1)}" y="${T}" width="${(slot + .3).toFixed(1)}" height="${ph}" fill="rgba(232,89,12,.09)"/>`; });   // ฤดูฝุ่น
@@ -222,9 +222,12 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
   const pts = pm.map((v, i) => v == null ? null : [X(i), yp(Math.min(v, pmMax))]);
   let path = "", on = false; pts.forEach(p => { if (!p) { on = false; return; } path += `${on ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`; on = true; });
   g += `<path d="${path}" fill="none" stroke="#1f2a3d" stroke-width="2.2" stroke-linejoin="round"/>` + pts.map(p => p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.4" fill="#fff" stroke="#1f2a3d" stroke-width="1.6"/>` : "").join("");
-  months.forEach(({ y, m }, i) => {   // ป้ายเดือนเว้นระยะ (เดือนสุดท้ายแสดงเสมอ) · ป้ายปีที่ต้นปี/ช่องแรก
-    if (i === n - 1 || (!(n > 12 ? m % 3 !== 1 : m % 2 !== 0) && i < n - 2)) g += `<text x="${X(i)}" y="${T + ph + 13}" text-anchor="middle" font-size="13" fill="#5f6c80" ${F}>${TH_M[m]}</text>`;
-    if ((i === 0 && !months.slice(1, 4).some(o => o.m === 0)) || (m === 0 && i > 0)) g += `<text x="${i === 0 ? L : X(i)}" y="${T + ph + 26}" text-anchor="${i === 0 ? "start" : "middle"}" font-size="13" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
+  // ป้ายเดือนใต้กราฟ (ตัวใหญ่ขึ้น 13→17): เลือกทุก 3 เดือน + เดือนแรก/เดือนสุดท้าย แล้วตัดป้ายที่ชิดกันเกิน (ไม่ให้ชนกัน)
+  const q = months.map((o, i) => i).filter(i => months[i].m % 3 === 0), cand = [...(q[0] >= 3 ? [0] : []), ...q, n - 1], keep = [];   // เดือนแรกแสดงเมื่อไม่ชิดป้ายไตรมาสแรก
+  const LW = 32, edge = i => [X(i) - LW / 2, X(i) + LW / 2, false];   // ขอบซ้าย/ขวาของป้าย (กึ่งกลางใต้แท่ง)
+  for (const i of [...new Set(cand)]) { if (!keep.length || edge(i)[0] - edge(keep[keep.length - 1])[1] >= 6) keep.push(i); }   // ระยะห่างระหว่างป้ายอย่างน้อย 6 px
+  keep.forEach(i => { const [x0, , st] = edge(i); g += `<text x="${st ? x0 : X(i)}" y="${T + ph + 16}" text-anchor="${st ? "start" : "middle"}" font-size="17" fill="#33415c" ${F}>${TH_M[months[i].m]}</text>`; });
+  months.forEach(({ y, m }, i) => { if ((i === 0 && !months.slice(1, 4).some(o => o.m === 0)) || (m === 0 && i > 0)) g += `<text x="${i === 0 ? L : X(i)}" y="${T + ph + 36}" text-anchor="${i === 0 ? "start" : "middle"}" font-size="15" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
 }
 function igComboSec(H) {
