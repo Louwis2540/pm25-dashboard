@@ -159,7 +159,7 @@ function igFocus() {
 }
 function igForecast(F, big) {
   const items = PROV.map(p => ({ p, it: S.gpv?.items.find(i => i.code === String(p.code)) })).filter(o => o.it);
-  if (!items.length) return "";
+  if (!items.length) return `<div style="padding:14px 4px;font-size:15px;color:var(--ink-2)">ยังไม่มีข้อมูลคาดการณ์จาก GISTDA ในขณะนี้</div>`;
   const base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00"), day = k => new Date(base.getTime() + (k + 1) * 864e5);
   const hd = [0, 1, 2].map(k => { const d = day(k); return `<th>${d.getDate()} ${TH_M[d.getMonth()]}<small>${k === 0 ? "พรุ่งนี้" : TH_D[d.getDay()]}</small></th>`; }).join("");
   const rows = (F.region ? items : [...items.filter(o => o.p.name === S.igPv), ...items.filter(o => o.p.name !== S.igPv)]);
@@ -253,15 +253,15 @@ function buildInfographic(size = "a4", dense = 0) {
   const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
   const fc1 = (() => { const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); const x = it?.pred?.[0]; return x == null ? null : x; })();
   const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (&gt;75 µg/m³)</span><b>${pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
-    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม. (เขต 7)</span><b>${S.hsToday.length} จุด</b></span></div>
+    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7) · ที่มา: GISTDA</span><b>${S.hsToday.length} จุด</b></span></div>
     <div><span class="fi" style="background:${fc1 != null ? LV[lvOf(fc1)].soft : "var(--subtle)"};color:${fc1 != null ? LV[lvOf(fc1)].ink : "var(--ink-2)"}">${inl("i-cal", 26)}</span><span><span class="k">พรุ่งนี้ (คาดการณ์) · ${F.f?.p.name ?? ""}</span><b>${fc1 != null ? `${f1(fc1)} · ${LV[lvOf(fc1)].name}` : "–"}</b></span></div></div>`;
   const pvCard = (p, cls) => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = !F.region && p.name === S.igPv;
     return `<div class="${me ? "me" : ""}" style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n"><b class="pn">${p.name}</b>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM<sub>2.5</sub></em>${v != null ? f1(v) : "–"}<small> µg/m³</small></span>${igTrendHtml(p.name)}</div>`; };
   const over = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5);
   const kpi = (ic, bg, fg, k, b, sm) => `<div><span class="fi" style="background:${bg};color:${fg}">${inl(ic, 26)}</span><span><span class="k">${k}</span><b>${b}</b>${sm ? `<small>${sm}</small>` : ""}</span></div>`;
   const kpis = `<div class="kpis${F.region ? " kpis-h" : ""}">${kpi("i-pin", over.length ? LV[3].soft : LV[1].soft, over.length ? LV[3].ink : LV[1].ink, "จังหวัดที่เกิน 37.5 µg/m³", `${over.length} จาก ${PROV.length}${over.length ? ` · ${over.map(p => p.name).join(" ")}` : ""}`)}
-    ${kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75)", pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์")}
-    ${kpi("i-fire", "#fdeee5", "#e8590c", "จุดความร้อน 24 ชม. (เขต 7)", `${S.hsToday.length} จุด`)}</div>`;
+    ${kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)", pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์")}
+    ${kpi("i-fire", "#fdeee5", "#e8590c", "จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7)", `${S.hsToday.length} จุด`, "ที่มา: GISTDA")}</div>`;
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
   if (size === "social") {
@@ -284,7 +284,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const sec1 = F.region ? maxBar.replace('<span class="ml">', `<span class="src">${srcT}</span><span class="ml">`) + igTiles() : `<div class="row1">${heroA4}${kpis}</div>`;
   const sec2 = `<div class="row3">
       <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><table class="t7 num">${t7Html(true)}</table></div>
-      <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>คาดการณ์ 3 วัน<small>GISTDA</small></h4>${igForecast(F)}</div>
+      <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4>${igForecast(F)}</div>
     </div>`;
   const sec3 = adviceBox + `<div class="lvleg">${LV.map((l, i) => `<span class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><i style="background:${l.c}"></i><b>${l.name}</b> ${l.range}</span>`).join("")}</div>`
     + `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสายด่วน ${HOT_DDC}</b>${F.lv >= 3 ? ` · <b style="color:#9a3412">ร่วมงดเผาในที่โล่ง</b> พบการเผาแจ้ง ${HOT_PCD}` : ""}</div>`;
