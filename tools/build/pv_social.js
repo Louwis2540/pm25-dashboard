@@ -87,7 +87,7 @@ function igCaption() {
     ? `สถานการณ์ฝุ่น PM₂.₅ เขตสุขภาพที่ 7 วัน${ds} (ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME})\n` + PROV.map(p => { const x = S.todayRow?.[p.name]; return x == null ? "" : `• ${p.name} ${f1(x)} µg/m³ ${LV[lvOf(x)].name}`; }).filter(Boolean).join("\n")
     : `สถานการณ์ฝุ่น PM₂.₅ จ.${pvn} วัน${ds} (ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME})\n${f1(v)} µg/m³ · ระดับ${L.name}${tr ? ` · ${igDelta(pvn).replace(/<\/?b>/g, "")}` : ""}`;
   return [head,
-    `\nคำแนะนำ${F.region ? ` (ตามระดับสูงสุดในเขต จ.${pvn})` : ""}`,
+    `\nคำแนะนำ${F.region ? ` (ตามระดับสูงสุดในเขตสุขภาพที่ 7 จ.${pvn})` : ""}`,
     `ประชาชนทั่วไป: ${L.pub.join(" / ")}`,
     `กลุ่มเสี่ยง*: ${L.risk.join(" / ")}`, `*${RISK_DEF}`,
     p1 != null ? `\nพรุ่งนี้คาดว่า${F.region ? ` จ.${pvn} ` : ""}จะอยู่ในระดับ${LV[lvOf(p1)].name}` : "",
