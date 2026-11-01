@@ -155,6 +155,14 @@
 #ig .fc4{display:flex;flex-direction:column;gap:3px;margin-top:-2px}#ig .fc4h{display:flex;align-items:baseline;gap:10px;padding:0 4px}#ig .fc4h b{font-family:Anuphan;font-size:16px;color:var(--ink-1)}#ig .fc4h span{font-size:11.5px;color:var(--ink-2)}
 #ig .fc4g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}#ig .fc4g .c{display:grid;grid-template-columns:auto 1fr 1fr 1fr;align-items:center;gap:4px;background:#fff;border:1px solid rgba(15,27,45,.1);border-radius:12px;padding:4px 6px}
 #ig .fc4g .n{font-family:Anuphan;font-weight:700;font-size:14px;color:var(--ink-1);padding-right:2px;white-space:nowrap}#ig .fc4g .v{display:flex;flex-direction:column;align-items:center;border-radius:8px;padding:1px 2px 2px;font-family:Anuphan;font-weight:700;font-size:17px;line-height:1.3}#ig .fc4g .v small{display:block;font-family:"IBM Plex Sans Thai";font-size:11px;line-height:1.35;font-weight:600;opacity:.9;white-space:nowrap}
+#ig .advice .do{text-wrap:pretty}
+#ig .sprg .advice .w{padding:4px 12px;gap:3px}#ig .sprg .advice .w h4{margin:0;font-size:16px}#ig .sprg .advice .do{padding:1px 8px;font-size:15px!important;line-height:1.3;min-height:0}#ig .sprg .advice .do span{width:26px;height:26px}#ig .sprg .advice .do span svg{width:18px;height:18px}#ig .sprg .advice{grid-template-columns:170px 1fr 1fr!important}#ig .sprg .advice .lv{padding:6px 8px!important;gap:2px!important}#ig .sprg .advice .lv b{font-size:20px!important;line-height:1.2}#ig .sprg .advice .lv .f{font-size:30px}#ig .sprg .advice .lv>span:last-child{font-size:13.5px;white-space:nowrap}
+#ig .sprg .igt .tile .delta{font-size:21px!important;font-weight:700;white-space:nowrap}
+#ig .sprg .igt .tile .delta b{font-weight:800}
+#ig .sprg .advice{border:2.5px solid var(--lv)!important;background:linear-gradient(160deg,#fff 35%,var(--lv-tint))!important}
+#ig .sprg .advice .w h4{color:var(--lv-ink);font-size:17px!important}
+#ig .sprg .advice .do{font-weight:600;color:var(--ink-1);background:rgba(255,255,255,.85)!important;border:1px solid color-mix(in srgb,var(--lv) 30%,#fff)!important}
+#ig .sprg .advice .do span{background:var(--lv-soft)!important;color:var(--lv-ink)!important}
 #ig .maxbar .ml.mlhs.ok,#ig .pvst.ok{background:#ecf8ef!important;border-color:#9ed7ac!important;color:#166534!important}#ig .pvst.ok b{color:#166534}
 #ig .maxbar .mk2{display:flex;align-items:center;gap:8px;flex:none}#ig .maxbar .mp,#ig .maxbar .mv{white-space:nowrap}#ig .maxbar .mv small{display:inline}#ig .maxbar{gap:12px!important;padding-top:4px!important;padding-bottom:4px!important}#ig .maxbar .mkt{display:flex;flex-direction:column;line-height:1.2}#ig .maxbar .mkt b{font-family:Anuphan;font-size:17px;color:var(--ink-1)}#ig .maxbar .mkt small{font-size:12px;font-weight:500;color:var(--ink-2)}
 `;
@@ -166,11 +174,11 @@ function igPad(ig) { const f = ig.querySelector(".ig-f"), b = ig.querySelector("
 let IG_GROW = 0;   // A4: พื้นที่ว่างที่แจกให้กราฟข้อ 4–5 (px)
 function fitInfographic(size) {
   const ig = document.getElementById("ig");
-  const top = size === "social" ? (S.igPv ? 6 : 4) : 7;   // โพสต์รายจังหวัดมีขั้น 5–6 เพิ่ม   // A4 มีขั้น 5–7 สำรอง (กราฟเตี้ยลง · ขั้น 7 ย่อการ์ดจังหวัด)
+  const top = size === "social" ? 6 : 7;   // โพสต์รายจังหวัดมีขั้น 5–6 เพิ่ม   // A4 มีขั้น 5–7 สำรอง (กราฟเตี้ยลง · ขั้น 7 ย่อการ์ดจังหวัด)
   let d = 0; IG_GROW = 0;
   for (; d <= top; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) break; }
   if (d > top) return top;
-  if (size !== "social" || S.igPv) {   // A4 และโพสต์รายจังหวัด: พื้นที่ว่างเหนือส่วนท้าย → ขยายกราฟผู้ป่วย (ไม่ปล่อยช่องว่าง)
+  {   // A4 และโพสต์รายจังหวัด: พื้นที่ว่างเหนือส่วนท้าย → ขยายกราฟผู้ป่วย (ไม่ปล่อยช่องว่าง)
     const b = ig.querySelector(".ig-body"), last = b?.lastElementChild, f = ig.querySelector(".ig-f");
     let g = last && f ? Math.floor(f.offsetTop - 12 - (last.offsetTop + last.offsetHeight)) : 0;
     for (let k = 0; k < 4 && g > 6; k++) { IG_GROW = g; buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) return d; g = Math.floor(g * .7); }
@@ -389,6 +397,19 @@ function igPvTrend(pv, F) {
 // ===== โพสต์รายจังหวัด 1080×1350 (1 พ.ย. 2569) · เรียงแบบอินโฟกราฟิกระดับเขต =====
 // 1 การ์ดจังหวัดใหญ่ (ภาพสภาพอากาศ + ค่าฝุ่น + เทียบเมื่อวาน) → 2 คำแนะนำดูแลตัวเอง → 3 ย้อนหลัง 7 วัน + คาดการณ์ 3 วัน
 // → 4 ผู้ป่วย 4 กลุ่มโรค รายเดือน ปี 2569 ของจังหวัดนั้น · ไม่มีการ์ดจังหวัดอื่น
+// โพสต์โซเชียลระดับเขต (1 พ.ย. 2569): สูงสุดในเขต + การ์ด 4 จังหวัด → ค่าฝุ่นย้อนหลัง 3 วัน → คำแนะนำ → ผู้ป่วย 4 กลุ่มโรครายเดือน
+// ตัดคาดการณ์ออก (เดิมซ้ำ 2 ที่) · ใช้รูปแบบเดียวกับโพสต์รายจังหวัด/A4
+function igSocialRg(ig, head, foot, maxBar, adviceBox, riskNote, act, dense) {
+  const d = Math.min(dense, 6); ig.dataset.sp = d;
+  const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
+  const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
+  const CH = [104, 96, 90, 84, 78, 70, 60][d] + Math.round(IG_GROW * .48);
+  const prov = last >= 0 && ser[0].m.some(o => o?.prov);
+  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · ทั้งเขตสุขภาพที่ 7</em><small style="margin-left:auto">ราย/เดือน</small></div>
+    <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 17)}</div>`).join("")}</div>
+    <div class="dzl">${prov ? "* แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
+  ig.innerHTML = head + `<div class="ig-body sp sprg">${maxBar}${igTiles()}${igH3()}${adviceBox}${act}${dz}${riskNote}</div>` + foot;
+}
 function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
   const pv = S.igPv, v = F.f?.v, d = Math.min(dense, 6); ig.dataset.sp = d;   // ระดับย่อของโพสต์รายจังหวัด 0–6
   const big = `<div class="sp-hero"><span class="sp-art">${weatherArt(F.lv, [210, 196, 184, 170, 160, 150, 140][d], [154, 144, 135, 125, 117, 110, 102][d])}</span>
@@ -434,13 +455,13 @@ function igTiles(sel) {
 const IG_TW = 1360;
 function igFitTiles(ig) {
   const box = ig.querySelector(".igt"), t = box?.querySelector(".tiles"); if (!t) return;
-  const tw = ig.classList.contains("social") ? IG_TW : IG_TW + (ig.dataset.tc ? 440 : 120); t.style.width = tw + "px";
+  const tw = ig.classList.contains("social") && !ig.dataset.tc ? IG_TW : IG_TW + (ig.dataset.tc ? 440 : 120); t.style.width = tw + "px";
   const k = box.clientWidth / tw; t.style.transform = `scale(${k})`; box.style.height = (t.offsetHeight * k) + "px";
 }
 function igEpiWk() { return epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
 function buildInfographic(size = "a4", dense = 0) {
   const F = igFocus(), L = LV[F.lv], ig = document.getElementById("ig");
-  ig.className = size; delete ig.dataset.sp; ig.dataset.dense = Math.min(dense, 3); const rgA4 = size === "a4" && !S.igPv; ig.dataset.dx = dense >= 4 || rgA4 ? "1" : ""; ig.dataset.tc = dense >= 7 || rgA4 ? "1" : "";   // A4 ระดับเขต: การ์ดจังหวัดแบบย่อเสมอ (เน้นกราฟผู้ป่วย) ig.dataset.dl = dense >= 5 || rgA4 ? "1" : "";   // A4 ระดับเขต: ส่วนอื่นแบบกระชับเสมอ พื้นที่ที่เหลือให้กราฟผู้ป่วย   // ขั้น 7 = การ์ดจังหวัดย่อ (สำรองสุดท้าย)   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
+  ig.className = size; delete ig.dataset.sp; ig.dataset.dense = Math.min(dense, 3); const rgA4 = size === "a4" && !S.igPv; ig.dataset.dx = dense >= 4 || rgA4 ? "1" : ""; const rgSo = size === "social" && !S.igPv; ig.dataset.tc = dense >= 7 || rgA4 || rgSo ? "1" : ""; ig.dataset.dl = dense >= 5 || rgA4 ? "1" : "";   /* ระดับเขต: การ์ดจังหวัดแบบย่อเสมอ (เน้นกราฟผู้ป่วย) */   // A4 ระดับเขต: ส่วนอื่นแบบกระชับเสมอ พื้นที่ที่เหลือให้กราฟผู้ป่วย   // ขั้น 7 = การ์ดจังหวัดย่อ (สำรองสุดท้าย)   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
   [["--lv", L.c], ["--lv-soft", L.soft], ["--lv-tint", L.tint], ["--lv-ink", L.ink]].forEach(([k, v]) => ig.style.setProperty(k, v));
   const pmTag = `<b class="pm-tag">ค่าฝุ่น PM<sub>2.5</sub></b>`;
   const heroK = F.region ? `${pmTag}สูงสุดในเขตสุขภาพที่ 7 <b class="hp">จ.${F.f?.p.name ?? "–"}</b>` : `${pmTag}<b class="hp">จ.${S.igPv}</b>`;
@@ -472,6 +493,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
   if (size === "social" && !F.region) { igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense); igPad(ig); igFitPvChart(ig); return; }   // โพสต์รายจังหวัด: เรียงแบบระดับเขต
+  if (size === "social" && F.region) { igSocialRg(ig, head, foot, maxBar, adviceBox, riskNote, act, dense); igFitTiles(ig); igPad(ig); return; }   // โพสต์ระดับเขต: แบบเดียวกับรายจังหวัด (ฝุ่น → ย้อนหลัง 3 วัน → คำแนะนำ → ผู้ป่วย)
   if (size === "social") {
     ig.innerHTML = head + `<div class="ig-body">${F.region ? "" : hero}
       ${F.region ? maxBar + igTiles() : `<div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = p.name === S.igPv;
