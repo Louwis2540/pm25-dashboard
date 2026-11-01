@@ -3420,7 +3420,8 @@ function fitInfographic(size) {
 #ig .row1.r32{grid-template-columns:3fr 2fr!important;gap:14px!important}
 #ig .r32 .avg{padding:16px 22px}#ig .r32 .avg .wart{width:190px!important;height:140px!important}#ig .r32 .avg .v{font-size:84px!important}#ig .r32 .avg .l{font-size:32px}
 #ig .pvside{display:flex;flex-direction:column;gap:8px}
-#ig .pvch{flex:1;border:1px solid var(--line);border-radius:18px;padding:8px 12px 4px;background:#fff}
+#ig .pvsrc{font-size:11.5px;color:var(--ink-2);text-align:right;margin-top:1px}
+#ig .pvch{display:flex;flex-direction:column;flex:1;border:1px solid var(--line);border-radius:18px;padding:8px 12px 4px;background:#fff}
 #ig .pvch h4{display:flex;justify-content:space-between;align-items:baseline;font-family:Anuphan;font-size:17px;margin:0 0 2px}#ig .pvch h4 small{font-size:12.5px;color:var(--ink-2);font-weight:600}
 #ig .pvfc{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:6px;align-items:stretch}
 #ig .pvfc .t{display:flex;flex-direction:column;justify-content:center;font-family:Anuphan;font-weight:700;font-size:15px;color:var(--ink-1);line-height:1.15}#ig .pvfc .t small{font-family:"IBM Plex Sans Thai";font-size:11.5px;font-weight:600;color:var(--ink-2)}
@@ -3570,36 +3571,45 @@ function igPh(yes, no) {
   if (typeof pheocLabel === "function") return pheocLabel(yes, no);
   return PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? yes : no;
 }
-// กราฟแท่งค่าฝุ่น 30 วันล่าสุดของจังหวัด (สีตามระดับ · เส้นประ 37.5) — ใช้ในการ์ดด้านขวาของ A4 รายจังหวัด
-function igPvChart(pv, W, H, n = 30) {
+// กราฟเส้นค่าฝุ่นรายวันของจังหวัด ตั้งแต่วันแรกที่มีข้อมูลจนถึงวันนี้ · แถบเกณฑ์ 37.5–75 (ส้ม) / เกิน 75 (แดง)
+function igPvChart(pv, W, H) {
   const all = S.pm?.allData || {}, end = S.todayRow?.date; if (!end) return "";
-  const days = []; for (let i = n - 1; i >= 0; i--) { const t = new Date(end + "T00:00:00"); t.setDate(t.getDate() - i); const k = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; const v = k === end ? (S.todayRow?.[pv] ?? all[k]?.[pv]) : all[k]?.[pv];   /* วันนี้ใช้ค่าเดียวกับการ์ด */ days.push({ t, v: v > 0 ? v : null }); }
-  const F = `font-family="'IBM Plex Sans Thai',Anuphan,sans-serif"`, L = 30, R = 8, T = 10, B = 22, pw = W - L - R, ph = H - T - B;
-  const mx = Math.max(90, Math.ceil(Math.max(0, ...days.map(d => d.v || 0)) * 1.1 / 10) * 10), Y = v => T + ph - Math.min(v, mx) / mx * ph, X = i => L + (i + .5) * pw / n;
-  // แถบเกณฑ์: 37.5–75 = เริ่มมีผลต่อสุขภาพ (ส้มอ่อน) · เกิน 75 = มีผลต่อสุขภาพ / เกณฑ์ PHEOC (แดงอ่อน)
+  const keys = Object.keys(all).filter(k => k <= end && all[k]?.[pv] > 0).sort();
+  const start = keys[0] || end, t0 = new Date(start + "T00:00:00"), t1 = new Date(end + "T00:00:00"), n = Math.round((t1 - t0) / 864e5) + 1;
+  const iso = t => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  const days = []; for (let i = 0; i < n; i++) { const t = new Date(t0.getTime() + i * 864e5), k = iso(t); const v = k === end ? (S.todayRow?.[pv] ?? all[k]?.[pv]) : all[k]?.[pv]; days.push({ t, v: v > 0 ? v : null }); }
+  const F = `font-family="'IBM Plex Sans Thai',Anuphan,sans-serif"`, L = 30, R = 8, T = 8, B = 30, pw = W - L - R, ph = H - T - B;
+  const mx = Math.max(90, Math.ceil(Math.max(0, ...days.map(d => d.v || 0)) * 1.06 / 10) * 10), Y = v => T + ph - Math.min(v, mx) / mx * ph, X = i => L + (n > 1 ? i / (n - 1) : .5) * pw;
   let g = `<rect x="${L}" y="${Y(mx)}" width="${pw}" height="${Y(75) - Y(mx)}" fill="${LV[4].soft}" opacity=".75"/><rect x="${L}" y="${Y(75)}" width="${pw}" height="${Y(37.5) - Y(75)}" fill="${LV[3].soft}" opacity=".7"/>`
     + `<line x1="${L}" x2="${W - R}" y1="${T + ph}" y2="${T + ph}" stroke="rgba(15,27,45,.3)"/><text x="${L - 5}" y="${T + ph + 4}" text-anchor="end" font-size="11" fill="#6b7689" ${F}>0</text>`;
+  if (mx >= 120) g += `<text x="${L - 5}" y="${Y(mx) + 9}" text-anchor="end" font-size="11" fill="#6b7689" ${F}>${mx}</text>`;
+  // เส้นแบ่งปี + ป้ายเดือน (ทุก 3 เดือน · ต้นปีแสดงปี พ.ศ.)
+  days.forEach((d, i) => { if (d.t.getDate() !== 1) return; const m = d.t.getMonth(), x = X(i).toFixed(1);
+    if (m === 0) g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T + ph}" stroke="rgba(15,27,45,.25)" stroke-dasharray="2 3"/>`;
+    if (m % 3 === 0) g += `<text x="${x}" y="${T + ph + 13}" text-anchor="middle" font-size="11" fill="#5f6c80" ${F}>${TH_M[m]}</text>` + (m === 0 ? `<text x="${x}" y="${T + ph + 26}" text-anchor="middle" font-size="11" font-weight="700" fill="#33415c" ${F}>${d.t.getFullYear() + 543}</text>` : ""); });
   [[75, LV[4].ink, "75 เกณฑ์ PHEOC"], [37.5, LV[3].ink, "37.5 ค่ามาตรฐาน"]].forEach(([v, c, t]) => {
-    g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="6 4" stroke-width="1.5"/><text x="${L - 5}" y="${Y(v) + 4}" text-anchor="end" font-size="11" font-weight="700" fill="${c}" ${F}>${v}</text>`
-      + `<text x="${L + 6}" y="${Y(v) - 4}" font-size="11" font-weight="700" fill="${c}" ${F}>${t}</text>`; });
-  const pts = days.map((d, i) => d.v == null ? null : [X(i), Y(d.v), d.v]);
-  let path = "", area = "", on = false, first = null, lastX = null;
-  pts.forEach(p => { if (!p) { if (on) { area += `L${lastX},${T + ph}Z`; } on = false; return; }
-    if (!on) { path += `M${p[0].toFixed(1)},${p[1].toFixed(1)}`; area += `M${p[0].toFixed(1)},${T + ph}L${p[0].toFixed(1)},${p[1].toFixed(1)}`; }
-    else { path += `L${p[0].toFixed(1)},${p[1].toFixed(1)}`; area += `L${p[0].toFixed(1)},${p[1].toFixed(1)}`; }
-    on = true; lastX = p[0].toFixed(1); });
-  if (on) area += `L${lastX},${T + ph}Z`;
-  g += `<path d="${area}" fill="rgba(31,42,61,.07)"/><path d="${path}" fill="none" stroke="#1f2a3d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
-  pts.forEach((p, i) => { if (!p) return; const l = LV[lvOf(p[2])], last = i === n - 1;
-    g += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${last ? 6 : 3}" fill="${l.c}" stroke="#fff" stroke-width="${last ? 2.5 : 1}"/>`;
-    if (last) g += `<text x="${(p[0] - 9).toFixed(1)}" y="${(p[1] - 9).toFixed(1)}" text-anchor="end" font-size="15" font-weight="800" fill="${l.ink}" stroke="#fff" stroke-width="3" paint-order="stroke" ${F}>${f1(p[2])}</text>`; });
-  [0, Math.floor(n / 2), n - 1].forEach(i => { const t = days[i].t; g += `<text x="${X(i).toFixed(1)}" y="${H - 5}" text-anchor="${i === 0 ? "start" : i === n - 1 ? "end" : "middle"}" font-size="11.5" fill="#5f6c80" ${F}>${i === n - 1 ? "วันนี้" : `${t.getDate()} ${TH_M[t.getMonth()]}`}</text>`; });
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg>`;
+    g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-dasharray="6 4" stroke-width="1.4"/><text x="${L - 5}" y="${Y(v) + 4}" text-anchor="end" font-size="11" font-weight="700" fill="${c}" ${F}>${v}</text>`
+      + `<text x="${L + 6}" y="${Y(v) - 4}" font-size="11" font-weight="700" fill="${c}" stroke="#fff" stroke-width="3" paint-order="stroke" ${F}>${t}</text>`; });
+  // เส้นค่ารายวัน (ขาดช่วงเมื่อไม่มีข้อมูลเกิน 3 วัน)
+  let path = "", gap = 99;
+  days.forEach((d, i) => { if (d.v == null) { gap++; return; } path += `${gap > 3 ? "M" : "L"}${X(i).toFixed(1)},${Y(d.v).toFixed(1)}`; gap = 0; });
+  g += `<path d="${path}" fill="none" stroke="#1f2a3d" stroke-width="${n > 120 ? 1.4 : 2.2}" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`;
+  const td = days[n - 1]; if (td?.v != null) { const l = LV[lvOf(td.v)], x = X(n - 1), y = Y(td.v);
+    g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${l.c}" stroke="#fff" stroke-width="2.5"/><text x="${(x - 9).toFixed(1)}" y="${(y - 9).toFixed(1)}" text-anchor="end" font-size="15" font-weight="800" fill="${l.ink}" stroke="#fff" stroke-width="3" paint-order="stroke" ${F}>วันนี้ ${f1(td.v)}</text>`; }
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;width:100%;height:auto">${g}</svg>`;
+}
+const igPvRange = pv => { const k = Object.keys(S.pm?.allData || {}).filter(x => S.pm.allData[x]?.[pv] > 0).sort()[0]; if (!k) return ""; const t = new Date(k + "T00:00:00"); return `${TH_M[t.getMonth()]} ${t.getFullYear() + 543}`; };
+// ยืดกราฟให้เต็มกรอบ (วัดความสูงจริงหลังวางหน้า แล้ววาดใหม่) — ไม่มีที่ว่างในกรอบ
+function igFitPvChart(ig) {
+  const box = ig.querySelector(".pvch"), svg = box?.querySelector("svg"); if (!box || !svg) return;
+  const cs = getComputedStyle(box), h4 = box.querySelector("h4"), src = box.querySelector(".pvsrc");
+  const H = Math.floor(box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - (h4 ? h4.offsetHeight + 2 : 0) - (src ? src.offsetHeight : 0)), W = Math.floor(svg.getBoundingClientRect().width);
+  if (H > 60 && W > 100) svg.outerHTML = igPvChart(S.igPv, W, H);
 }
 // การ์ดด้านขวาของโซนบน (A4 และโพสต์รายจังหวัด): กราฟเส้นค่าฝุ่น 30 วัน + จุดความร้อน (+ PHEOC เฉพาะวันที่เข้าเกณฑ์)
-function igPvSide(H) {
+function igPvSide() {
   const phHit = !!(S.pheoc?.ok && S.pheoc.anyHit);
-  return `<div class="pvside"><div class="pvch"><h4>ค่าฝุ่น 30 วันล่าสุด<small>µg/m³ · จ.${S.igPv}</small></h4>${igPvChart(S.igPv, 380, H)}</div>
+  return `<div class="pvside"><div class="pvch"><h4>ค่าฝุ่นรายวัน ตั้งแต่ ${igPvRange(S.igPv)}<small>µg/m³ · จ.${S.igPv}</small></h4>${igPvChart(S.igPv, 380, 90)}<div class="pvsrc">ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · ที่มา: Air4Thai (กรมควบคุมมลพิษ)</div></div>
     ${phHit ? `<div class="pvst ph">${inl("i-shield", 18)}<span>เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)</span><b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์"))}</b></div>` : ""}
     ${igPvFc()}
     <div class="pvst">${inl("i-fire", 18)}<span>จุดความร้อน 24 ชม. (${igHsLbl()}) · GISTDA</span><b>${igHs().length} จุด</b></div></div>`;
@@ -3635,7 +3645,7 @@ function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
       <span class="sp-l">${L.face} ${L.name}</span>
       ${igDelta(pv) ? `<span class="sp-d">${igDelta(pv)}</span>` : ""}
       <span class="sp-src">ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai (กรมควบคุมมลพิษ)</span></div></div>`;
-  const top = `<div class="sp-top">${big}${igPvSide([210, 196, 184, 172, 160, 150, 140][d])}</div>`;
+  const top = `<div class="sp-top">${big}${igPvSide()}</div>`;
   const trend = igPvTrend(pv, F);
   const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
   const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
@@ -3710,7 +3720,7 @@ function buildInfographic(size = "a4", dense = 0) {
     ${kpi("i-fire", "#fdeee5", "#e8590c", `จุดความร้อน 24 ชม. (${igHsLbl()})`, `${igHs().length} จุด`, "ที่มา: GISTDA")}</div>`;   // PHEOC แสดงเฉพาะวันที่เข้าเกณฑ์ · ตัด "จังหวัดที่เกิน 37.5"
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
-  if (size === "social" && !F.region) { igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense); igPad(ig); return; }   // โพสต์รายจังหวัด: เรียงแบบระดับเขต
+  if (size === "social" && !F.region) { igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense); igPad(ig); igFitPvChart(ig); return; }   // โพสต์รายจังหวัด: เรียงแบบระดับเขต
   if (size === "social") {
     ig.innerHTML = head + `<div class="ig-body">${F.region ? "" : hero}
       ${F.region ? maxBar + igTiles() : `<div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = p.name === S.igPv;
@@ -3729,7 +3739,7 @@ function buildInfographic(size = "a4", dense = 0) {
     CBH = [150, 146, 142, 136, 128, 98, 78, 70][dense] + Math.round(IG_GROW * .55);
   const srcT = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai (กรมควบคุมมลพิษ)`;
   const heroA4 = hero.replace('<span class="l">', `<span class="trd4">${igDelta(S.igPv)}</span><span class="l">`).replace(/<\/div><\/div>$/, `<span class="src">${srcT}</span></div></div>`);
-  const side = igPvSide([196, 186, 176, 166, 156, 146, 136, 126][dense] || 126);
+  const side = igPvSide();
   const sec1 = F.region ? maxBar.replace('<span class="ml">', `<span class="src">${srcT}</span><span class="ml">`) + igTiles() : `<div class="row1 r32">${heroA4}${side}</div>`;
   const sec2 = !F.region ? "" : `<div class="row3">
       <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><table class="t7 num">${t7Html(true)}</table></div>
@@ -3746,7 +3756,7 @@ function buildInfographic(size = "a4", dense = 0) {
   <div class="ig-body a4v2">
     ${sec1}${sec2}${sec3}${sec4}${sec5}
   </div>${foot}`;
-  igFitTiles(ig); igPad(ig);
+  igFitTiles(ig); igPad(ig); igFitPvChart(ig);
 }
 
 // ================= สร้างภาพ / บันทึกรูป (1 พ.ย. 2569) =================
