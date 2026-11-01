@@ -39,7 +39,7 @@ def apply(html, mock=False):
     expr = r"PROV\.some\(p => \(S\.todayRow\?\.\[p\.name\] \?\? 0\) >= 75\.1\)"
     html, k1 = re.subn(r'(\b(?:pheoc0?)|' + expr + r') \? "([^"]+)" : "([^"]+)"', lambda m: f'pheocLabel("{m.group(2)}", "{m.group(3)}")', html)
     html, k2 = re.subn(expr, "pheocHit()", html)
-    assert k1 >= 2, k1
+    assert k1 >= 1, k1   # อินโฟกราฟิก (ig_new.js) เรียก pheocLabel เองผ่าน igPh() แล้ว — เหลือจุดของหน้าแดชบอร์ด
     # การ์ดหน้าแรก: บรรทัดเกณฑ์ + tooltip ค่ารายจังหวัด + สีเมื่อถึงเกณฑ์
     old = '<div class="fact"><span class="fi" style="background:#e7f0fc;color:#1c6ed6"><svg class="ico"><use href="#i-shield"/></svg></span><div><span>เกณฑ์เปิด PHEOC</span><b>${pheocLabel("มีจังหวัดถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")}</b></div></div>'
     assert html.count(old) == 1, html.count(old)

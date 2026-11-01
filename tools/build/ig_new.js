@@ -70,6 +70,13 @@
   background-image:linear-gradient(180deg,rgba(255,255,255,.6) 0%,rgba(255,255,255,.2) 42%,rgba(255,255,255,0) 52%,rgba(0,0,0,.1) 100%)!important;
   box-shadow:0 0 0 2px #fff,0 2px 3px rgba(15,27,45,.22),0 6px 12px -4px rgba(15,27,45,.45)!important}
 #ig .a4v2 .fc3 tr.me td:first-child{font-weight:800;color:var(--lv-ink)}
+/* หัวเรื่อง/ส่วนท้าย: ไม่ให้ข้อความล้นกรอบ · ตัดบรรทัดเฉพาะระหว่างวลี */
+#ig .ig-date{gap:14px}
+#ig .ig-date>span:last-child{white-space:normal!important;min-width:0;flex:1 1 auto;text-align:right}
+#ig .ig-date .kl .kls,#ig .ig-f .nw{white-space:nowrap}
+#ig .ig-f{gap:16px}
+#ig .ig-f .ig-fl{flex:1 1 auto;min-width:0}
+#ig .ig-f .ig-fr{flex:none;text-align:right}
 `;
   document.head.appendChild(st);
 })();
@@ -202,6 +209,14 @@ function igDelta(pv) {
   const d = r1(v - y), w = d > 0 ? "▲ เพิ่มขึ้น" : d < 0 ? "▼ ลดลง" : "● เท่ากับ";
   return `${w} ${d ? Math.abs(d).toFixed(1) + " " : ""}· ${igPrevLbl()} <b>${f1(y)}</b>`;
 }
+// PHEOC ในอินโฟกราฟิก = เกณฑ์เดียวกับหน้าเว็บและ LINE (/api/pheoc: ค่าเฉลี่ย 24 ชม. ณ 07.00 น. ≥ 75.1 ติดกัน 2 วัน)
+// เดิมเว็บจริงใช้ "มีจังหวัด ≥ 75.1 วันนี้" วันเดียว (ตัวแปลงของ pheoc_apply ทำงานก่อนที่โค้ดนี้จะถูกใส่) → เรียก pheocLabel ตรง ๆ
+function igPh(yes, no) {
+  if (typeof pheocLabel === "function") return pheocLabel(yes, no);
+  return PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? yes : no;
+}
+// หัวเรื่อง: ย่อป้าย PHEOC "ถึงเกณฑ์ · จ.ก, ข, ค" → "ถึงเกณฑ์ 3 จังหวัด" (รายชื่อยาวทำให้หัวเรื่องสูงหลายบรรทัด)
+function igPhShort(t) { return String(t).replace(/ · จ\.(.+)$/, (m, l) => ` ${l.split(", ").length} จังหวัด`); }
 function igTrendHtml(pv, center) {
   const t = igTrend(pv); if (!t) return "";
   const w = igPrevLbl(), ys = w === "เมื่อวาน" ? "เมื่อวาน" : `วันที่ ${w}`;
@@ -240,7 +255,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const hero = `<div class="avg">${weatherArt(F.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k">${heroK}</span><span class="v num">${F.f ? f1(F.f.v) : "–"}<small> µg/m³</small></span><span class="l">${L.name}</span></div></div>`;
   const overN = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5), pheoc0 = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
   const over75 = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);   // เกิน 75 = เกณฑ์ PHEOC (≥ 75.1)
-  const kline = `<span class="kl">เกิน 75 µg/m³: <b>${over75.length} จังหวัด</b> · PHEOC <b>${pheoc0 ? "ถึงเกณฑ์" : "ยังไม่ถึงเกณฑ์"}</b> · จุดความร้อน <b>${S.hsToday.length} จุด</b></span>`;
+  const kline = `<span class="kl"><span class="kls">เกิน 75 µg/m³: <b>${over75.length} จังหวัด</b></span> · <span class="kls">PHEOC <b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่ถึงเกณฑ์"))}</b></span> · <span class="kls">จุดความร้อน <b>${S.hsToday.length.toLocaleString("en-US")} จุด</b></span></span>`;
   const scope = F.region ? `${L.face} ระดับสูงสุดในเขต: ${L.name}` : `${L.face} จ.${S.igPv}: ${L.name}`;
   const head = `<div class="ig-banner"><img src="${document.querySelector(".hdr-banner img")?.src || "/header-v2.webp"}" alt="" width="2000" height="250"></div><div class="ig-date"><span class="d">${S.todayRow ? `<span class="today-b">วันนี้</span><b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${size === "social" ? scope : `<small class="ew">สัปดาห์ระบาดวิทยาที่ ${igEpiWk()}</small>${F.region ? kline : scope}`}</span></div>`;
   const maxBar = F.region && F.f ? `<div class="maxbar"><span class="mk">${inl("i-pin", 22)}สูงสุดในเขตวันนี้</span><b class="mp">จ.${F.f.p.name}</b><span class="mv num">${f1(F.f.v)}<small> µg/m³</small></span><span class="ml">${L.face} ${L.name}</span></div>` : "";
@@ -249,10 +264,10 @@ function buildInfographic(size = "a4", dense = 0) {
       <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
       <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
   const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === F.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
-  const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span style="margin-right:auto"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_NAME}<br>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span style="text-align:right">${size === "social" ? "" : "ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม<br>"}สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น · กรมควบคุมโรค</span></div>`;
+  const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span class="ig-fl"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_NAME}<br><span class="nw">แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ)</span> · <span class="nw">GISTDA</span> · <span class="nw">HDC กระทรวงสาธารณสุข</span></span><span class="ig-fr">${size === "social" ? "" : `<span class="nw">ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม</span><br>`}<span class="nw">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</span><br><span class="nw">กรมควบคุมโรค</span></span></div>`;
   const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
   const fc1 = (() => { const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); const x = it?.pred?.[0]; return x == null ? null : x; })();
-  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (&gt;75 µg/m³)</span><b>${pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
+  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (&gt;75 µg/m³)</span><b>${igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")}</b></span></div>
     <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7) · ที่มา: GISTDA</span><b>${S.hsToday.length} จุด</b></span></div>
     <div><span class="fi" style="background:${fc1 != null ? LV[lvOf(fc1)].soft : "var(--subtle)"};color:${fc1 != null ? LV[lvOf(fc1)].ink : "var(--ink-2)"}">${inl("i-cal", 26)}</span><span><span class="k">พรุ่งนี้ (คาดการณ์) · ${F.f?.p.name ?? ""}</span><b>${fc1 != null ? `${f1(fc1)} · ${LV[lvOf(fc1)].name}` : "–"}</b></span></div></div>`;
   const pvCard = (p, cls) => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = !F.region && p.name === S.igPv;
@@ -260,7 +275,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const over = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5);
   const kpi = (ic, bg, fg, k, b, sm) => `<div><span class="fi" style="background:${bg};color:${fg}">${inl(ic, 26)}</span><span><span class="k">${k}</span><b>${b}</b>${sm ? `<small>${sm}</small>` : ""}</span></div>`;
   const kpis = `<div class="kpis${F.region ? " kpis-h" : ""}">${kpi("i-pin", over.length ? LV[3].soft : LV[1].soft, over.length ? LV[3].ink : LV[1].ink, "จังหวัดที่เกิน 37.5 µg/m³", `${over.length} จาก ${PROV.length}${over.length ? ` · ${over.map(p => p.name).join(" ")}` : ""}`)}
-    ${kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)", pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์")}
+    ${kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)", igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์"))}
     ${kpi("i-fire", "#fdeee5", "#e8590c", "จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7)", `${S.hsToday.length} จุด`, "ที่มา: GISTDA")}</div>`;
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
