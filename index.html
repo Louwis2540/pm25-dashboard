@@ -3368,6 +3368,36 @@ function fitInfographic(size) {
 #ig .kpis:not(.kpis-h){grid-template-rows:none!important;grid-auto-rows:1fr;align-content:stretch!important}   /* KPI 1–2 ช่อง (PHEOC เฉพาะวันที่เข้าเกณฑ์) ยืดเต็มความสูงการ์ด */
 #ig.social .pvrow .trd{font-size:12.5px;line-height:1.25;margin-top:2px}
 #ig .igt .tile.me{outline:6px solid var(--lv-ink);outline-offset:-3px}
+/* โพสต์รายจังหวัด */
+#ig .sp{gap:12px!important;padding-top:14px!important}
+#ig .sp-hero{display:flex;align-items:center;justify-content:center;gap:22px;border-radius:26px;padding:12px 26px;border:3px solid var(--lv);background:linear-gradient(160deg,#fff 30%,var(--lv-tint));box-shadow:0 2px 4px rgba(15,27,45,.08),0 10px 22px -14px var(--lv-ink)}
+#ig .sp-art{flex:none;line-height:0}#ig .sp-art svg{display:block}
+#ig .sp-txt{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
+#ig .sp-k{display:flex;align-items:center;gap:12px}#ig .sp-k .pm-tag{font-size:26px}
+#ig .sp-pv{font-family:Anuphan;font-size:46px;color:var(--lv-ink)}
+#ig .sp-v{font-family:Anuphan;font-weight:700;font-size:132px;color:var(--ink-1);letter-spacing:-.02em}#ig .sp-v small{font-size:34px;color:var(--ink-2);font-weight:600}
+#ig .sp-l{font-family:Anuphan;font-weight:700;font-size:40px;color:#fff;background:var(--lv-ink);border-radius:999px;padding:4px 22px;margin-top:4px}
+#ig .sp-d{font-size:24px;font-weight:700;color:var(--ink-1);margin-top:8px}#ig .sp-d b{color:var(--lv-ink)}
+#ig .sp-src{font-size:16px;color:var(--ink-2);margin-top:6px}
+#ig .sp .advice .do{font-size:21px!important}#ig .sp .advice .w h4{font-size:23px!important}
+#ig .sp-row{display:grid;grid-template-columns:1.55fr 1fr;gap:12px}
+#ig .sp-box{border:1px solid var(--line);border-radius:18px;padding:8px 14px 10px;background:#fff}
+#ig .sp-box h4{display:flex;justify-content:space-between;align-items:baseline;font-family:Anuphan;font-size:21px;margin:0 0 6px}#ig .sp-box h4 small{font-size:15px;color:var(--ink-2);font-weight:600}
+#ig .sp-d7{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}#ig .sp-fc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#ig .sp-d7 .c,#ig .sp-fc .c{display:flex;flex-direction:column;align-items:center;border-radius:12px;padding:4px 2px;line-height:1.15}
+#ig .sp-fc .c{border:2.5px solid}
+#ig .sp-d7 .c small,#ig .sp-fc .c small{font-size:14px;font-weight:600;white-space:nowrap}#ig .sp-d7 .c b,#ig .sp-fc .c b{font-family:Anuphan;font-size:23px}
+#ig .sp-d7 .c.td{box-shadow:0 0 0 3px #fff,0 4px 10px -3px rgba(15,27,45,.45);background-image:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 50%,rgba(0,0,0,.08))}
+#ig .sp-none{grid-column:1/-1;font-size:16px;color:var(--ink-2);padding:10px 2px}
+#ig .sp .dzg2 .dh .nm{font-size:18px}#ig .sp .dzl{display:block!important;font-size:14px}#ig .sp .ig-note{font-size:15px}
+#ig[data-sp="2"] .sp-v,#ig[data-sp="3"] .sp-v{font-size:116px}#ig[data-sp="4"] .sp-v,#ig[data-sp="5"] .sp-v,#ig[data-sp="6"] .sp-v{font-size:100px}
+#ig[data-sp="3"] .sp,#ig[data-sp="4"] .sp,#ig[data-sp="5"] .sp,#ig[data-sp="6"] .sp{gap:8px!important}
+#ig[data-sp="4"] .sp .advice .do,#ig[data-sp="5"] .sp .advice .do,#ig[data-sp="6"] .sp .advice .do{font-size:18px!important;padding:2px 8px!important;line-height:1.25}
+#ig[data-sp="4"] .sp .advice .w,#ig[data-sp="5"] .sp .advice .w,#ig[data-sp="6"] .sp .advice .w{gap:4px!important;padding:6px 12px!important}
+#ig[data-sp="4"] .sp .advice .w h4,#ig[data-sp="5"] .sp .advice .w h4,#ig[data-sp="6"] .sp .advice .w h4{font-size:20px!important;margin:0!important}
+#ig[data-sp="5"] .sp-hero,#ig[data-sp="6"] .sp-hero{padding:6px 22px}#ig[data-sp="5"] .sp-l,#ig[data-sp="6"] .sp-l{font-size:32px}#ig[data-sp="5"] .sp-pv,#ig[data-sp="6"] .sp-pv{font-size:38px}
+#ig[data-sp="5"] .sp .ig-act,#ig[data-sp="6"] .sp .ig-act{padding:4px 12px;font-size:16px}
+#ig[data-sp="6"] .sp-v{font-size:88px}#ig[data-sp="6"] .sp-src{font-size:14px;margin-top:2px}#ig[data-sp="6"] .sp-d{font-size:20px;margin-top:4px}#ig[data-sp="6"] .sp .ig-note,#ig[data-sp="6"] .sp .dzl{font-size:13px}#ig[data-sp="6"] .sp-box{padding:4px 12px 6px}#ig[data-sp="6"] .sp-box h4{font-size:18px;margin-bottom:3px}#ig[data-sp="6"] .sp-d7 .c b,#ig[data-sp="6"] .sp-fc .c b{font-size:20px}#ig[data-sp="6"] .sp .advice .do{font-size:16px!important}#ig[data-sp="6"] .sp .advice .lv b{font-size:24px!important}#ig[data-sp="6"] .sp .advice .do span{width:26px;height:26px}
 `;
   document.head.appendChild(st);
 })();
@@ -3377,7 +3407,7 @@ function igPad(ig) { const f = ig.querySelector(".ig-f"), b = ig.querySelector("
 let IG_GROW = 0;   // A4: พื้นที่ว่างที่แจกให้กราฟข้อ 4–5 (px)
 function fitInfographic(size) {
   const ig = document.getElementById("ig");
-  const top = size === "social" ? 4 : 7;   // A4 มีขั้น 5–7 สำรอง (กราฟเตี้ยลง · ขั้น 7 ย่อการ์ดจังหวัด)
+  const top = size === "social" ? (S.igPv ? 6 : 4) : 7;   // โพสต์รายจังหวัดมีขั้น 5–6 เพิ่ม   // A4 มีขั้น 5–7 สำรอง (กราฟเตี้ยลง · ขั้น 7 ย่อการ์ดจังหวัด)
   let d = 0; IG_GROW = 0;
   for (; d <= top; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) break; }
   if (d > top) return top;
@@ -3506,6 +3536,35 @@ function igPh(yes, no) {
   if (typeof pheocLabel === "function") return pheocLabel(yes, no);
   return PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? yes : no;
 }
+// ===== โพสต์รายจังหวัด 1080×1350 (1 พ.ย. 2569) · เรียงแบบอินโฟกราฟิกระดับเขต =====
+// 1 การ์ดจังหวัดใหญ่ (ภาพสภาพอากาศ + ค่าฝุ่น + เทียบเมื่อวาน) → 2 คำแนะนำดูแลตัวเอง → 3 ย้อนหลัง 7 วัน + คาดการณ์ 3 วัน
+// → 4 ผู้ป่วย 4 กลุ่มโรค รายเดือน ปี 2569 ของจังหวัดนั้น · ไม่มีการ์ดจังหวัดอื่น
+function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
+  const pv = S.igPv, v = F.f?.v, d = Math.min(dense, 6); ig.dataset.sp = d;   // ระดับย่อของโพสต์รายจังหวัด 0–6
+  const big = `<div class="sp-hero"><span class="sp-art">${weatherArt(F.lv, [300, 270, 240, 220, 200, 170, 140][d], [220, 196, 175, 160, 146, 124, 102][d])}</span>
+    <div class="sp-txt"><span class="sp-k"><b class="pm-tag">ค่าฝุ่น PM<sub>2.5</sub></b><b class="sp-pv">จ.${pv}</b></span>
+      <span class="sp-v num">${v != null ? f1(v) : "–"}<small> µg/m³</small></span>
+      <span class="sp-l">${L.face} ${L.name}</span>
+      ${igDelta(pv) ? `<span class="sp-d">${igDelta(pv)}</span>` : ""}
+      <span class="sp-src">ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · ที่มา: Air4Thai (กรมควบคุมมลพิษ)</span></div></div>`;
+  const days = S.last7 || [], sd = iso => { const t = new Date(iso + "T00:00:00"); return `${t.getDate()}/${t.getMonth() + 1}`; };
+  const d7 = days.map((r, i) => { const x = r[pv], l = x != null ? LV[lvOf(x)] : null, td = i === days.length - 1;
+    return `<span class="c${td ? " td" : ""}" style="background:${l ? l.c : "#dfe4ea"};color:${l ? textOn(l.c) : "#5f6c80"}"><small>${td ? "วันนี้" : sd(r.date)}</small><b class="num">${x != null ? f1(x) : "–"}</b></span>`; }).join("");
+  const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)), base = new Date((S.gpv?.asOf || "").slice(0, 10) + "T00:00:00");
+  const fc = it ? it.pred.slice(0, 3).map((x, k) => { const t = new Date(base.getTime() + (k + 1) * 864e5), l = x == null ? null : LV[lvOf(x)];
+    return `<span class="c" style="background:${l ? l.soft : "#eef1f5"};color:${l ? l.ink : "#5f6c80"};border-color:${l ? l.c : "#ccd4de"}"><small>${k === 0 ? "พรุ่งนี้" : `${TH_DS[t.getDay()]} ${t.getDate()} ${TH_M[t.getMonth()]}`}</small><b class="num">${x != null ? f1(x) : "–"}</b></span>`; }).join("")
+    : `<span class="sp-none">ยังไม่มีข้อมูลคาดการณ์</span>`;
+  const trend = `<div class="sp-row"><div class="sp-box"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><div class="sp-d7">${d7}</div></div>
+    <div class="sp-box"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4><div class="sp-fc">${fc}</div></div></div>`;
+  const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
+  const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
+  const CH = [104, 96, 90, 84, 78, 64, 54][d];
+  const prov = last >= 0 && ser[0].m.some(o => o?.prov);
+  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · จ.${pv}</em><small style="margin-left:auto">ราย/เดือน</small></div>
+    <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 15)}</div>`).join("")}</div>
+    <div class="dzl">${prov ? "* แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
+  ig.innerHTML = head + `<div class="ig-body sp">${big}${adviceBox}${act}${trend}${dz}${riskNote}</div>` + foot;
+}
 // หัวเรื่อง: ย่อป้าย PHEOC "ถึงเกณฑ์ · จ.ก, ข, ค" → "ถึงเกณฑ์ 3 จังหวัด" (รายชื่อยาวทำให้หัวเรื่องสูงหลายบรรทัด)
 function igPhShort(t) { return String(t).replace(/ · จ\.(.+)$/, (m, l) => ` ${l.split(", ").length} จังหวัด`); }
 function igTrendHtml(pv, center) {   // ข้อความเดียวกับการ์ดจังหวัดระดับเขต: "▲ เพิ่มขึ้น N · เมื่อวาน X"
@@ -3538,7 +3597,7 @@ function igFitTiles(ig) {
 function igEpiWk() { return epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
 function buildInfographic(size = "a4", dense = 0) {
   const F = igFocus(), L = LV[F.lv], ig = document.getElementById("ig");
-  ig.className = size; ig.dataset.dense = Math.min(dense, 3); ig.dataset.dx = dense >= 4 ? "1" : ""; ig.dataset.tc = dense >= 7 ? "1" : "";   // ขั้น 7 = การ์ดจังหวัดย่อ (สำรองสุดท้าย)   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
+  ig.className = size; delete ig.dataset.sp; ig.dataset.dense = Math.min(dense, 3); ig.dataset.dx = dense >= 4 ? "1" : ""; ig.dataset.tc = dense >= 7 ? "1" : "";   // ขั้น 7 = การ์ดจังหวัดย่อ (สำรองสุดท้าย)   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
   [["--lv", L.c], ["--lv-soft", L.soft], ["--lv-tint", L.tint], ["--lv-ink", L.ink]].forEach(([k, v]) => ig.style.setProperty(k, v));
   const pmTag = `<b class="pm-tag">ค่าฝุ่น PM<sub>2.5</sub></b>`;
   const heroK = F.region ? `${pmTag}สูงสุดในเขต <b class="hp">จ.${F.f?.p.name ?? "–"}</b>` : `${pmTag}<b class="hp">จ.${S.igPv}</b>`;
@@ -3570,6 +3629,7 @@ function buildInfographic(size = "a4", dense = 0) {
     ${kpi("i-fire", "#fdeee5", "#e8590c", "จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7)", `${S.hsToday.length} จุด`, "ที่มา: GISTDA")}</div>`;   // PHEOC แสดงเฉพาะวันที่เข้าเกณฑ์ · ตัด "จังหวัดที่เกิน 37.5"
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
+  if (size === "social" && !F.region) { igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense); igPad(ig); return; }   // โพสต์รายจังหวัด: เรียงแบบระดับเขต
   if (size === "social") {
     ig.innerHTML = head + `<div class="ig-body">${F.region ? "" : hero}
       ${F.region ? maxBar + igTiles() : `<div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = p.name === S.igPv;
