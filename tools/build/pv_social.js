@@ -8,7 +8,7 @@ function fixTemplatePM(x) {   // เทมเพลตพิมพ์ "PM.25" �
   x.font = "700 30px Anuphan"; x.fillText("2.5", x0 + w1 + 3, 602);
 }
 const HOT_DDC = "1422", HOT_PCD = "1650";
-const RISK_DEF = "เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ และผู้มีโรคระบบทางเดินหายใจหรือโรคหัวใจ";
+const RISK_DEF = "เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ และผู้มีโรคระบบทางเดินหายใจและโรคระบบหัวใจและหลอดเลือด";
 // เทียบเมื่อวาน (ค่าจริง Air4Thai ทั้งสองวัน)
 function igTrend(pv) {
   const v = S.todayRow?.[pv], y = S.prevRow?.[pv];
