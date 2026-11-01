@@ -20,6 +20,12 @@
 | `latest` / `snapshot` / `_log` / `_sync_status` | ผู้ป่วย 4 กลุ่มโรครายสัปดาห์จาก HDC (`moph_to_sheet.gs`) |
 | `_visits` | สถิติการเข้าชม (จาก Apps Script แยก `visits.gs`) |
 
+### ที่มาของค่าใน `PM25_History` (ปี 2568)
+
+| ช่วง | แหล่ง |
+|---|---|
+| ม.ค.–ธ.ค. 2568 | สถานี Air4Thai (กรมควบคุมมลพิษ) ค่ารายวัน 46T/113T/107T/114T จากไฟล์ `36dcc7e3-2025.xlsx` ที่ Louis ส่งมา (1 พ.ย. 2569 · `backfillPcdPreview` ดูตัวอย่าง → `backfillPcd` เติมเฉพาะช่องว่าง/0 · วิธีใน `_backfill_log` = `air4thai-pcd-file`) · "N/A" ในไฟล์ = ไม่มีค่า ข้ามไม่เติม |
+
 ### ที่มาของค่าใน `PM25_History` (ปี 2569)
 
 | ช่วง | แหล่ง |
