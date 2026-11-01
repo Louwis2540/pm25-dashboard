@@ -62,6 +62,14 @@
 #ig .a4v2~.ig-f{left:24px!important;right:24px!important;bottom:14px!important;border-radius:22px;padding:10px 22px!important;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.6))!important;border:1px solid rgba(255,255,255,.95)!important;box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(15,27,45,.06),0 10px 24px -14px rgba(15,27,45,.4)}
 #ig .a4v2~.ig-f{padding:7px 20px!important}#ig .a4v2~.ig-f .qr svg{width:66px;height:66px}
 #ig:not(.social) .ig-date{padding-top:6px!important;padding-bottom:6px!important}
+/* ตารางค่าฝุ่นย้อนหลัง / คาดการณ์: ไม่มีเส้นขอบ (white border/outline) · ช่องนูนแบบกระจกใส มีเงา */
+#ig .a4v2 .t7,#ig .a4v2 .fc3{border-collapse:separate!important;border-spacing:4px 3px!important}
+#ig .a4v2 .t7 td.cell,#ig .a4v2 .fc3 td:not(:first-child){border:0!important;outline:0!important;border-radius:9px!important;
+  background-image:linear-gradient(180deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,.18) 42%,rgba(255,255,255,0) 52%,rgba(0,0,0,.08) 100%)!important;
+  box-shadow:0 1px 1px rgba(15,27,45,.12),0 3px 6px -2px rgba(15,27,45,.32)!important;padding:2px 4px!important}
+#ig .a4v2 .t7 td.today-col{outline:0!important;font-weight:800;box-shadow:0 0 0 2px #fff,0 2px 3px rgba(15,27,45,.2),0 6px 12px -4px rgba(15,27,45,.45)!important}
+#ig .a4v2 .fc3 tr.me td:not(:first-child){outline:0!important;box-shadow:0 0 0 2px #fff,0 2px 3px rgba(15,27,45,.2),0 6px 12px -4px rgba(15,27,45,.45)!important}
+#ig .a4v2 .fc3 tr.me td:first-child{font-weight:800;color:var(--lv-ink)}
 `;
   document.head.appendChild(st);
 })();
@@ -88,8 +96,8 @@ function fitInfographic(size) {
 const IG_DZ_NAME = { "ทางเดินหายใจ": "โรคระบบทางเดินหายใจ", "หัวใจ": "โรคระบบหัวใจและหลอดเลือด", "ตาอักเสบ": "โรคเยื่อบุตาอักเสบ", "ผิวหนัง": "โรคผิวหนังอักเสบ" };
 const igDzName = d => IG_DZ_NAME[d.key] || d.label;
 // ช่วงกราฟผู้ป่วยย้อนหลังเทียบค่าฝุ่น: ย้อนหลัง N เดือน นับถึงเดือนล่าสุดที่มีข้อมูลผู้ป่วย (เลื่อนเองทุกเดือน)
-// ฤดูฝุ่น = 1 พ.ย. – 31 พ.ค. (แรเงาในกราฟ) · N = 12 / 16 / 18 (รอเลือก · ค่าเริ่มต้น 18)
-let IG_CB_N = 18;
+// ฤดูฝุ่น = 1 พ.ย. – 31 พ.ค. (แรเงาในกราฟ) · ใช้ 12 เดือน (เลือกแล้ว) · ข้อมูลเริ่มปี 2568 แล้วเลื่อนต่อไปเรื่อย ๆ
+let IG_CB_N = 12;
 const IG_SEASON = m => m >= 10 || m <= 4;   // พ.ย.–พ.ค.
 function igCbMonths() {
   const ys = Object.keys(S.dz || {}).map(Number).filter(Boolean), cy = Math.max(...ys);
