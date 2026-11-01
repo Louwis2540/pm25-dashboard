@@ -815,10 +815,20 @@ async function buildDiseasePv() {
   const dataDate = dateComToDmy(src.dateCom || '');
   const staleDays = Number(api.disease_stale_days) || 10;
   const age = diseaseDataAge(dataDate ? [{ 'อัพเดท': dataDate }] : []);
+  // ปีก่อนหน้า (Type 1+3) — ให้อินโฟกราฟิกรายจังหวัดแสดงผู้ป่วยย้อนหลังข้ามปี (เช่น พ.ย.–ธ.ค. ปีก่อน) · ข้อมูลนิ่งแล้ว เก็บไว้ 24 ชม.
+  const prevBe = String(Number(beYear) - 1);
+  let prev = getCached('disease-pv-prev');
+  if (!prev) {
+    prev = await diseasePvFromSheet(prevBe).catch(() => ({ rows: [] }));
+    if (!prev.rows.length) prev = await diseasePvFromMoph(prevBe).catch(() => ({ rows: [] }));
+    prev = { beYear: prevBe, rows: prev.rows || [] };
+    setCached('disease-pv-prev', prev, (prev.rows.length ? 24 : 1) * 60 * 60 * 1000);
+  }
   const data = {
     ok: true, mock: false,
     pop: population.midyear, popNote: population.label, popMethod: population.method,
     rows: src.rows, rows1: src.rows1 || [], dateCom: src.dateCom || '',
+    rowsPrev: prev.rows, prevYearBe: prev.beYear,
     meta: { source, mophMissing: missing, dataDate, ageDays: age.ageDays, staleDays,
             stale: age.ageDays !== null && age.ageDays > staleDays },
   };

@@ -146,6 +146,8 @@
 #ig .a4v2 .box h4 small{font-size:12px!important}
 #ig .maxbar .ml.mlhs{display:inline-flex;align-items:center;gap:6px;background:#fff3ea!important;color:#9a3412!important;border:2px solid #fdba74;font-family:"IBM Plex Sans Thai",sans-serif;font-size:16px;font-weight:600;padding:3px 14px 3px 10px;white-space:nowrap}
 #ig .maxbar .ml.mlhs b{font-family:Anuphan;font-size:21px;font-weight:700}#ig .maxbar .ml.mlhs small{font-size:11.5px;color:#b45309;font-weight:600}
+#ig .maxbar:has(.hst){padding-top:4px!important;padding-bottom:4px!important}#ig .maxbar .ml.mlhs{border-radius:16px!important}#ig .maxbar .ml.mlhs .hst{display:flex;flex-direction:column;line-height:1.2;white-space:nowrap}#ig .maxbar .ml.mlhs .hst b{font-size:19px;display:inline!important}#ig .maxbar .ml.mlhs{padding:4px 14px 5px 10px!important}#ig .maxbar .ml.mlhs .hst small{font-size:12px;color:#9a3412;font-weight:500;white-space:nowrap}
+#ig .maxbar .ml.mlhs.ok,#ig .pvst.ok{background:#ecf8ef!important;border-color:#9ed7ac!important;color:#166534!important}#ig .pvst.ok b{color:#166534}
 `;
   document.head.appendChild(st);
 })();
@@ -206,16 +208,16 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
 function igComboSec(H) {
   const months = igCbMonths(); if (!months.length) return "";
   const end = dzCbEnd(S.dz, S.wkMax), cy = end.y;
-  const pv = S.igPv, src = y => pv ? (y === 2026 ? igDzRows() : []) : (S.dz?.[y] || []);   // รายจังหวัด: มีข้อมูลผู้ป่วยรายจังหวัดตั้งแต่ปี 2569
+  const pv = S.igPv, src = y => pv ? (y === 2026 ? igDzRows() : igDzRowsPv(y)) : (S.dz?.[y] || []);   // รายจังหวัด: ปีก่อนหน้าจาก DZPV.rowsPrev
   const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(src(y), d.key, y === cy ? end.w : 99, y)]));
   const pm = igPmMonthly(months, pv), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(v => v != null), 0) / 10) * 10);
   const ser = DZ.map(d => ({ d, bars: months.map(({ y, m }) => byY[y]?.[d.key]?.[m] || null) }));
   const f = months[0], l = months.at(-1), rng = `${TH_M[f.m]} ${String(f.y + 543).slice(2)} – ${TH_M[l.m]} ${String(l.y + 543).slice(2)}`;
   const prov = ser[0].bars.some(o => o?.prov);
   return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">จำนวนผู้ป่วย 4 กลุ่มโรคเทียบกับค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ${pv ? `จ.${pv}` : "ทั้งเขต"}</small></div>
-    <div class="cbk"><span><i class="bar"></i><em>แท่ง = จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>เส้น = ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 = ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
+    <div class="cbk"><span><i class="bar"></i><em>จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
     <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H, months)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}${pv ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
+    <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}${pv && !window.DZPV?.rowsPrev?.length ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 const IG_NAME = "R7_PM" + "2.5_dashboard";   // ชื่อที่แสดงท้ายหน้า (QR ยังชี้ไปที่ IG_URL) · แยกสตริงกันตัวแทนที่ชื่อสารมลพิษตอน build
@@ -248,6 +250,12 @@ function igDzRows() {
     return window.DZPV.rows.filter(r => r.pv === S.igPv).map(r => ({ wk: r.wk, ...Object.fromEntries(Object.entries(K).map(([c, k]) => [k, r[c]])) }));
   }
   return S.dz?.[2026] || [];
+}
+// ผู้ป่วยรายจังหวัดของปีก่อนหน้า (/api/disease-pv → rowsPrev · Type 1+3) ในรูปแบบเดียวกับ igDzRows
+function igDzRowsPv(y) {
+  const D = window.DZPV; if (!D?.rowsPrev?.length || String(y + 543) !== String(D.prevYearBe)) return [];
+  const K = Object.fromEntries(Object.entries(DZPV_COL).map(([k, v]) => [v, k]));
+  return D.rowsPrev.filter(r => r.pv === S.igPv).map(r => ({ wk: r.wk, ...Object.fromEntries(Object.entries(K).map(([c, k]) => [k, r[c]])) }));
 }
 function igDzPanel(d, m, last, W, H, fs) {
   const n = last + 1, L = 2, pw = W - 4, slot = pw / n, bw = Math.min(30, slot * .6), T = fs + 6, B = fs * 1.9, ph = H - T - B;
@@ -283,6 +291,13 @@ function igDelta(pv) {
 // เดิมเว็บจริงใช้ "มีจังหวัด ≥ 75.1 วันนี้" วันเดียว (ตัวแปลงของ pheoc_apply ทำงานก่อนที่โค้ดนี้จะถูกใส่) → เรียก pheocLabel ตรง ๆ
 // จุดความร้อนของอินโฟกราฟิก: รายจังหวัด = เฉพาะจังหวัดนั้น · ระดับเขต = ทั้งเขต
 const igHs = () => S.igPv ? (S.hsToday || []).filter(f => f.properties?.changwat === S.igPv) : (S.hsToday || []);
+// แถบสูงสุดในเขต: จุดความร้อนทั้งเขต + แยกจังหวัด · ไม่มีเลย = "ไม่พบจุดความร้อน"
+function igHsPill() {
+  const hs = S.hsToday || [], n = hs.length;
+  if (!n) return `<span class="ml mlhs ok">${inl("i-fire", 20)}ไม่พบจุดความร้อน 24 ชม.<small>GISTDA</small></span>`;
+  const by = PROV.map(p => [p.name, hs.filter(f => f.properties?.changwat === p.name).length]).filter(x => x[1]);
+  return `<span class="ml mlhs">${inl("i-fire", 20)}<span class="hst"><span>จุดความร้อน 24 ชม. ทั้งเขต <b>${n.toLocaleString("en-US")} จุด</b></span><small>${by.map(([k, v]) => `${k} ${v}`).join(" · ")} · GISTDA</small></span></span>`;
+}
 const igHsLbl = () => S.igPv ? `จ.${S.igPv}` : "เขตสุขภาพที่ 7";
 function igPh(yes, no) {
   if (typeof pheocLabel === "function") return pheocLabel(yes, no);
@@ -329,7 +344,7 @@ function igPvSide() {
   return `<div class="pvside"><div class="pvch"><h4>ค่าฝุ่นรายวัน ตั้งแต่ ${igPvRange(S.igPv)}<small>µg/m³ · จ.${S.igPv}</small></h4>${igPvChart(S.igPv, 380, 90)}<div class="pvsrc"><span class="lg"><i style="border-color:${LV[3].ink}"></i>37.5 ค่ามาตรฐาน</span><span class="lg"><i style="border-color:${LV[4].ink}"></i>75 เกณฑ์ PHEOC</span><span class="s">ที่มา: Air4Thai (กรมควบคุมมลพิษ)</span></div></div>
     ${phHit ? `<div class="pvst ph">${inl("i-shield", 18)}<span>เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)</span><b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์"))}</b></div>` : ""}
     ${igPvFc()}
-    <div class="pvst">${inl("i-fire", 18)}<span>จุดความร้อน 24 ชม. (${igHsLbl()}) · GISTDA</span><b>${igHs().length} จุด</b></div></div>`;
+    ${igHs().length ? `<div class="pvst">${inl("i-fire", 18)}<span>จุดความร้อน 24 ชม. (${igHsLbl()}) · GISTDA</span><b>${igHs().length} จุด</b></div>` : `<div class="pvst ok">${inl("i-fire", 18)}<span>จุดความร้อน 24 ชม. (${igHsLbl()}) · GISTDA</span><b>ไม่พบจุดความร้อน</b></div>`}</div>`;
 }
 function igPvFc() {   // คาดการณ์ 3 วันของจังหวัด แถวเล็กในการ์ดขวา
   const p = PROV.find(x => x.name === S.igPv), it = S.gpv?.items.find(i => i.code === String(p?.code));
@@ -417,7 +432,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const kline = `<span class="kl">${phHit ? `<span class="kls">เกิน 75 µg/m³: <b>${over75.length} จังหวัด</b></span> · <span class="kls">PHEOC <b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่ถึงเกณฑ์"))}</b></span> · ` : ""}</span>`.replace(/ · <\/span>$/, "</span>");   // จุดความร้อนย้ายไปแถบสูงสุดในเขต / การ์ดจังหวัดแล้ว
   const scope = F.region ? `${L.face} ระดับสูงสุดในเขต: ${L.name}` : `${L.face} จ.${S.igPv}: ${L.name}`;
   const head = `<div class="ig-banner"><img src="${document.querySelector(".hdr-banner img")?.src || "/header-v2.webp"}" alt="" width="2000" height="250"></div><div class="ig-date"><span class="d">${S.todayRow ? `<span class="today-b">วันนี้</span><b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)"><small class="ew">สัปดาห์ระบาดวิทยาที่ ${igEpiWk()}</small>${kline}</span></div>`;
-  const maxBar = F.region && F.f ? `<div class="maxbar"><span class="mk">${inl("i-pin", 22)}สูงสุดในเขตวันนี้</span><b class="mp">จ.${F.f.p.name}</b><span class="mv num">${f1(F.f.v)}<small> µg/m³</small></span><span class="ml mlhs">${inl("i-fire", 20)}จุดความร้อน 24 ชม. <b>${S.hsToday.length.toLocaleString("en-US")} จุด</b><small>GISTDA</small></span></div>` : "";   // ระดับอยู่ในการ์ดจังหวัดแล้ว → ใช้ที่นี้แสดงจุดความร้อนทั้งเขต
+  const maxBar = F.region && F.f ? `<div class="maxbar"><span class="mk">${inl("i-pin", 22)}สูงสุดในเขตวันนี้</span><b class="mp">จ.${F.f.p.name}</b><span class="mv num">${f1(F.f.v)}<small> µg/m³</small></span>${igHsPill()}</div>` : "";   // ระดับอยู่ในการ์ดจังหวัดแล้ว → ใช้ที่นี้แสดงจุดความร้อนทั้งเขต
   const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้</div>
     <div class="advice"><div class="lv"><span class="f">${L.face}</span><b>${L.name}</b><span>${L.range} µg/m³</span></div>
       <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
