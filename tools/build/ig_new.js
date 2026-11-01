@@ -77,6 +77,7 @@
 #ig .ig-f{gap:16px}
 #ig .ig-f .ig-fl{flex:1 1 auto;min-width:0}
 #ig .ig-f .ig-fr{flex:none;text-align:right}
+#ig.social .pvrow .trd{font-size:12.5px;line-height:1.25;margin-top:2px}
 #ig .igt .tile.me{outline:6px solid var(--lv-ink);outline-offset:-3px}
 `;
   document.head.appendChild(st);
