@@ -26,8 +26,8 @@
 #ig .maxbar .src{flex:1;min-width:0;font-size:12.5px;line-height:1.3;color:var(--ink-2);text-align:right;padding-right:6px}#ig .avg .src{display:block;font-size:12.5px;line-height:1.3;color:var(--ink-2);margin-top:4px}
 #ig .a4v2 .advice .w{padding:4px 12px;gap:3px}#ig .a4v2 .advice .w h4{margin:0;font-size:16px}#ig .a4v2 .advice .do{padding:1px 8px;font-size:15px!important;line-height:1.3;min-height:0}#ig .a4v2 .advice .do span{width:26px;height:26px}#ig .a4v2 .advice .do span svg{width:18px;height:18px}#ig .a4v2 .advice{grid-template-columns:170px 1fr 1fr!important}#ig .a4v2 .advice .lv{padding:6px 8px!important;gap:2px!important}#ig .a4v2 .advice .lv b{font-size:20px!important;line-height:1.2}#ig .a4v2 .advice .lv .f{font-size:30px}#ig .a4v2 .advice .lv>span:last-child{font-size:13.5px;white-space:nowrap}#ig[data-dx="1"] .a4v2{gap:5px!important}
 #ig .a4v2 .lvleg{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}#ig .a4v2 .lvleg span{font-size:13.5px;padding:2px 8px 2px 5px;white-space:nowrap}#ig .a4v2 .lvleg b{font-size:14px}
-#ig .a4v2 .ig-note{font-size:13px;line-height:1.35}
-#ig .a4v2 .dzl{display:block!important;font-size:13px;line-height:1.4;margin-top:0;color:var(--ink-2)!important;font-weight:400!important}#ig .a4v2 .dzl b{color:var(--ink-1);font-weight:700}
+#ig .a4v2 .ig-note{font-size:11.5px;line-height:1.35}
+#ig .a4v2 .dzl{display:block!important;font-size:11.5px;line-height:1.4;margin-top:0;color:var(--ink-2)!important;font-weight:400!important}#ig .a4v2 .dzl b{color:var(--ink-1);font-weight:700}
 #ig .a4v2 .dzg2 .dh .nm{font-size:15.5px}#ig .a4v2 .dzg2 .dh{gap:6px}#ig .a4v2 .dzg2 .dh .dz-icon{width:26px;height:26px;border-radius:8px}#ig .a4v2 .dzg2 .dh .dz-icon svg{width:17px;height:17px}#ig .a4v2 .dzg2>div{padding-top:4px}
 #ig .cbk{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--ink-2)}
 #ig .cbk span{display:flex;align-items:center;gap:6px}
@@ -141,6 +141,9 @@
 #ig .pvfc .none{grid-column:2/-1;font-size:13px;color:var(--ink-2);align-self:center}
 #ig .pvst{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:4px 12px;background:#fdf6f1;color:#9a3412;font-size:13.5px}
 #ig .pvst.ph{background:#eef4fd;color:#1c4f9c}#ig .pvst span{flex:1;min-width:0;color:var(--ink-2)}#ig .pvst b{font-family:Anuphan;font-size:18px;white-space:nowrap}
+/* ข้อมูลเด่นกว่าหมายเหตุ (ดอกจัน/ที่มาเล็กกว่าตัวเลขในกราฟ) */
+#ig .a4v2 .cbk{font-size:12px}
+#ig .a4v2 .box h4 small{font-size:12px!important}
 `;
   document.head.appendChild(st);
 })();
@@ -180,13 +183,13 @@ function igPmMonthly(months, pv) {
 }
 // กราฟผสม: แท่ง = ผู้ป่วยรวมรายเดือน (สเกลซ้ายของกลุ่มนั้น) · เส้น = ค่าฝุ่นรายเดือน (สเกลขวาเท่ากันทุกแผง) · เส้นประ 37.5
 function igCombo(d, bars, pm, pmMax, W, H, months) {
-  const F = "font-family=\"'IBM Plex Sans Thai',Anuphan,sans-serif\"", n = bars.length, L = 34, R = 26, T = 10, B = 30, pw = W - L - R, ph = H - T - B, slot = pw / n, bw = Math.max(4, slot * .68);
+  const F = "font-family=\"'IBM Plex Sans Thai',Anuphan,sans-serif\"", n = bars.length, L = 36, R = 36, T = 10, B = 32, pw = W - L - R, ph = H - T - B, slot = pw / n, bw = Math.max(4, slot * .68);
   const bMax = e1Nice(Math.max(...bars.map(o => o?.sum || 0)) * 1.05, true) || 1, yb = v => T + ph - v / bMax * ph, yp = v => T + ph - v / pmMax * ph, X = i => L + i * slot + slot / 2;
   const k = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v);
   let g = `<line x1="${L}" x2="${W - R}" y1="${T + ph}" y2="${T + ph}" stroke="rgba(15,27,45,.25)"/>`
-    + `<text x="${L - 4}" y="${T + 4}" text-anchor="end" font-size="10.5" fill="${d.c}" font-weight="700" ${F}>${k(bMax)}</text><text x="${L - 4}" y="${T + ph}" text-anchor="end" font-size="10.5" fill="#5f6c80" ${F}>0</text>`
-    + `<text x="${W - R + 4}" y="${T + 4}" font-size="10.5" fill="#33415c" font-weight="700" ${F}>${pmMax}</text>`;
-  const y37 = yp(37.5); if (37.5 < pmMax) g += `<line x1="${L}" x2="${W - R}" y1="${y37}" y2="${y37}" stroke="#b84a00" stroke-dasharray="4 3" stroke-width="1.2"/><text x="${W - R + 4}" y="${y37 + 4}" font-size="10.5" fill="#b84a00" font-weight="700" ${F}>37.5</text>`;
+    + `<text x="${L - 4}" y="${T + 4}" text-anchor="end" font-size="13" fill="${d.c}" font-weight="700" ${F}>${k(bMax)}</text><text x="${L - 4}" y="${T + ph}" text-anchor="end" font-size="13" fill="#5f6c80" ${F}>0</text>`
+    + `<text x="${W - R + 4}" y="${T + 4}" font-size="13" fill="#33415c" font-weight="700" ${F}>${pmMax}</text>`;
+  const y37 = yp(37.5); if (37.5 < pmMax) g += `<line x1="${L}" x2="${W - R}" y1="${y37}" y2="${y37}" stroke="#b84a00" stroke-dasharray="4 3" stroke-width="1.2"/><text x="${W - R + 4}" y="${y37 + 4}" font-size="13" fill="#b84a00" font-weight="700" ${F}>37.5</text>`;
   months.forEach(({ m }, i) => { if (IG_SEASON(m)) g += `<rect x="${(L + i * slot).toFixed(1)}" y="${T}" width="${(slot + .3).toFixed(1)}" height="${ph}" fill="rgba(232,89,12,.09)"/>`; });   // ฤดูฝุ่น
   const yi = bars.findIndex((_, i) => i > 0 && months[i].m === 0); if (yi > 0) g += `<line x1="${L + yi * slot}" x2="${L + yi * slot}" y1="${T}" y2="${T + ph + 26}" stroke="rgba(15,27,45,.22)" stroke-dasharray="2 2"/>`;
   bars.forEach((o, i) => { if (!o) return; const y = yb(o.sum); g += `<rect x="${X(i) - bw / 2}" y="${y}" width="${bw}" height="${T + ph - y}" rx="2" fill="${d.c}" opacity="${o.prov ? .38 : .8}"/>`; });
@@ -194,8 +197,8 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
   let path = "", on = false; pts.forEach(p => { if (!p) { on = false; return; } path += `${on ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`; on = true; });
   g += `<path d="${path}" fill="none" stroke="#1f2a3d" stroke-width="2.2" stroke-linejoin="round"/>` + pts.map(p => p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.4" fill="#fff" stroke="#1f2a3d" stroke-width="1.6"/>` : "").join("");
   months.forEach(({ y, m }, i) => {   // ป้ายเดือนเว้นระยะ (เดือนสุดท้ายแสดงเสมอ) · ป้ายปีที่ต้นปี/ช่องแรก
-    if (i === n - 1 || (!(n > 12 ? m % 3 !== 1 : m % 2 !== 0) && i < n - 2)) g += `<text x="${X(i)}" y="${T + ph + 13}" text-anchor="middle" font-size="10.5" fill="#5f6c80" ${F}>${TH_M[m]}</text>`;
-    if (i === 0 || m === 0) g += `<text x="${i === 0 ? L : X(i)}" y="${T + ph + 26}" text-anchor="${i === 0 ? "start" : "middle"}" font-size="10.5" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
+    if (i === n - 1 || (!(n > 12 ? m % 3 !== 1 : m % 2 !== 0) && i < n - 2)) g += `<text x="${X(i)}" y="${T + ph + 13}" text-anchor="middle" font-size="13" fill="#5f6c80" ${F}>${TH_M[m]}</text>`;
+    if ((i === 0 && !months.slice(1, 4).some(o => o.m === 0)) || (m === 0 && i > 0)) g += `<text x="${i === 0 ? L : X(i)}" y="${T + ph + 26}" text-anchor="${i === 0 ? "start" : "middle"}" font-size="13" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
 }
 function igComboSec(H) {
@@ -210,7 +213,7 @@ function igComboSec(H) {
   return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">จำนวนผู้ป่วย 4 กลุ่มโรคเทียบกับค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ${pv ? `จ.${pv}` : "ทั้งเขต"}</small></div>
     <div class="cbk"><span><i class="bar"></i><em>แท่ง = จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>เส้น = ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 = ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
     <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H, months)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}${pv ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ใช้ดูแนวโน้มร่วมกัน ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง · ที่มา: HDC กระทรวงสาธารณสุข · Air4Thai ร่วมกับ GISTDA</div>`;
+    <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}${pv ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ใช้ดูแนวโน้มร่วมกัน ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง · ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 const IG_NAME = "R7_PM" + "2.5_dashboard";   // ชื่อที่แสดงท้ายหน้า (QR ยังชี้ไปที่ IG_URL) · แยกสตริงกันตัวแทนที่ชื่อสารมลพิษตอน build
@@ -342,7 +345,7 @@ function igPvTrend(pv, F) {
   const fc = it ? it.pred.slice(0, 3).map((x, k) => { const t = new Date(base.getTime() + (k + 1) * 864e5), l = x == null ? null : LV[lvOf(x)];
     return `<span class="c" style="background:${l ? l.soft : "#eef1f5"};color:${l ? l.ink : "#5f6c80"};border-color:${l ? l.c : "#ccd4de"}"><small>${k === 0 ? "พรุ่งนี้" : `${TH_DS[t.getDay()]} ${t.getDate()} ${TH_M[t.getMonth()]}`}</small><b class="num">${x != null ? f1(x) : "–"}</b></span>`; }).join("")
     : `<span class="sp-none">ยังไม่มีข้อมูลคาดการณ์</span>`;
-  const trend = `<div class="sp-row"><div class="sp-box"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><div class="sp-d7">${d7}</div></div>
+  const trend = `<div class="sp-row"><div class="sp-box"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³ · ที่มา: Air4Thai (กรมควบคุมมลพิษ)</small></h4><div class="sp-d7">${d7}</div></div>
     <div class="sp-box"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4><div class="sp-fc">${fc}</div></div></div>`;
   return trend;
 }
@@ -454,14 +457,14 @@ function buildInfographic(size = "a4", dense = 0) {
   const side = igPvSide();
   const sec1 = F.region ? maxBar.replace('<span class="ml">', `<span class="src">${srcT}</span><span class="ml">`) + igTiles() : `<div class="row1 r32">${heroA4}${side}</div>`;
   const sec2 = !F.region ? "" : `<div class="row3">
-      <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><table class="t7 num">${t7Html(true)}</table></div>
+      <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³ · ที่มา: Air4Thai (กรมควบคุมมลพิษ)</small></h4><table class="t7 num">${t7Html(true)}</table></div>
       <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4>${igForecast(F)}</div>
     </div>`;
   const sec3 = adviceBox + `<div class="lvleg">${LV.map((l, i) => `<span class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><i style="background:${l.c}"></i><b>${l.name}</b> ${l.range}</span>`).join("")}</div>`
     + `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสายด่วน ${HOT_DDC}</b>${F.lv >= 3 ? ` · <b style="color:#9a3412">ร่วมงดเผาในที่โล่ง</b> พบการเผาแจ้ง ${HOT_PCD}` : ""}</div>`;
   const provM = last < 0 ? [] : ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean);
   const sec4 = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569${F.region ? "" : ` · จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}</em><small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)</small></div>
-    <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${igDzName(s.d)}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, F.region ? 15 : 17)}</div>`).join("")}</div>
+    <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${igDzName(s.d)}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, F.region ? 16.5 : 17)}</div>`).join("")}</div>
     <div class="dzl">${provM.length ? `* แท่งจาง (${provM.join(" ")}) = ข้อมูลยังไม่ครบ หน่วยบริการยังรายงานไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   const sec5 = igComboSec(CBH);
   ig.innerHTML = head + `
