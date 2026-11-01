@@ -42,3 +42,15 @@ details.pg-fold>ul{padding-left:18px}
 .pv-lg i.hol{width:9px;height:9px;border-radius:50%;background:#fff;border:1.6px solid #6b7689}
 .pv-note{grid-column:1/-1;margin:0;font-size:13px;font-weight:600;line-height:1.6;color:var(--ink-2);background:#f4f6f9;border:1px solid #e1e6ee;border-radius:12px;padding:10px 14px}
 .pv-note b{color:var(--ink-1);margin-right:6px}
+
+/* ===== E1 ฉบับ 12 เดือน: กราฟแท่ง + เส้นค่าฝุ่น + แรเงาฤดูฝุ่น ===== */
+.e1lg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--ink-2);margin:10px 0 4px;align-items:center}
+.e1lg span{display:inline-flex;align-items:center;gap:7px}
+.e1lg em{font-style:normal}
+.e1lg i{display:block;flex:none}
+.e1lg .bar{width:13px;height:13px;border-radius:3px;background:linear-gradient(90deg,#2980b9 25%,#e74c3c 25% 50%,#27ae60 50% 75%,#f39c12 75%)}
+.e1lg .ln{width:22px;height:2.5px;background:#1f2a3d;border-radius:2px}
+.e1lg .dsh{width:22px;height:2px;background:repeating-linear-gradient(90deg,#b84a00 0 5px,transparent 5px 8px)}
+.e1lg .ssn{width:16px;height:13px;border-radius:3px;background:rgba(232,89,12,.18)}
+.delta b{font-weight:800}
+@media(max-width:680px){.dz-all .dz-top{flex-wrap:wrap}.dz-all .dz-top>div:nth-child(2){flex:1 1 180px;min-width:0}.dz-all .ds-jump{margin-left:0!important}}

@@ -109,7 +109,7 @@ function igCbMonths() {
 // ค่าฝุ่นรายเดือนทั้งเขต = ค่าเฉลี่ยรายวันของ 4 จังหวัด แล้วเฉลี่ยทั้งเดือน (เฉพาะวันที่มีค่า)
 function igPmMonthly(months) {
   const all = S.pm?.allData || {}, acc = {};
-  for (const [d, o] of Object.entries(all)) { const v = PROV.map(p => o?.[p.name]).filter(x => x != null && !isNaN(x)); if (!v.length) continue;
+  for (const [d, o] of Object.entries(all)) { const v = PROV.map(p => o?.[p.name]).filter(x => x != null && !isNaN(x) && x > 0); if (!v.length) continue;   // 0 = สถานีไม่มีข้อมูล ไม่นับ
     const k = d.slice(0, 7); (acc[k] ||= []).push(v.reduce((a, b) => a + b, 0) / v.length); }
   return months.map(({ y, m }) => { const a = acc[`${y}-${String(m + 1).padStart(2, "0")}`]; return a?.length ? a.reduce((x, z) => x + z, 0) / a.length : null; });
 }
