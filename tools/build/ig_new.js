@@ -245,14 +245,13 @@ function igFocus() {
   const f = sel || maxP;
   return { vals, maxP, f, lv: f ? lvOf(f.v) : S.lv, region: !S.igPv };
 }
-// คาดการณ์ 3 วัน (GISTDA) แบบแถบเดียว เรียงตรงกับการ์ด 4 จังหวัด — ระดับเขต A4
-function igFc4() {
-  const items = PROV.map(p => ({ p, it: S.gpv?.items.find(i => i.code === String(p.code)) }));
-  if (!items.some(o => o.it)) return "";
-  const base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00"), day = k => new Date(base.getTime() + (k + 1) * 864e5);
-  const dl = k => { const d = day(k); return `${d.getDate()} ${TH_M[d.getMonth()]}`; };
-  return `<div class="fc4"><div class="fc4h"><b>คาดการณ์ 3 วัน</b><span>ที่มา: GISTDA</span></div><div class="fc4g">${items.map(({ p, it }) => `<div class="c"><span class="n">${p.name}</span>${[0, 1, 2].map(k => { const x = it?.pred?.[k]; const l = x == null ? null : LV[lvOf(x)];
-    return `<span class="v" style="${l ? `background:${l.c};color:${textOn(l.c)}` : "background:#eef1f5;color:#5f6c80"}"><small>${k === 0 ? "พรุ่งนี้" : dl(k)}</small>${x == null ? "–" : f1(x)}</span>`; }).join("")}</div>`).join("")}</div></div>`;
+// ค่าฝุ่นย้อนหลัง 3 วัน (ก่อนวันนี้) แบบแถบเดียว เรียงตรงกับการ์ด 4 จังหวัด — A4 ระดับเขต (แทนคาดการณ์ · Louis 1 พ.ย. 2569)
+function igH3() {
+  const all = S.last7 || [], days = all.slice(Math.max(0, all.length - 4), all.length - 1);
+  if (!days.length) return "";
+  const dl = iso => { const d = new Date(iso + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]}`; };
+  return `<div class="fc4"><div class="fc4h"><b>ค่าฝุ่นย้อนหลัง 3 วัน</b><span>ค่าเฉลี่ย 24 ชม. · µg/m³ · ที่มา: Air4Thai (กรมควบคุมมลพิษ)</span></div><div class="fc4g">${PROV.map(p => `<div class="c"><span class="n">${p.name}</span>${days.map(d => { const x = d[p.name]; const l = x == null ? null : LV[lvOf(x)];
+    return `<span class="v" style="${l ? `background:${l.c};color:${textOn(l.c)}` : "background:#eef1f5;color:#5f6c80"}"><small>${dl(d.date)}</small>${x == null ? "–" : f1(x)}</span>`; }).join("")}</div>`).join("")}</div></div>`;
 }
 function igForecast(F, big) {
   const items = PROV.map(p => ({ p, it: S.gpv?.items.find(i => i.code === String(p.code)) })).filter(o => o.it);
@@ -494,7 +493,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const heroA4 = hero.replace('<span class="l">', `<span class="trd4">${igDelta(S.igPv)}</span><span class="l">`).replace(/<\/div><\/div>$/, `<span class="src">${srcT}</span></div></div>`);
   const side = igPvSide();
   const sec1 = F.region ? maxBar + igTiles() : `<div class="row1 r32">${heroA4}${side}</div>`;
-  const sec2 = F.region ? igFc4() : "";   // ระดับเขต: ตัดตารางย้อนหลัง 7 วัน · คาดการณ์ 3 วันเหลือแถบเดียวใต้การ์ดจังหวัด (คืนพื้นที่ให้กราฟผู้ป่วย)
+  const sec2 = F.region ? igH3() : "";   // ระดับเขต: ค่าฝุ่นย้อนหลัง 3 วันเป็นแถบเดียวใต้การ์ดจังหวัด (ไม่มีคาดการณ์ · คืนพื้นที่ให้กราฟผู้ป่วย)
   const sec3 = adviceBox + `<div class="lvleg">${LV.map((l, i) => `<span class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><i style="background:${l.c}"></i><b>${l.name}</b> ${l.range}</span>`).join("")}</div>`
     + `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสายด่วน ${HOT_DDC}</b>${F.lv >= 3 ? ` · <b style="color:#9a3412">ร่วมงดเผาในที่โล่ง</b> พบการเผาแจ้ง ${HOT_PCD}` : ""}</div>`;
   const provM = last < 0 ? [] : ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean);
