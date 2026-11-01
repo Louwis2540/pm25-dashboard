@@ -3429,9 +3429,9 @@ let IG_CB_N = 12;
 const IG_SEASON = m => m >= 10 || m <= 4;   // พ.ย.–พ.ค.
 function igCbMonths() { return dzCbMonths(S.dz || {}, S.wkMax, IG_CB_N); }   // ใช้ตัวเดียวกับแดชบอร์ด (เลื่อนข้ามปีตาม meta.dataYear/dataWk)
 // ค่าฝุ่นรายเดือนทั้งเขต = ค่าเฉลี่ยรายวันของ 4 จังหวัด แล้วเฉลี่ยทั้งเดือน (เฉพาะวันที่มีค่า)
-function igPmMonthly(months) {
+function igPmMonthly(months, pv) {
   const all = S.pm?.allData || {}, acc = {};
-  for (const [d, o] of Object.entries(all)) { const v = PROV.map(p => o?.[p.name]).filter(x => x != null && !isNaN(x) && x > 0); if (!v.length) continue;   // 0 = สถานีไม่มีข้อมูล ไม่นับ
+  for (const [d, o] of Object.entries(all)) { const v = (pv ? [pv] : PROV.map(p => p.name)).map(n => o?.[n]).filter(x => x != null && !isNaN(x) && x > 0); if (!v.length) continue;   // 0 = สถานีไม่มีข้อมูล ไม่นับ
     const k = d.slice(0, 7); (acc[k] ||= []).push(v.reduce((a, b) => a + b, 0) / v.length); }
   return months.map(({ y, m }) => { const a = acc[`${y}-${String(m + 1).padStart(2, "0")}`]; return a?.length ? a.reduce((x, z) => x + z, 0) / a.length : null; });
 }
@@ -3458,15 +3458,16 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
 function igComboSec(H) {
   const months = igCbMonths(); if (!months.length) return "";
   const end = dzCbEnd(S.dz, S.wkMax), cy = end.y;
-  const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(S.dz?.[y] || [], d.key, y === cy ? end.w : 99, y)]));
-  const pm = igPmMonthly(months), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(v => v != null), 0) / 10) * 10);
+  const pv = S.igPv, src = y => pv ? (y === 2026 ? igDzRows() : []) : (S.dz?.[y] || []);   // รายจังหวัด: มีข้อมูลผู้ป่วยรายจังหวัดตั้งแต่ปี 2569
+  const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(src(y), d.key, y === cy ? end.w : 99, y)]));
+  const pm = igPmMonthly(months, pv), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(v => v != null), 0) / 10) * 10);
   const ser = DZ.map(d => ({ d, bars: months.map(({ y, m }) => byY[y]?.[d.key]?.[m] || null) }));
   const f = months[0], l = months.at(-1), rng = `${TH_M[f.m]} ${String(f.y + 543).slice(2)} – ${TH_M[l.m]} ${String(l.y + 543).slice(2)}`;
   const prov = ser[0].bars.some(o => o?.prov);
-  return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">จำนวนผู้ป่วย 4 กลุ่มโรคเทียบกับค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ทั้งเขต</small></div>
+  return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">จำนวนผู้ป่วย 4 กลุ่มโรคเทียบกับค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ${pv ? `จ.${pv}` : "ทั้งเขต"}</small></div>
     <div class="cbk"><span><i class="bar"></i><em>แท่ง = จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>เส้น = ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 = ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
     <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H, months)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}ใช้ดูแนวโน้มร่วมกัน ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง · ที่มา: HDC กระทรวงสาธารณสุข · Air4Thai ร่วมกับ GISTDA</div>`;
+    <div class="dzl">${prov ? "แท่งจาง = ข้อมูลยังไม่ครบ · " : ""}${pv ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ใช้ดูแนวโน้มร่วมกัน ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง · ที่มา: HDC กระทรวงสาธารณสุข · Air4Thai ร่วมกับ GISTDA</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 const IG_NAME = "R7_PM" + "2.5_dashboard";   // ชื่อที่แสดงท้ายหน้า (QR ยังชี้ไปที่ IG_URL) · แยกสตริงกันตัวแทนที่ชื่อสารมลพิษตอน build
@@ -3532,9 +3533,25 @@ function igDelta(pv) {
 }
 // PHEOC ในอินโฟกราฟิก = เกณฑ์เดียวกับหน้าเว็บและ LINE (/api/pheoc: ค่าเฉลี่ย 24 ชม. ณ 07.00 น. ≥ 75.1 ติดกัน 2 วัน)
 // เดิมเว็บจริงใช้ "มีจังหวัด ≥ 75.1 วันนี้" วันเดียว (ตัวแปลงของ pheoc_apply ทำงานก่อนที่โค้ดนี้จะถูกใส่) → เรียก pheocLabel ตรง ๆ
+// จุดความร้อนของอินโฟกราฟิก: รายจังหวัด = เฉพาะจังหวัดนั้น · ระดับเขต = ทั้งเขต
+const igHs = () => S.igPv ? (S.hsToday || []).filter(f => f.properties?.changwat === S.igPv) : (S.hsToday || []);
+const igHsLbl = () => S.igPv ? `จ.${S.igPv}` : "เขตสุขภาพที่ 7";
 function igPh(yes, no) {
   if (typeof pheocLabel === "function") return pheocLabel(yes, no);
   return PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? yes : no;
+}
+// ค่าฝุ่นย้อนหลัง 7 วัน + คาดการณ์ 3 วัน ของจังหวัดเดียว (โพสต์และ A4 รายจังหวัด)
+function igPvTrend(pv, F) {
+  const days = S.last7 || [], sd = iso => { const t = new Date(iso + "T00:00:00"); return `${t.getDate()}/${t.getMonth() + 1}`; };
+  const d7 = days.map((r, i) => { const x = r[pv], l = x != null ? LV[lvOf(x)] : null, td = i === days.length - 1;
+    return `<span class="c${td ? " td" : ""}" style="background:${l ? l.c : "#dfe4ea"};color:${l ? textOn(l.c) : "#5f6c80"}"><small>${td ? "วันนี้" : sd(r.date)}</small><b class="num">${x != null ? f1(x) : "–"}</b></span>`; }).join("");
+  const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)), base = new Date((S.gpv?.asOf || "").slice(0, 10) + "T00:00:00");
+  const fc = it ? it.pred.slice(0, 3).map((x, k) => { const t = new Date(base.getTime() + (k + 1) * 864e5), l = x == null ? null : LV[lvOf(x)];
+    return `<span class="c" style="background:${l ? l.soft : "#eef1f5"};color:${l ? l.ink : "#5f6c80"};border-color:${l ? l.c : "#ccd4de"}"><small>${k === 0 ? "พรุ่งนี้" : `${TH_DS[t.getDay()]} ${t.getDate()} ${TH_M[t.getMonth()]}`}</small><b class="num">${x != null ? f1(x) : "–"}</b></span>`; }).join("")
+    : `<span class="sp-none">ยังไม่มีข้อมูลคาดการณ์</span>`;
+  const trend = `<div class="sp-row"><div class="sp-box"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><div class="sp-d7">${d7}</div></div>
+    <div class="sp-box"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4><div class="sp-fc">${fc}</div></div></div>`;
+  return trend;
 }
 // ===== โพสต์รายจังหวัด 1080×1350 (1 พ.ย. 2569) · เรียงแบบอินโฟกราฟิกระดับเขต =====
 // 1 การ์ดจังหวัดใหญ่ (ภาพสภาพอากาศ + ค่าฝุ่น + เทียบเมื่อวาน) → 2 คำแนะนำดูแลตัวเอง → 3 ย้อนหลัง 7 วัน + คาดการณ์ 3 วัน
@@ -3547,15 +3564,7 @@ function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
       <span class="sp-l">${L.face} ${L.name}</span>
       ${igDelta(pv) ? `<span class="sp-d">${igDelta(pv)}</span>` : ""}
       <span class="sp-src">ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · ที่มา: Air4Thai (กรมควบคุมมลพิษ)</span></div></div>`;
-  const days = S.last7 || [], sd = iso => { const t = new Date(iso + "T00:00:00"); return `${t.getDate()}/${t.getMonth() + 1}`; };
-  const d7 = days.map((r, i) => { const x = r[pv], l = x != null ? LV[lvOf(x)] : null, td = i === days.length - 1;
-    return `<span class="c${td ? " td" : ""}" style="background:${l ? l.c : "#dfe4ea"};color:${l ? textOn(l.c) : "#5f6c80"}"><small>${td ? "วันนี้" : sd(r.date)}</small><b class="num">${x != null ? f1(x) : "–"}</b></span>`; }).join("");
-  const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)), base = new Date((S.gpv?.asOf || "").slice(0, 10) + "T00:00:00");
-  const fc = it ? it.pred.slice(0, 3).map((x, k) => { const t = new Date(base.getTime() + (k + 1) * 864e5), l = x == null ? null : LV[lvOf(x)];
-    return `<span class="c" style="background:${l ? l.soft : "#eef1f5"};color:${l ? l.ink : "#5f6c80"};border-color:${l ? l.c : "#ccd4de"}"><small>${k === 0 ? "พรุ่งนี้" : `${TH_DS[t.getDay()]} ${t.getDate()} ${TH_M[t.getMonth()]}`}</small><b class="num">${x != null ? f1(x) : "–"}</b></span>`; }).join("")
-    : `<span class="sp-none">ยังไม่มีข้อมูลคาดการณ์</span>`;
-  const trend = `<div class="sp-row"><div class="sp-box"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><div class="sp-d7">${d7}</div></div>
-    <div class="sp-box"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4><div class="sp-fc">${fc}</div></div></div>`;
+  const trend = igPvTrend(pv, F);
   const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
   const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
   const CH = [104, 96, 90, 84, 78, 64, 54][d];
@@ -3619,14 +3628,14 @@ function buildInfographic(size = "a4", dense = 0) {
   const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
   const fc1 = (() => { const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); const x = it?.pred?.[0]; return x == null ? null : x; })();
   const facts3 = `<div class="facts3"${phHit ? "" : ' style="grid-template-columns:repeat(2,1fr)"'}>${phHit ? `<div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)</span><b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์"))}</b></span></div>` : ""}
-    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7) · ที่มา: GISTDA</span><b>${S.hsToday.length} จุด</b></span></div>
+    <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม. (${igHsLbl()}) · ที่มา: GISTDA</span><b>${igHs().length} จุด</b></span></div>
     <div><span class="fi" style="background:${fc1 != null ? LV[lvOf(fc1)].soft : "var(--subtle)"};color:${fc1 != null ? LV[lvOf(fc1)].ink : "var(--ink-2)"}">${inl("i-cal", 26)}</span><span><span class="k">พรุ่งนี้ (คาดการณ์) · ${F.f?.p.name ?? ""}</span><b>${fc1 != null ? `${f1(fc1)} · ${LV[lvOf(fc1)].name}` : "–"}</b></span></div></div>`;
   const pvCard = (p, cls) => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = !F.region && p.name === S.igPv;
     return `<div class="${me ? "me" : ""}" style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n"><b class="pn">${p.name}</b>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM<sub>2.5</sub></em>${v != null ? f1(v) : "–"}<small> µg/m³</small></span>${igTrendHtml(p.name)}</div>`; };
   const over = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5);
   const kpi = (ic, bg, fg, k, b, sm) => `<div><span class="fi" style="background:${bg};color:${fg}">${inl(ic, 26)}</span><span><span class="k">${k}</span><b>${b}</b>${sm ? `<small>${sm}</small>` : ""}</span></div>`;
   const kpis = `<div class="kpis${F.region ? " kpis-h" : ""}">${phHit ? kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)", igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")) : ""}
-    ${kpi("i-fire", "#fdeee5", "#e8590c", "จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7)", `${S.hsToday.length} จุด`, "ที่มา: GISTDA")}</div>`;   // PHEOC แสดงเฉพาะวันที่เข้าเกณฑ์ · ตัด "จังหวัดที่เกิน 37.5"
+    ${kpi("i-fire", "#fdeee5", "#e8590c", `จุดความร้อน 24 ชม. (${igHsLbl()})`, `${igHs().length} จุด`, "ที่มา: GISTDA")}</div>`;   // PHEOC แสดงเฉพาะวันที่เข้าเกณฑ์ · ตัด "จังหวัดที่เกิน 37.5"
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
   if (size === "social" && !F.region) { igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense); igPad(ig); return; }   // โพสต์รายจังหวัด: เรียงแบบระดับเขต
@@ -3648,7 +3657,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const srcT = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai (กรมควบคุมมลพิษ)`;
   const heroA4 = hero.replace('<span class="l">', `<span class="trd4">${igDelta(S.igPv)}</span><span class="l">`).replace(/<\/div><\/div>$/, `<span class="src">${srcT}</span></div></div>`);
   const sec1 = F.region ? maxBar.replace('<span class="ml">', `<span class="src">${srcT}</span><span class="ml">`) + igTiles() : `<div class="row1">${heroA4}${kpis}</div>`;
-  const sec2 = `<div class="row3">
+  const sec2 = !F.region ? igPvTrend(S.igPv, F) : `<div class="row3">
       <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><table class="t7 num">${t7Html(true)}</table></div>
       <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4>${igForecast(F)}</div>
     </div>`;
