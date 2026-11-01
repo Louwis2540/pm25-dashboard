@@ -21,12 +21,10 @@
 #ig.social[data-dense="3"] .scale b{font-size:15px}
 #ig .a4v2{gap:6px!important}#ig .a4v2 .ig-sec{padding:3px 14px 3px 5px!important;font-size:19px}#ig .a4v2 .ig-sec>span{width:30px;height:30px}
 #ig .a4v2 .maxbar{padding:0 16px}#ig .a4v2 .maxbar .ml{font-size:19px}
-#ig .a4v2 .row3{gap:12px}#ig .a4v2 .box{padding:6px 14px}#ig .a4v2 .box h4{font-size:17px;margin-bottom:2px}
+#ig .a4v2 .row3{gap:10px}#ig .a4v2 .box{padding:6px 14px}#ig .a4v2 .box h4{font-size:17px;margin-bottom:2px}#ig .a4v2 .box h4 small{font-size:12.5px!important}#ig .a4v2 .t7,#ig .a4v2 .fc3{font-size:14px}
 #ig .a4v2 .t7 td,#ig .a4v2 .t7 th,#ig .a4v2 .fc3 td,#ig .a4v2 .fc3 th{padding:0 4px!important;line-height:1.2!important}#ig .a4v2 .t7 td.cell{font-size:14px!important;border-width:1.5px;line-height:1.1!important}#ig .a4v2 .fc3 td{font-size:14px!important;padding:2px 4px!important;line-height:1.2!important}#ig .a4v2 .t7 td:first-child,#ig .a4v2 .fc3 td:first-child{font-size:14px!important}#ig .a4v2 .t7 td.today-col{font-size:16px!important}#ig .a4v2 .fc3 th small{display:inline;margin-left:3px}
-#ig .ig-src{font-size:13px;color:var(--ink-3);text-align:right;margin-top:-4px}
+#ig .maxbar .src{flex:1;min-width:0;font-size:12.5px;line-height:1.3;color:var(--ink-2);text-align:right;padding-right:6px}#ig .avg .src{display:block;font-size:12.5px;line-height:1.3;color:var(--ink-2);margin-top:4px}
 #ig .a4v2 .advice .w{padding:4px 12px;gap:3px}#ig .a4v2 .advice .w h4{margin:0;font-size:16px}#ig .a4v2 .advice .do{padding:1px 8px;font-size:15px!important;line-height:1.3;min-height:0}#ig .a4v2 .advice .do span{width:26px;height:26px}#ig .a4v2 .advice .do span svg{width:18px;height:18px}#ig .a4v2 .advice{grid-template-columns:170px 1fr 1fr!important}#ig .a4v2 .advice .lv{padding:6px 8px!important;gap:2px!important}#ig .a4v2 .advice .lv b{font-size:20px!important;line-height:1.2}#ig .a4v2 .advice .lv .f{font-size:30px}#ig .a4v2 .advice .lv>span:last-child{font-size:13.5px;white-space:nowrap}#ig[data-dx="1"] .a4v2{gap:5px!important}
-#ig .a4v2 .row3{gap:10px}#ig .a4v2 .box{padding:6px 14px}#ig .a4v2 .box h4{font-size:17px}#ig .a4v2 .box h4 small{font-size:12.5px!important}
-#ig .a4v2 .t7{font-size:15px}#ig .a4v2 .t7 td,#ig .a4v2 .fc3 td{line-height:1.25}#ig .a4v2 .t7 td.cell{font-size:15.5px}#ig .a4v2 .t7 td.today-col{font-size:17px}#ig .a4v2 .fc3{font-size:15.5px}#ig .a4v2 .t7 td:first-child,#ig .a4v2 .fc3 td:first-child{font-size:14.5px}#ig .a4v2 .t7 td,#ig .a4v2 .t7 th{padding:1px 4px!important}#ig .a4v2 .fc3 td{padding:1px 4px}
 #ig .a4v2 .lvleg{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}#ig .a4v2 .lvleg span{font-size:13.5px;padding:2px 8px 2px 5px;white-space:nowrap}#ig .a4v2 .lvleg b{font-size:14px}
 #ig .a4v2 .ig-note{font-size:13px;line-height:1.35}
 #ig .a4v2 .dzl{display:block!important;font-size:13px;line-height:1.4;margin-top:0;color:var(--ink-2)!important;font-weight:400!important}#ig .a4v2 .dzl b{color:var(--ink-1);font-weight:700}
@@ -38,17 +36,52 @@
 #ig .cbg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 #ig .cbg>div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px 6px 0}
 #ig .cbh{display:flex;align-items:center;gap:5px;font-family:Anuphan;font-weight:700;font-size:14px;line-height:1.3;white-space:nowrap}
+/* ===== A4 ฉบับ 4 ===== */
+/* เงาไม่ล้นทับข้อความถัดไป (เงาเดิมยื่นลง 12–14px) */
+#ig .a4v2 .ig-sec{box-shadow:0 1px 2px rgba(15,27,45,.16),0 3px 8px -3px var(--lv-ink)!important}
+#ig .a4v2 .maxbar{box-shadow:0 0 0 1px rgba(15,27,45,.06),0 2px 6px -2px var(--lv)!important}
+#ig .a4v2 .igt .tile{box-shadow:0 1px 2px rgba(15,27,45,.08),0 4px 10px -6px rgba(15,27,45,.25)!important}
+#ig .a4v2 .box,#ig .a4v2 .dzg2>div,#ig .a4v2 .kpis>div,#ig .a4v2 .avg,#ig .a4v2 .advice{box-shadow:0 1px 2px rgba(15,27,45,.06),0 3px 8px -4px rgba(15,27,45,.18)!important}
+/* การ์ดค่าฝุ่น: เทียบเมื่อวานชัดขึ้น */
+#ig .a4v2 .igt .tile .delta{font-size:21px!important;font-weight:700;white-space:nowrap}
+#ig .a4v2 .igt .tile .delta b{font-weight:800}
+#ig .avg .trd4{font-size:15px;font-weight:600;color:var(--ink-2)}#ig .avg .trd4 b{color:var(--ink-1)}
+/* คำแนะนำ: เด่นขึ้น (กรอบสีระดับ + พื้นอ่อน + ข้อความหนาขึ้น) */
+#ig .a4v2 .advice{border:2.5px solid var(--lv)!important;background:linear-gradient(160deg,#fff 35%,var(--lv-tint))!important}
+#ig .a4v2 .advice .w h4{color:var(--lv-ink);font-size:17px!important}
+#ig .a4v2 .advice .do{font-weight:600;color:var(--ink-1);background:rgba(255,255,255,.85)!important;border:1px solid color-mix(in srgb,var(--lv) 30%,#fff)!important}
+#ig .a4v2 .advice .do span{background:var(--lv-soft)!important;color:var(--lv-ink)!important}
+/* ผู้ป่วยรายเดือน: เด่นขึ้น */
+#ig .a4v2 .dzg2>div{border:1.5px solid color-mix(in srgb,var(--dzs) 30%,#c9d3df)!important}
+#ig .a4v2 .dzg2 .dh .nm{font-size:16.5px!important;font-weight:700}
+/* ข้อ 5 + ส่วนท้าย: กระจกใสแบบ iOS 26 (html2canvas ไม่วาด backdrop-filter → ใช้ไล่สีขาวโปร่ง + ขอบสว่าง + เงานุ่ม) */
+#ig .a4v2 .cbg{gap:10px}
+#ig .a4v2 .cbg>div{border-radius:18px;border:1px solid rgba(255,255,255,.95);background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.62));box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(15,27,45,.06),0 6px 16px -10px rgba(15,27,45,.35);padding:6px 8px 2px}
+#ig .a4v2 .cbk{background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.55));border:1px solid rgba(255,255,255,.95);border-radius:999px;padding:3px 14px;align-self:flex-start;box-shadow:inset 0 1px 0 #fff,0 2px 6px -4px rgba(15,27,45,.25)}
+#ig .a4v2 .cbh{font-size:15px}
+#ig .a4v2~.ig-f{left:24px!important;right:24px!important;bottom:14px!important;border-radius:22px;padding:10px 22px!important;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.6))!important;border:1px solid rgba(255,255,255,.95)!important;box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(15,27,45,.06),0 10px 24px -14px rgba(15,27,45,.4)}
+#ig .a4v2~.ig-f{padding:7px 20px!important}#ig .a4v2~.ig-f .qr svg{width:66px;height:66px}
+#ig:not(.social) .ig-date{padding-top:6px!important;padding-bottom:6px!important}
 `;
   document.head.appendChild(st);
 })();
 // ส่วนท้ายเป็น position:absolute → เว้นที่ด้านล่างเนื้อหาเท่าความสูงจริงของส่วนท้าย (เดิมโซเชียลเว้นแค่ 14px จึงซ้อนทับ)
-function igPad(ig) { const f = ig.querySelector(".ig-f"), b = ig.querySelector(".ig-body"); if (f && b) b.style.paddingBottom = (f.offsetHeight + 10) + "px"; }
+function igPad(ig) { const f = ig.querySelector(".ig-f"), b = ig.querySelector(".ig-body"); if (f && b) b.style.paddingBottom = (ig.clientHeight - f.offsetTop + 10) + "px"; }
 // ย่อทีละขั้น (โพสต์ 0–4 · A4 0–6) จนไม่ล้น — ล้นตรวจจากส่วนที่เว้นไว้เหนือส่วนท้ายด้วย
+let IG_GROW = 0;   // A4: พื้นที่ว่างที่แจกให้กราฟข้อ 4–5 (px)
 function fitInfographic(size) {
   const ig = document.getElementById("ig");
   const top = size === "social" ? 4 : 6;   // A4 มีขั้น 5–6 สำรอง (กราฟข้อ 4–5 เตี้ยลง)
-  for (let d = 0; d <= top; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) return d; }
-  return top;
+  let d = 0; IG_GROW = 0;
+  for (; d <= top; d++) { buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) break; }
+  if (d > top) return top;
+  if (size !== "social") {   // A4: พื้นที่ว่างเหนือส่วนท้าย → ขยายกราฟผู้ป่วย (ไม่ปล่อยช่องว่าง)
+    const b = ig.querySelector(".ig-body"), last = b?.lastElementChild, f = ig.querySelector(".ig-f");
+    let g = last && f ? Math.floor(f.offsetTop - 12 - (last.offsetTop + last.offsetHeight)) : 0;
+    for (let k = 0; k < 4 && g > 6; k++) { IG_GROW = g; buildInfographic(size, d); if (ig.scrollHeight <= ig.clientHeight + 1) return d; g = Math.floor(g * .7); }
+    IG_GROW = 0; buildInfographic(size, d);
+  }
+  return d;
 }
 // ---- A4 ฉบับ 2: ตัวช่วย ----
 // ชื่อกลุ่มโรคบนอินโฟกราฟิก (ใช้คำว่า "โรคระบบ…" ตามที่ขอ)
@@ -144,9 +177,21 @@ function igFcStrip(F) {   // ขนาดโซเชียล: คาดกา�
   return `<div class="fcs"><span class="t">${inl("i-cal", 22)}คาดการณ์ 3 วัน · ${F.f.p.name}</span>${it.pred.slice(0, 3).map((x, k) => { const d = new Date(base.getTime() + (k + 1) * 864e5), l = x == null ? null : LV[lvOf(x)];
     return `<span class="c" style="background:${l ? l.soft : "#eef1f5"};color:${l ? l.ink : "#5f6c80"};border-color:${l ? l.c : "#ccd4de"}"><small>${k === 0 ? "พรุ่งนี้" : `${TH_D[d.getDay()]} ${d.getDate()} ${TH_M[d.getMonth()]}`}</small><b>${l ? `${l.face} ${l.name}` : "–"}</b></span>`; }).join("")}</div>`;
 }
+// วันก่อนหน้าใน S.prevRow = แถวก่อนหน้าที่มีค่า (อาจไม่ใช่เมื่อวาน ถ้าวันนั้นไม่มีข้อมูล) → ตรวจวันที่จริง
+function igPrevLbl() {
+  const a = S.todayRow?.date, b = S.prevRow?.date; if (!a || !b) return "วันก่อนหน้า";
+  const gap = Math.round((new Date(a + "T00:00:00") - new Date(b + "T00:00:00")) / 864e5), d = new Date(b + "T00:00:00");
+  return gap === 1 ? "เมื่อวาน" : `${d.getDate()} ${TH_M[d.getMonth()]}`;
+}
+function igDelta(pv) {
+  const v = S.todayRow?.[pv], y = S.prevRow?.[pv]; if (v == null || y == null) return "";
+  const d = r1(v - y), w = d > 0 ? "▲ เพิ่มขึ้น" : d < 0 ? "▼ ลดลง" : "● เท่ากับ";
+  return `${w} ${d ? Math.abs(d).toFixed(1) + " " : ""}· ${igPrevLbl()} <b>${f1(y)}</b>`;
+}
 function igTrendHtml(pv, center) {
   const t = igTrend(pv); if (!t) return "";
-  return `<span class="trd ${t.up ? "up" : t.dn ? "dn" : ""}"${center ? ' style="justify-content:center"' : ""}>${t.up ? "▲ สูงขึ้นกว่าเมื่อวาน" : t.dn ? "▼ ลดลงจากเมื่อวาน" : "● ใกล้เคียงเมื่อวาน"}</span>`;
+  const w = igPrevLbl(), ys = w === "เมื่อวาน" ? "เมื่อวาน" : `วันที่ ${w}`;
+  return `<span class="trd ${t.up ? "up" : t.dn ? "dn" : ""}"${center ? ' style="justify-content:center"' : ""}>${t.up ? `▲ สูงขึ้นกว่า${ys}` : t.dn ? `▼ ลดลงจาก${ys}` : `● ใกล้เคียง${ys}`}</span>`;
 }
 // แถบสี 7 วันย้อนหลัง (โพสต์ประชาชน): เห็นแนวโน้มโดยไม่ต้องอ่านตัวเลข
 function igStrip7(pv) {
@@ -159,13 +204,16 @@ function dzAsOf() { const p = String(S.dz?.meta?.dataDate || "").split("/"); ret
 function igTiles() {
   const src = document.getElementById("tiles"); if (!src || !src.children.length) return "";
   const html = src.innerHTML.replace(/aria-pressed="true"/g, 'aria-pressed="false"').replace(/<button /g, '<div ').replace(/<\/button>/g, '</div>');
-  return `<div class="ws-v2 igt"><div class="tiles">${html}</div></div>`;
+  // ข้อความเทียบวันก่อนหน้า: ระบุ "เมื่อวาน"/วันที่ และค่าของวันนั้น
+  const t = document.createElement("div"); t.innerHTML = html;
+  t.querySelectorAll("[data-pv]").forEach(el => { const dl = el.querySelector(".delta"), x = igDelta(el.dataset.pv); if (dl && x) dl.innerHTML = x; });
+  return `<div class="ws-v2 igt"><div class="tiles">${t.innerHTML}</div></div>`;
 }
 // ย่อการ์ด 4 ใบให้พอดีแถว ด้วย transform (html2canvas วาด transform ได้ถูก แต่ zoom วาดตัวหนังสือเพี้ยน)
 const IG_TW = 1360;
 function igFitTiles(ig) {
   const box = ig.querySelector(".igt"), t = box?.querySelector(".tiles"); if (!t) return;
-  const tw = ig.classList.contains("social") ? IG_TW : IG_TW + (ig.querySelector(".a4v2") ? 440 : 120); t.style.width = tw + "px";
+  const tw = ig.classList.contains("social") ? IG_TW : IG_TW + (ig.querySelector(".a4v2") ? 120 : 120); t.style.width = tw + "px";
   const k = box.clientWidth / tw; t.style.transform = `scale(${k})`; box.style.height = (t.offsetHeight * k) + "px";
 }
 function igEpiWk() { return epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
@@ -216,9 +264,10 @@ function buildInfographic(size = "a4", dense = 0) {
   const wkMax = S.wkMax || 0, rows = igDzRows();
   const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, 2026) }));
   const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
-  const CH = [104, 98, 92, 86, 80, 68, 58][dense], CBH = [150, 146, 142, 136, 128, 98, 78][dense];
-  const src = `<div class="ig-src">ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME} · ที่มา: สถานี Air4Thai (กรมควบคุมมลพิษ) ร่วมกับดาวเทียม GISTDA</div>`;
-  const sec1 = (F.region ? maxBar + igTiles() : `<div class="row1">${hero}${kpis}</div>`) + src;
+  const CH = [104, 98, 92, 86, 80, 68, 58][dense] + Math.round(IG_GROW * .2), CBH = [150, 146, 142, 136, 128, 98, 78][dense] + Math.round(IG_GROW * .55);
+  const srcT = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai ร่วมกับดาวเทียม GISTDA`;
+  const heroA4 = hero.replace('<span class="l">', `<span class="trd4">${igDelta(S.igPv)}</span><span class="l">`).replace(/<\/div><\/div>$/, `<span class="src">${srcT}</span></div></div>`);
+  const sec1 = F.region ? maxBar.replace('<span class="ml">', `<span class="src">${srcT}</span><span class="ml">`) + igTiles() : `<div class="row1">${heroA4}${kpis}</div>`;
   const sec2 = `<div class="row3">
       <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><table class="t7 num">${t7Html(true)}</table></div>
       <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>คาดการณ์ 3 วัน<small>GISTDA</small></h4>${igForecast(F)}</div>
