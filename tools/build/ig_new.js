@@ -59,8 +59,9 @@
 #ig .a4v2 .cbg>div{border-radius:18px;border:1px solid rgba(255,255,255,.95);background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.62));box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(15,27,45,.06),0 6px 16px -10px rgba(15,27,45,.35);padding:6px 8px 2px}
 #ig .a4v2 .cbk{background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.55));border:1px solid rgba(255,255,255,.95);border-radius:999px;padding:3px 14px;align-self:flex-start;box-shadow:inset 0 1px 0 #fff,0 2px 6px -4px rgba(15,27,45,.25)}
 #ig .a4v2 .cbh{font-size:15px}
-#ig .a4v2~.ig-f{left:24px!important;right:24px!important;bottom:14px!important;border-radius:22px;padding:10px 22px!important;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.6))!important;border:1px solid rgba(255,255,255,.95)!important;box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(15,27,45,.06),0 10px 24px -14px rgba(15,27,45,.4)}
-#ig .a4v2~.ig-f{padding:7px 20px!important}#ig .a4v2~.ig-f .qr svg{width:66px;height:66px}
+#ig .a4v2~.ig-f{left:0!important;right:0!important;bottom:0!important;border:0!important;border-radius:0!important;padding:10px 44px!important;color:#fff!important;background:linear-gradient(100deg,var(--lv-ink),color-mix(in srgb,var(--lv-ink) 62%,var(--lv)))!important;box-shadow:none!important}
+#ig .a4v2~.ig-f b,#ig .a4v2~.ig-f span{color:#fff!important}#ig .a4v2~.ig-f .qr{background:#fff;border:0!important;border-radius:10px!important;padding:3px;box-shadow:none!important}
+#ig .a4v2~.ig-f .qr svg{width:66px;height:66px}
 #ig:not(.social) .ig-date{padding-top:6px!important;padding-bottom:6px!important}
 /* ตารางค่าฝุ่นย้อนหลัง / คาดการณ์: ช่องเรียบ ไม่มีเส้นขอบ · เอฟเฟ็กต์นูนกระจกใสมีเงาเฉพาะคอลัมน์ "วันนี้" */
 #ig .a4v2 .t7,#ig .a4v2 .fc3{border-collapse:separate!important;border-spacing:4px 3px!important}
