@@ -746,6 +746,7 @@ import zbc_apply
 zbc_apply.apply(sub)
 html = zbc_apply.apply_area_bind(html)
 sub(zbc_apply.FC_OLD, zbc_apply.FC_NEW)
+import dash_apply; dash_apply.apply(sub)   # ข้อความเทียบวันก่อนหน้า (ใช้ igDelta)
 import pheoc_apply
 html = pheoc_apply.apply(html)
 import nav_apply

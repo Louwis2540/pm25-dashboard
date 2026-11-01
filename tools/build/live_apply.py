@@ -69,6 +69,7 @@ sub("function renderDisease() {", DS_ADAPT + (SCR / "ds_module.js").read_text(en
 sub('<h2>โรคที่ต้องเฝ้าระวังผลกระทบจากฝุ่น</h2>', '<h2>ข้อมูลผู้ป่วยกลุ่มโรคที่เกี่ยวข้องกับฝุ่น <span class="pm25">PM<sub>2.5</sub></span></h2>')   # ไม่สื่อว่าฝุ่นเป็นสาเหตุ
 import nav_apply
 html = nav_apply.apply(html)
+import dash_apply; dash_apply.apply(sub)   # ข้อความเทียบวันก่อนหน้า (ใช้ igDelta)
 # หมายเหตุตารางสรุปช่วงที่เลือก (แนวโน้ม): ค่า ณ 07.00 น. จากสถานี + ดาวเทียม
 sub('<div class="tr-note">ค่ารายวันจากสถานีตรวจวัด Air4Thai · ', '<div class="tr-note">ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จากสถานีตรวจวัด Air4Thai ร่วมกับดาวเทียม GISTDA · ')
 sub("</style>", "\n/* ===== รอบ 16 ต.ค. 2569 ===== */\n" + (css_z or zbc_apply.CSS) + pheoc_apply.CSS + (SCR / "ds.css").read_text(encoding="utf-8") + nav_apply.TOC_CSS + "</style>")
