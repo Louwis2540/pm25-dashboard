@@ -24,6 +24,11 @@
  *      หน้าเว็บ (/api/pheoc ใน server.js) ใช้เกณฑ์เดียวกันจาก config.json → pheoc
  *   8. บันทึกค่า 07:00 ลงแท็บ PM25_07 ทุกรอบ
  *   9. PM25_History (ที่แดชบอร์ดอ่าน) เปลี่ยนเป็นค่าเฉลี่ย 24 ชม. ณ 07:00 เหมือนกัน — ไม่เขียนค่ารอบบ่ายแล้ว
+ *
+ * แก้ 1/11/2026 (คุมโควตา 300 ข้อความ/เดือน):
+ *  10. รอบเช้า (ก่อน 11:00) ส่งทุกวัน · รอบบ่าย (15:00) ส่งเฉพาะวันที่มีจังหวัดเกิน 37.5 µg/m³
+ *      (บันทึกประวัติ/PHEOC ยังทำครบทุกรอบ) · ปิดการคุมได้ที่ LINE_AFTERNOON_ONLY_IF_ALERT
+ *  11. เพิ่ม testLineQuota() — ดูโควตาที่ใช้/เหลือ และคาดการณ์สิ้นเดือน (ไม่ส่งข้อความ ไม่กินโควตา)
  */
 
 // ── ค่าที่ไม่เป็นความลับ ───────────────────────────────────────────────
@@ -77,6 +82,28 @@ function secret_(key) {
 }
 
 // ==========================================================
+// 📉 คุมโควตา broadcast (แพ็กเกจฟรี 300 ข้อความ/เดือน)
+// ==========================================================
+// รอบเช้า (ก่อน 11:00 · trigger 07:00) = ส่งทุกวัน
+// รอบบ่าย (11:00 เป็นต้นไป · trigger 15:00) = ส่งเฉพาะเมื่อมีจังหวัดเกิน LINE_PM_ALERT
+// ปิดการคุมได้ที่ LINE_AFTERNOON_ONLY_IF_ALERT = false (ส่งทุกรอบเหมือนเดิม)
+const LINE_AFTERNOON_ONLY_IF_ALERT = true;
+const LINE_PM_ALERT = 37.5;   // µg/m³ · ค่ามาตรฐาน PM2.5 เฉลี่ย 24 ชม. ของไทย (เกินแล้ว = ระดับเริ่มมีผลต่อสุขภาพ)
+
+/**
+ * ตัดสินว่ารอบนี้ควร broadcast ไหม
+ * @return {{send:boolean, over:string[], reason:string}}
+ */
+function shouldBroadcast_(airData, hour) {
+  const over = airData.filter(p => p.pm25 !== null && p.pm25 > LINE_PM_ALERT).map(p => p.name + ' ' + p.pm25);
+  if (hour < 11) return { send: true, over: over, reason: 'รอบเช้า — ส่งทุกวัน' };
+  if (!LINE_AFTERNOON_ONLY_IF_ALERT) return { send: true, over: over, reason: 'รอบบ่าย — ปิดการคุมโควตา ส่งทุกรอบ' };
+  return over.length
+    ? { send: true,  over: over, reason: 'รอบบ่าย — มีจังหวัดเกิน ' + LINE_PM_ALERT + ' : ' + over.join(', ') }
+    : { send: false, over: over, reason: 'รอบบ่าย — ไม่มีจังหวัดเกิน ' + LINE_PM_ALERT + ' ข้ามการส่งเพื่อประหยัดโควตา' };
+}
+
+// ==========================================================
 // 🚀 ฟังก์ชันหลัก
 // ==========================================================
 function main() {
@@ -91,6 +118,12 @@ function main() {
 
   let today = new Date();
   let currentHour = today.getHours();
+
+  // คุมโควตา: บันทึกประวัติ/PHEOC ข้างบนทำครบทุกรอบ แต่รอบบ่ายส่ง LINE เฉพาะวันที่มีจังหวัดเกินเกณฑ์
+  const decision = shouldBroadcast_(airData, currentHour);
+  console.log((decision.send ? "📤 " : "⏭️ ") + decision.reason);
+  if (!decision.send) return;
+
   let roundText = "";if (currentHour < 11) {roundText = "รอบเช้า";} else if (currentHour < 15) { roundText = "รอบเที่ยง";} else { roundText = "รอบเย็น";}
   let timeStr = Utilities.formatDate(today, "GMT+7", "HH.mm น.");
   let thaiYear = parseInt(Utilities.formatDate(today, "GMT+7", "yyyy")) + 543;
@@ -320,6 +353,44 @@ function testLineToken() {
 }
 
 /**
+ * ดูโควตาข้อความ LINE OA ของเดือนนี้ — อ่านอย่างเดียว ไม่ส่งข้อความหาใคร ไม่กินโควตา
+ * ใช้ GET /v2/bot/message/quota (โควตารวม) และ /quota/consumption (ที่ใช้ไปแล้ว)
+ *
+ * วิธีรู้ว่า "1 รอบส่ง กินกี่ข้อความต่อเพื่อน 1 คน" (main() ส่ง 2 ก้อน: Flex + ข้อความ)
+ *  → รันฟังก์ชันนี้ก่อนและหลังรอบส่งจริง 1 ครั้ง แล้วเอาส่วนต่าง ÷ จำนวนเพื่อนที่ไม่ได้บล็อก
+ */
+function testLineQuota() {
+  const headers = { 'Authorization': 'Bearer ' + secret_('LINE_ACCESS_TOKEN') };
+  const get = path => { const r = UrlFetchApp.fetch('https://api.line.me' + path, { method: 'get', headers: headers, muteHttpExceptions: true });
+    return { code: r.getResponseCode(), text: r.getContentText() }; };
+
+  const q = get('/v2/bot/message/quota'), c = get('/v2/bot/message/quota/consumption');
+  if (q.code !== 200 || c.code !== 200) {
+    Logger.log('❌ อ่านโควตาไม่ได้ — quota HTTP ' + q.code + ' / consumption HTTP ' + c.code + '\n   ' + q.text + '\n   ' + c.text);
+    Logger.log('   401 = token ผิด/ถูก revoke → ออก token ใหม่แล้วรัน testLineToken()');
+    return;
+  }
+  const quota = JSON.parse(q.text), used = JSON.parse(c.text).totalUsage;
+  if (quota.type !== 'limited') { Logger.log('✅ แพ็กเกจนี้ไม่จำกัดจำนวนข้อความ (quota type = ' + quota.type + ') · ใช้ไปเดือนนี้ ' + used); return; }
+
+  const now = new Date(), day = +Utilities.formatDate(now, 'GMT+7', 'd');
+  const dim = new Date(+Utilities.formatDate(now, 'GMT+7', 'yyyy'), +Utilities.formatDate(now, 'GMT+7', 'M'), 0).getDate();
+  const left = quota.value - used, perDay = day > 0 ? used / day : 0, proj = Math.round(perDay * dim);
+  Logger.log('── โควตา LINE OA เดือนนี้ ──');
+  Logger.log('  โควตา ' + quota.value + ' · ใช้ไปแล้ว ' + used + ' · เหลือ ' + left + (left <= 0 ? '  ⛔ หมดแล้ว (ส่งไม่ออกจนถึงต้นเดือนหน้า)' : ''));
+  Logger.log('  วันที่ ' + day + ' จาก ' + dim + ' วัน · เฉลี่ยใช้วันละ ' + perDay.toFixed(1) + ' → คาดว่าสิ้นเดือนรวม ~' + proj + (proj > quota.value ? '  ⚠️ เกินโควตา' : '  ✅ ไม่เกิน'));
+  if (perDay > 0 && proj > quota.value) Logger.log('  ที่อัตรานี้โควตาจะหมดราววันที่ ' + Math.min(dim, Math.floor(quota.value / perDay)) + ' ของเดือน');
+
+  // จำนวนเพื่อน (ไม่ใช่ทุกบัญชีเรียกได้ — บัญชีที่ยังไม่ verified หรือไม่มีข้อมูลเมื่อวานจะข้าม)
+  const y = Utilities.formatDate(new Date(now.getTime() - 86400000), 'GMT+7', 'yyyyMMdd');
+  const f = get('/v2/bot/insight/followers?date=' + y);
+  if (f.code === 200 && JSON.parse(f.text).status === 'ready') {
+    const j = JSON.parse(f.text);
+    Logger.log('  เพื่อนเมื่อวาน : ' + j.followers + ' (บล็อก ' + j.blocks + ') → ผู้รับจริงราว ' + Math.max(0, j.followers - j.blocks) + ' คน');
+  } else Logger.log('  (ดึงจำนวนเพื่อนอัตโนมัติไม่ได้ — HTTP ' + f.code + ' · ดูที่ LINE OA Manager > Analytics แทน)');
+}
+
+/**
  * ประกอบรายงานทั้งหมดแล้ว log ออกมาดู — ไม่ broadcast และไม่เขียนชีต
  * ใช้ตรวจว่าตัวเลข/ข้อความถูกต้องก่อนปล่อยของจริง
  *
@@ -344,6 +415,8 @@ function testReportDryRun() {
   Logger.log('── ค่าฝุ่นที่ดึงได้ ──');
   airData.forEach(p => Logger.log('  ' + p.name + ' : ' + (p.pm25 === null ? '(ไม่มีข้อมูล)' : p.pm25) + '  เวลา ' + p.time));
   Logger.log('  เฉลี่ย 4 จังหวัด : ' + (avgPM === null ? '(คำนวณไม่ได้)' : avgPM.toFixed(1)));
+  const dec = shouldBroadcast_(airData, new Date().getHours());
+  Logger.log('  ตอนนี้ main() จะ ' + (dec.send ? 'ส่ง' : 'ข้ามการส่ง') + ' — ' + dec.reason);
 
   Logger.log('── ข้อมูลกลุ่มโรค ──');
   if (!healthData) {
