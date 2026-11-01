@@ -70,6 +70,14 @@
   background-image:linear-gradient(180deg,rgba(255,255,255,.6) 0%,rgba(255,255,255,.2) 42%,rgba(255,255,255,0) 52%,rgba(0,0,0,.1) 100%)!important;
   box-shadow:0 0 0 2px #fff,0 2px 3px rgba(15,27,45,.22),0 6px 12px -4px rgba(15,27,45,.45)!important}
 #ig .a4v2 .fc3 tr.me td:first-child{font-weight:800;color:var(--lv-ink)}
+/* หัวเรื่อง/ส่วนท้าย: ไม่ให้ข้อความล้นกรอบ · ตัดบรรทัดเฉพาะระหว่างวลี */
+#ig .ig-date{gap:14px}
+#ig .ig-date>span:last-child{white-space:normal!important;min-width:0;flex:1 1 auto;text-align:right}
+#ig .ig-date .kl .kls,#ig .ig-f .nw{white-space:nowrap}
+#ig .ig-f{gap:16px}
+#ig .ig-f .ig-fl{flex:1 1 auto;min-width:0}
+#ig .ig-f .ig-fr{flex:none;text-align:right}
+#ig .igt .tile.me{outline:6px solid var(--lv-ink);outline-offset:-3px}
 `;
   document.head.appendChild(st);
 })();
@@ -202,6 +210,14 @@ function igDelta(pv) {
   const d = r1(v - y), w = d > 0 ? "▲ เพิ่มขึ้น" : d < 0 ? "▼ ลดลง" : "● เท่ากับ";
   return `${w} ${d ? Math.abs(d).toFixed(1) + " " : ""}· ${igPrevLbl()} <b>${f1(y)}</b>`;
 }
+// PHEOC ในอินโฟกราฟิก = เกณฑ์เดียวกับหน้าเว็บและ LINE (/api/pheoc: ค่าเฉลี่ย 24 ชม. ณ 07.00 น. ≥ 75.1 ติดกัน 2 วัน)
+// เดิมเว็บจริงใช้ "มีจังหวัด ≥ 75.1 วันนี้" วันเดียว (ตัวแปลงของ pheoc_apply ทำงานก่อนที่โค้ดนี้จะถูกใส่) → เรียก pheocLabel ตรง ๆ
+function igPh(yes, no) {
+  if (typeof pheocLabel === "function") return pheocLabel(yes, no);
+  return PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? yes : no;
+}
+// หัวเรื่อง: ย่อป้าย PHEOC "ถึงเกณฑ์ · จ.ก, ข, ค" → "ถึงเกณฑ์ 3 จังหวัด" (รายชื่อยาวทำให้หัวเรื่องสูงหลายบรรทัด)
+function igPhShort(t) { return String(t).replace(/ · จ\.(.+)$/, (m, l) => ` ${l.split(", ").length} จังหวัด`); }
 function igTrendHtml(pv, center) {
   const t = igTrend(pv); if (!t) return "";
   const w = igPrevLbl(), ys = w === "เมื่อวาน" ? "เมื่อวาน" : `วันที่ ${w}`;
@@ -215,12 +231,12 @@ function igStrip7(pv) {
 }
 function dzAsOf() { const p = String(S.dz?.meta?.dataDate || "").split("/"); return p.length === 3 ? `${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : "–"; }
 // การ์ดรายจังหวัด: ใช้การ์ดเดียวกับแดชบอร์ด (A3) ทุกประการ — คัดลอกจาก #tiles ที่แสดงอยู่
-function igTiles() {
+function igTiles(sel) {
   const src = document.getElementById("tiles"); if (!src || !src.children.length) return "";
   const html = src.innerHTML.replace(/aria-pressed="true"/g, 'aria-pressed="false"').replace(/<button /g, '<div ').replace(/<\/button>/g, '</div>');
   // ข้อความเทียบวันก่อนหน้า: ระบุ "เมื่อวาน"/วันที่ และค่าของวันนั้น
   const t = document.createElement("div"); t.innerHTML = html;
-  t.querySelectorAll("[data-pv]").forEach(el => { const dl = el.querySelector(".delta"), x = igDelta(el.dataset.pv); if (dl && x) dl.innerHTML = x; });
+  t.querySelectorAll("[data-pv]").forEach(el => { const dl = el.querySelector(".delta"), x = igDelta(el.dataset.pv); if (dl && x) dl.innerHTML = x; el.classList.toggle("me", !!sel && el.dataset.pv === sel); });
   return `<div class="ws-v2 igt"><div class="tiles">${t.innerHTML}</div></div>`;
 }
 // ย่อการ์ด 4 ใบให้พอดีแถว ด้วย transform (html2canvas วาด transform ได้ถูก แต่ zoom วาดตัวหนังสือเพี้ยน)
@@ -240,34 +256,29 @@ function buildInfographic(size = "a4", dense = 0) {
   const hero = `<div class="avg">${weatherArt(F.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k">${heroK}</span><span class="v num">${F.f ? f1(F.f.v) : "–"}<small> µg/m³</small></span><span class="l">${L.name}</span></div></div>`;
   const overN = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5), pheoc0 = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
   const over75 = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);   // เกิน 75 = เกณฑ์ PHEOC (≥ 75.1)
-  const kline = `<span class="kl">เกิน 75 µg/m³: <b>${over75.length} จังหวัด</b> · PHEOC <b>${pheoc0 ? "ถึงเกณฑ์" : "ยังไม่ถึงเกณฑ์"}</b> · จุดความร้อน <b>${S.hsToday.length} จุด</b></span>`;
+  // แสดง "เกิน 75" และ "PHEOC" เฉพาะวันที่มีจังหวัดเข้าเกณฑ์ PHEOC (≥ 75.1 ติดกัน 2 วัน · /api/pheoc) — วันปกติแสดงแค่จุดความร้อน
+  const phHit = !!(S.pheoc?.ok && S.pheoc.anyHit);
+  const kline = `<span class="kl">${phHit ? `<span class="kls">เกิน 75 µg/m³: <b>${over75.length} จังหวัด</b></span> · <span class="kls">PHEOC <b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่ถึงเกณฑ์"))}</b></span> · ` : ""}<span class="kls">จุดความร้อน <b>${S.hsToday.length.toLocaleString("en-US")} จุด</b></span></span>`;
   const scope = F.region ? `${L.face} ระดับสูงสุดในเขต: ${L.name}` : `${L.face} จ.${S.igPv}: ${L.name}`;
-  const head = `<div class="ig-banner"><img src="${document.querySelector(".hdr-banner img")?.src || "/header-v2.webp"}" alt="" width="2000" height="250"></div><div class="ig-date"><span class="d">${S.todayRow ? `<span class="today-b">วันนี้</span><b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)">${size === "social" ? scope : `<small class="ew">สัปดาห์ระบาดวิทยาที่ ${igEpiWk()}</small>${F.region ? kline : scope}`}</span></div>`;
-  const maxBar = F.region && F.f ? `<div class="maxbar"><span class="mk">${inl("i-pin", 22)}สูงสุดในเขตวันนี้</span><b class="mp">จ.${F.f.p.name}</b><span class="mv num">${f1(F.f.v)}<small> µg/m³</small></span><span class="ml">${L.face} ${L.name}</span></div>` : "";
+  const head = `<div class="ig-banner"><img src="${document.querySelector(".hdr-banner img")?.src || "/header-v2.webp"}" alt="" width="2000" height="250"></div><div class="ig-date"><span class="d">${S.todayRow ? `<span class="today-b">วันนี้</span><b>${thLong(S.todayRow.date)}</b><em>ณ เวลา ${REPORT_TIME}</em>` : ""}</span><span style="color:var(--lv-ink)"><small class="ew">สัปดาห์ระบาดวิทยาที่ ${igEpiWk()}</small>${kline}</span></div>`;
+  const maxBar = F.f ? `<div class="maxbar"><span class="mk">${inl("i-pin", 22)}${F.region ? "สูงสุดในเขตวันนี้" : "ค่าฝุ่นวันนี้"}</span><b class="mp">จ.${F.f.p.name}</b><span class="mv num">${f1(F.f.v)}<small> µg/m³</small></span><span class="ml">${L.face} ${L.name}</span></div>` : "";
   const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้</div>
     <div class="advice"><div class="lv"><span class="f">${L.face}</span><b>${L.name}</b><span>${L.range} µg/m³</span></div>
       <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
       <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
   const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === F.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
-  const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span style="margin-right:auto"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_NAME}<br>แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ) · GISTDA · HDC กระทรวงสาธารณสุข</span><span style="text-align:right">${size === "social" ? "" : "ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม<br>"}สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น · กรมควบคุมโรค</span></div>`;
+  const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span class="ig-fl"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_NAME}<br><span class="nw">แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ)</span> · <span class="nw">GISTDA</span> · <span class="nw">HDC กระทรวงสาธารณสุข</span></span><span class="ig-fr">${size === "social" ? "" : `<span class="nw">ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม</span><br>`}<span class="nw">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</span><br><span class="nw">กรมควบคุมโรค</span></span></div>`;
   const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
   const fc1 = (() => { const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); const x = it?.pred?.[0]; return x == null ? null : x; })();
-  const facts3 = `<div class="facts3"><div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (&gt;75 µg/m³)</span><b>${pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์"}</b></span></div>
+  const facts3 = `<div class="facts3"${phHit ? "" : ' style="grid-template-columns:repeat(2,1fr)"'}>${phHit ? `<div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)</span><b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์"))}</b></span></div>` : ""}
     <div><span class="fi" style="background:#fdeee5;color:#e8590c">${inl("i-fire", 26)}</span><span><span class="k">จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7) · ที่มา: GISTDA</span><b>${S.hsToday.length} จุด</b></span></div>
     <div><span class="fi" style="background:${fc1 != null ? LV[lvOf(fc1)].soft : "var(--subtle)"};color:${fc1 != null ? LV[lvOf(fc1)].ink : "var(--ink-2)"}">${inl("i-cal", 26)}</span><span><span class="k">พรุ่งนี้ (คาดการณ์) · ${F.f?.p.name ?? ""}</span><b>${fc1 != null ? `${f1(fc1)} · ${LV[lvOf(fc1)].name}` : "–"}</b></span></div></div>`;
   const pvCard = (p, cls) => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = !F.region && p.name === S.igPv;
     return `<div class="${me ? "me" : ""}" style="border-left:8px solid ${l ? l.c : "#ccc"};background:linear-gradient(160deg,#fff,${l ? l.soft : "#f3f6f9"})"><span class="n"><b class="pn">${p.name}</b>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM<sub>2.5</sub></em>${v != null ? f1(v) : "–"}<small> µg/m³</small></span>${igTrendHtml(p.name)}</div>`; };
-  const over = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5);
-  const kpi = (ic, bg, fg, k, b, sm) => `<div><span class="fi" style="background:${bg};color:${fg}">${inl(ic, 26)}</span><span><span class="k">${k}</span><b>${b}</b>${sm ? `<small>${sm}</small>` : ""}</span></div>`;
-  const kpis = `<div class="kpis${F.region ? " kpis-h" : ""}">${kpi("i-pin", over.length ? LV[3].soft : LV[1].soft, over.length ? LV[3].ink : LV[1].ink, "จังหวัดที่เกิน 37.5 µg/m³", `${over.length} จาก ${PROV.length}${over.length ? ` · ${over.map(p => p.name).join(" ")}` : ""}`)}
-    ${kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)", pheoc ? "ถึงเกณฑ์" : "ยังไม่เข้าเกณฑ์")}
-    ${kpi("i-fire", "#fdeee5", "#e8590c", "จุดความร้อน 24 ชม. (เขตสุขภาพที่ 7)", `${S.hsToday.length} จุด`, "ที่มา: GISTDA")}</div>`;
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
   if (size === "social") {
-    ig.innerHTML = head + `<div class="ig-body">${F.region ? "" : hero}
-      ${F.region ? maxBar + igTiles() : `<div class="pvrow">${PROV.map(p => { const v = S.todayRow?.[p.name], l = v != null ? LV[lvOf(v)] : null, me = p.name === S.igPv;
-        return `<div class="${me ? "me" : ""}" style="border-top:6px solid ${l ? l.c : "#ccc"}"><span class="n">${p.name}</span><span class="x num"><em class="pm" style="background:${l ? l.ink : "#5b6b7f"}">PM<sub>2.5</sub></em>${v != null ? f1(v) : "–"}</span>${l ? `<span class="chip" style="background:${l.soft};color:${l.ink};font-size:14px">${l.name}</span>` : ""}${igTrendHtml(p.name, true)}${igStrip7(p.name)}</div>`; }).join("")}</div>`}
+    ig.innerHTML = head + `<div class="ig-body">${maxBar}${igTiles(S.igPv)}
       ${facts3}${adviceBox}${igFcStrip(F)}${act}${scaleBox}${riskNote}</div>` + foot;
     igFitTiles(ig); igPad(ig);
     return;
@@ -280,8 +291,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
   const CH = [104, 98, 92, 86, 80, 68, 58, 52][dense] + Math.round(IG_GROW * .2), CBH = [150, 146, 142, 136, 128, 98, 78, 70][dense] + Math.round(IG_GROW * .55);
   const srcT = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai (กรมควบคุมมลพิษ)`;
-  const heroA4 = hero.replace('<span class="l">', `<span class="trd4">${igDelta(S.igPv)}</span><span class="l">`).replace(/<\/div><\/div>$/, `<span class="src">${srcT}</span></div></div>`);
-  const sec1 = F.region ? maxBar.replace('<span class="ml">', `<span class="src">${srcT}</span><span class="ml">`) + igTiles() : `<div class="row1">${heroA4}${kpis}</div>`;
+  const sec1 = maxBar.replace('<span class="ml">', `<span class="src">${srcT}</span><span class="ml">`) + igTiles(S.igPv);   // ระดับเขตเป็นแบบหลัก ใช้กับรายจังหวัดด้วย
   const sec2 = `<div class="row3">
       <div class="box" style="background:linear-gradient(165deg,#fff,#f1effd)"><h4>ค่าฝุ่นย้อนหลัง 7 วัน<small>µg/m³</small></h4><table class="t7 num">${t7Html(true)}</table></div>
       <div class="box" style="background:linear-gradient(165deg,#fff,var(--lv-tint))"><h4>คาดการณ์ 3 วัน<small>ที่มา: GISTDA</small></h4>${igForecast(F)}</div>
@@ -299,3 +309,96 @@ function buildInfographic(size = "a4", dense = 0) {
   </div>${foot}`;
   igFitTiles(ig); igPad(ig);
 }
+
+// ================= สร้างภาพ / บันทึกรูป (1 พ.ย. 2569) =================
+// 1) กด "สร้างภาพ" → เปิดหน้าต่างพร้อมข้อความ "กำลังสร้างภาพ…" ทันที (เดิมเห็นแค่ปุ่มเปลี่ยนข้อความ ดูเหมือนค้าง)
+// 2) เร็วขึ้น: html2canvas คัดลอกเฉพาะส่วนที่ใช้วาด (ไม่คัดลอกแผนที่/กราฟทั้งหน้า) · ใช้ Blob แทน data URL ขนาดหลาย MB
+// 3) ปุ่ม "บันทึกรูป": มือถือที่รองรับ → แผ่นแชร์ของระบบ (บันทึกลงคลังรูป/ส่ง LINE ได้) · อื่น ๆ → ดาวน์โหลดไฟล์
+//    แทนตัวจัดการเดิมด้วยตัวดักแบบ capture ที่ document (ตัวเดิมผูกอยู่ในหน้าแล้ว ลบตรง ๆ ไม่ได้)
+(function () {
+  const $ = id => document.getElementById(id);
+  const st = document.createElement("style");
+  st.textContent = `
+.modal .ig-wait{display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:48px 16px;text-align:center;color:var(--ink-2)}
+.modal.busy .ig-wait{display:flex}.modal.busy .img,.modal.busy .cap,.modal.busy .hint,.modal.busy #mDl{display:none!important}
+.modal .ig-wait i{width:44px;height:44px;border-radius:50%;border:5px solid #e3e8ef;border-top-color:var(--accent,#1c6ed6);animation:igspin .8s linear infinite}
+.modal .ig-wait b{font-size:16px;color:var(--ink-1)}.modal .ig-wait small{font-size:13px}
+@keyframes igspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.modal .ig-wait i{animation-duration:2.4s}}
+#mDl[aria-busy="true"]{opacity:.6;pointer-events:none}
+.modal .bar #mDl,.modal .bar #mClose{white-space:nowrap;flex:none}.modal .bar h3{min-width:0}`;
+  document.head.appendChild(st);
+  let wait = null, curUrl = null, curBlob = null, curName = "PM25.png";
+  const ensureWait = () => { if (wait) return wait; const box = document.querySelector("#modal .box"); if (!box) return null;
+    wait = document.createElement("div"); wait.className = "ig-wait"; wait.setAttribute("role", "status"); wait.setAttribute("aria-live", "polite");
+    wait.innerHTML = `<i aria-hidden="true"></i><b>กำลังสร้างภาพ…</b><small>ใช้เวลาประมาณ 3–10 วินาที ขึ้นกับเครื่อง</small>`;
+    box.insertBefore(wait, box.querySelector(".hint")); return wait; };
+  const step = t => { const w = ensureWait(); if (w) w.querySelector("small").textContent = t; };
+  const paint = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));   // ให้หน้าวาดข้อความก่อนเริ่มงานหนัก
+  const toBlob = c => new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error("แปลงภาพไม่สำเร็จ")), "image/png"));
+  const inApp = /\bLine\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent);
+  const touch = matchMedia("(pointer:coarse)").matches;
+  function setResult(blob, name, hint) {
+    if (curUrl) URL.revokeObjectURL(curUrl);
+    curUrl = URL.createObjectURL(blob); curBlob = blob; curName = name;
+    $("mImg").src = curUrl;
+    const a = $("mDl"); a.href = curUrl; a.download = name;
+    $("mHint").textContent = hint + (inApp ? " · ถ้ากดบันทึกไม่ได้ (เปิดในแอป LINE/Facebook) ให้กดค้างที่รูป หรือเปิดหน้านี้ในเบราว์เซอร์" : "");
+  }
+  // ---- ปุ่ม "สร้างภาพ" ----
+  document.addEventListener("click", async e => {
+    const btn = e.target.closest && e.target.closest("#btnIg"); if (!btn) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (btn.disabled) return;
+    const old = btn.innerHTML, m = $("modal"); btn.disabled = true; btn.textContent = "กำลังสร้างภาพ…";
+    ensureWait(); step("กำลังเตรียมข้อมูล…"); $("mTitle").textContent = "กำลังสร้าง Infographic";
+    $("mCap").hidden = true; m.classList.add("on", "busy"); await paint();
+    try {
+      const size = $("igSize").value; S.igPv = $("igPv").value;
+      await document.fonts.ready; if (typeof lsFontReady === "function") await lsFontReady();
+      fitInfographic(size); step("กำลังวาดภาพ…"); await paint();
+      let canvas;
+      if (size === "social" && S.igPv && typeof provinceSocial === "function") canvas = await provinceSocial(S.igPv);
+      else {
+        if (typeof html2canvas !== "function") throw new Error("ไม่พบ html2canvas — เปิดหน้านี้ผ่าน server");
+        const ig = $("ig");
+        canvas = await html2canvas(ig, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", windowWidth: 1400, windowHeight: 1000, logging: false,
+          // คัดลอกเฉพาะ head (สไตล์/ฟอนต์), บรรพบุรุษของ #ig และเนื้อหาใน #ig — ส่วนอื่นของหน้าไม่ต้องคัดลอก (เร็วขึ้นมาก)
+          ignoreElements: el => !(el === ig || el.contains(ig) || ig.contains(el) || el.closest("head") || el.tagName === "STYLE" || el.tagName === "LINK"),
+          onclone: doc => { const c = doc.getElementById("ig"); if (typeof canvasSafeColors === "function") canvasSafeColors(c); if (typeof igSvgFonts === "function") igSvgFonts(c); } });
+      }
+      step("เกือบเสร็จ…"); await paint();
+      const blob = await toBlob(canvas);
+      $("mTitle").textContent = "Infographic พร้อมดาวน์โหลด";
+      setResult(blob, `PM25-${S.igPv || "เขต7"}-${S.todayRow?.date || "today"}-${size}.png`,
+        `ขนาด ${canvas.width}×${canvas.height} px · ${size === "social" ? "สำหรับโพสต์ Facebook/LINE" : "A4 สำหรับพิมพ์"} · กด "บันทึกรูป" เพื่อบันทึกลงเครื่อง`);
+      if (size === "social" && typeof igCaption === "function") { $("mCap").hidden = false; $("mCapT").value = igCaption(); }
+      m.classList.remove("busy"); $("mDl").focus();
+    } catch (err) { m.classList.remove("on", "busy"); alert("สร้าง Infographic ไม่สำเร็จ: " + err.message); }
+    finally { btn.disabled = false; btn.innerHTML = old; }
+  }, true);
+  // ---- ปุ่ม "บันทึกรูป" (ใช้กับภาพทุกแบบในหน้าต่างนี้ รวมภาพการ์ดจังหวัด) ----
+  document.addEventListener("click", async e => {
+    const a = e.target.closest && e.target.closest("#mDl"); if (!a || !a.href) return;
+    // ชื่อไฟล์ภาษาไทยถูกเบราว์เซอร์บางตัวเปลี่ยนเป็น "download" (ไม่มีนามสกุล) → ใช้ชื่ออังกฤษ
+    const EN = { "เขต7": "R7", "ขอนแก่น": "KhonKaen", "มหาสารคาม": "MahaSarakham", "ร้อยเอ็ด": "RoiEt", "กาฬสินธุ์": "Kalasin" };
+    let name = String(a.download || curName); Object.keys(EN).forEach(k => { name = name.split(k).join(EN[k]); });
+    name = name.replace(/[^\w.\-]+/g, "-"); if (!/\.png$/i.test(name)) name += ".png";
+    // ได้ไฟล์แบบ "ทันที" (ไม่ await) — iOS ยอมเปิดแผ่นแชร์เฉพาะเมื่อเรียกต่อจากการกดโดยตรง
+    let blob = null;
+    if (a.href === curUrl && curBlob) blob = curBlob;
+    else if (a.href.startsWith("data:")) { try { const [h, d] = a.href.split(","), bin = atob(d), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); blob = new Blob([u8], { type: (h.match(/data:([^;]+)/) || [])[1] || "image/png" }); } catch { blob = null; } }
+    if (!blob) return;   // ไม่รู้จักลิงก์ → ปล่อยให้ลิงก์ทำงานตามปกติ
+    e.preventDefault(); e.stopImmediatePropagation();
+    const file = new File([blob], name, { type: blob.type || "image/png" });
+    // มือถือ: แผ่นแชร์ของระบบ (iOS/Android) → บันทึกรูป / ส่ง LINE ได้
+    if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: name }); return; }
+      catch (err) { if (err && err.name === "AbortError") return; }   // ผู้ใช้กดยกเลิก
+    }
+    // คอมพิวเตอร์ / เบราว์เซอร์ที่ไม่รองรับแชร์ไฟล์: ดาวน์โหลดผ่านลิงก์ Blob ชั่วคราว
+    const u = URL.createObjectURL(blob), t = document.createElement("a");
+    t.href = u; t.download = name; t.rel = "noopener"; t.style.display = "none"; document.body.appendChild(t); t.click();
+    setTimeout(() => { URL.revokeObjectURL(u); t.remove(); }, 4000);
+  }, true);
+})();
