@@ -209,7 +209,7 @@ function igPmMonthly(months, pv) {
 }
 // กราฟผสม: แท่ง = ผู้ป่วยรวมรายเดือน (สเกลซ้ายของกลุ่มนั้น) · เส้น = ค่าฝุ่นรายเดือน (สเกลขวาเท่ากันทุกแผง) · เส้นประ 37.5
 function igCombo(d, bars, pm, pmMax, W, H, months) {
-  const F = "font-family=\"'IBM Plex Sans Thai',Anuphan,sans-serif\"", n = bars.length, L = 36, R = 36, T = 10, B = 41, pw = W - L - R, ph = H - T - B, slot = pw / n, bw = Math.max(4, slot * .68);
+  const F = "font-family=\"'IBM Plex Sans Thai',Anuphan,sans-serif\"", n = bars.length, L = 36, R = 36, T = 10, B = 44, pw = W - L - R, ph = H - T - B, slot = pw / n, bw = Math.max(4, slot * .68);
   const bMax = e1Nice(Math.max(...bars.map(o => o?.sum || 0)) * 1.05, true) || 1, yb = v => T + ph - v / bMax * ph, yp = v => T + ph - v / pmMax * ph, X = i => L + i * slot + slot / 2;
   const k = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v);
   let g = `<line x1="${L}" x2="${W - R}" y1="${T + ph}" y2="${T + ph}" stroke="rgba(15,27,45,.25)"/>`
@@ -226,8 +226,11 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
   const q = months.map((o, i) => i).filter(i => months[i].m % 3 === 0), cand = [...(q[0] >= 3 ? [0] : []), ...q, n - 1], keep = [];   // เดือนแรกแสดงเมื่อไม่ชิดป้ายไตรมาสแรก
   const LW = 32, edge = i => [X(i) - LW / 2, X(i) + LW / 2, false];   // ขอบซ้าย/ขวาของป้าย (กึ่งกลางใต้แท่ง)
   for (const i of [...new Set(cand)]) { if (!keep.length || edge(i)[0] - edge(keep[keep.length - 1])[1] >= 6) keep.push(i); }   // ระยะห่างระหว่างป้ายอย่างน้อย 6 px
-  keep.forEach(i => { const [x0, , st] = edge(i); g += `<text x="${st ? x0 : X(i)}" y="${T + ph + 16}" text-anchor="${st ? "start" : "middle"}" font-size="17" fill="#33415c" ${F}>${TH_M[months[i].m]}</text>`; });
-  months.forEach(({ y, m }, i) => { if ((i === 0 && !months.slice(1, 4).some(o => o.m === 0)) || (m === 0 && i > 0)) g += `<text x="${i === 0 ? L : X(i)}" y="${T + ph + 36}" text-anchor="${i === 0 ? "start" : "middle"}" font-size="15" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
+  // ขีดทุกเดือนใต้แกน + จุดใต้แท่งของเดือนที่มีชื่อ → รู้ว่าชื่อเดือนตรงกับแท่งไหน
+  months.forEach((o, i) => { g += `<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${T + ph}" y2="${T + ph + 3}" stroke="rgba(15,27,45,.3)" stroke-width="1"/>`; });
+  keep.forEach(i => { g += `<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${T + ph}" y2="${T + ph + 4}" stroke="${d.c}" stroke-width="2"/><circle cx="${X(i).toFixed(1)}" cy="${T + ph + 4}" r="2.6" fill="${d.c}"/>`; });
+  keep.forEach(i => { const [x0, , st] = edge(i); g += `<text x="${st ? x0 : X(i)}" y="${T + ph + 21}" text-anchor="${st ? "start" : "middle"}" font-size="17" fill="#33415c" ${F}>${TH_M[months[i].m]}</text>`; });
+  months.forEach(({ y, m }, i) => { if ((i === 0 && !months.slice(1, 4).some(o => o.m === 0)) || (m === 0 && i > 0)) g += `<text x="${i === 0 ? L : X(i)}" y="${T + ph + 39}" text-anchor="${i === 0 ? "start" : "middle"}" font-size="15" font-weight="700" fill="#33415c" ${F}>${y + 543}</text>`; });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
 }
 function igComboSec(H) {
