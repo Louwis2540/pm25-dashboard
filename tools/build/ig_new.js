@@ -149,7 +149,9 @@
 #ig .maxbar .ml.mlhs b{font-family:Anuphan;font-size:21px;font-weight:700}#ig .maxbar .ml.mlhs small{font-size:11.5px;color:#b45309;font-weight:600}
 #ig .maxbar:has(.hst){padding-top:4px!important;padding-bottom:4px!important}#ig .maxbar .mavg{font-style:normal;font-size:15px;font-weight:600;color:var(--ink-2)}
 #ig .maxbar .ml.mlhs{border-radius:16px!important;padding:4px 14px 5px 10px!important}#ig .maxbar .ml.mlhs .hst{display:flex;flex-direction:column;line-height:1.2;white-space:nowrap}
-#ig .maxbar .ml.mlhs .hl{font-size:14px;font-weight:600}#ig .maxbar .mk{white-space:nowrap;font-size:16px!important}#ig .maxbar .mavg{font-size:13px!important}#ig .maxbar .ml.mlhs .hn{display:flex;flex-direction:column;gap:0}#ig .maxbar .ml.mlhs .hl{font-size:13px}#ig .maxbar .ml.mlhs .hn b{font-family:Anuphan;font-size:21px}#ig .maxbar .ml.mlhs .hn small{font-size:12px;color:#9a3412;font-weight:500}
+#ig .maxbar .ml.mlhs .hl{font-size:14px;font-weight:600}#ig .maxbar .mk{white-space:nowrap;font-size:16px!important}#ig .maxbar .mavg{font-size:13px!important}#ig .maxbar .ml.mlhs .hn{display:flex;flex-direction:row;align-items:baseline;gap:8px}#ig .maxbar .ml.mlhs .hl{font-size:13px}#ig .maxbar .ml.mlhs .hn b{font-family:Anuphan;font-size:21px}#ig .maxbar .ml.mlhs .hn small{font-size:12px;color:#9a3412;font-weight:500}
+#ig,#ig *{-webkit-text-size-adjust:none!important;-moz-text-size-adjust:none!important;text-size-adjust:none!important}
+#ig[data-dl="1"].a4 .a4v2 .advice .do{padding:0 8px;font-size:14.5px!important;line-height:1.25}#ig[data-dl="1"].a4 .a4v2 .advice .do span{width:22px;height:22px}#ig[data-dl="1"].a4 .a4v2 .advice .w{gap:2px;padding-top:2px;padding-bottom:2px}
 #ig .maxbar .ml.mlhs.ok,#ig .pvst.ok{background:#ecf8ef!important;border-color:#9ed7ac!important;color:#166534!important}#ig .pvst.ok b{color:#166534}
 #ig .maxbar .mk2{display:flex;align-items:center;gap:8px;flex:none}#ig .maxbar .mp,#ig .maxbar .mv{white-space:nowrap}#ig .maxbar .mv small{display:inline}#ig .maxbar{gap:12px!important;padding-top:4px!important;padding-bottom:4px!important}#ig .maxbar .mkt{display:flex;flex-direction:column;line-height:1.2}#ig .maxbar .mkt b{font-family:Anuphan;font-size:17px;color:var(--ink-1)}#ig .maxbar .mkt small{font-size:12px;font-weight:500;color:var(--ink-2)}
 `;
@@ -196,7 +198,7 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
   const k = v => v >= 1000 ? `${+(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v);
   let g = `<line x1="${L}" x2="${W - R}" y1="${T + ph}" y2="${T + ph}" stroke="rgba(15,27,45,.25)"/>`
     + `<text x="${L - 4}" y="${T + 4}" text-anchor="end" font-size="13" fill="${d.c}" font-weight="700" ${F}>${k(bMax)}</text><text x="${L - 4}" y="${T + ph}" text-anchor="end" font-size="13" fill="#5f6c80" ${F}>0</text>`
-    + `<text x="${W - R + 4}" y="${T + 4}" font-size="13" fill="#33415c" font-weight="700" ${F}>${pmMax}</text>`;
+    + (yp(37.5) - T >= 16 ? `<text x="${W - R + 4}" y="${T + 4}" font-size="13" fill="#33415c" font-weight="700" ${F}>${pmMax}</text>` : "");
   const y37 = yp(37.5); if (37.5 < pmMax) g += `<line x1="${L}" x2="${W - R}" y1="${y37}" y2="${y37}" stroke="#b84a00" stroke-dasharray="4 3" stroke-width="1.2"/><text x="${W - R + 4}" y="${y37 + 4}" font-size="13" fill="#b84a00" font-weight="700" ${F}>37.5</text>`;
   months.forEach(({ m }, i) => { if (IG_SEASON(m)) g += `<rect x="${(L + i * slot).toFixed(1)}" y="${T}" width="${(slot + .3).toFixed(1)}" height="${ph}" fill="rgba(232,89,12,.09)"/>`; });   // ฤดูฝุ่น
   const yi = bars.findIndex((_, i) => i > 0 && months[i].m === 0); if (yi > 0) g += `<line x1="${L + yi * slot}" x2="${L + yi * slot}" y1="${T}" y2="${T + ph + 26}" stroke="rgba(15,27,45,.22)" stroke-dasharray="2 2"/>`;
@@ -331,7 +333,9 @@ function igPvChart(pv, W, H) {
   days.forEach((d, i) => { if (d.v == null) { gap++; return; } path += `${gap > 3 ? "M" : "L"}${X(i).toFixed(1)},${Y(d.v).toFixed(1)}`; gap = 0; });
   g += `<path d="${path}" fill="none" stroke="#1f2a3d" stroke-width="${n > 120 ? 1.4 : 2.2}" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`;
   const td = days[n - 1]; if (td?.v != null) { const l = LV[lvOf(td.v)], x = X(n - 1), y = Y(td.v);
-    g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${l.c}" stroke="#fff" stroke-width="2.5"/><text x="${(x - 9).toFixed(1)}" y="${(y - 9).toFixed(1)}" text-anchor="end" font-size="15" font-weight="800" fill="${l.ink}" stroke="#fff" stroke-width="3" paint-order="stroke" ${F}>วันนี้ ${f1(td.v)}</text>`; }
+    const lt = `วันนี้ ${f1(td.v)}`, lw = lt.length * 8.6 + 10, ly = Math.max(T + 15, y - 9);
+    g += `<rect x="${(x - 14 - lw).toFixed(1)}" y="${(ly - 15).toFixed(1)}" width="${lw.toFixed(1)}" height="20" rx="6" fill="#fff" fill-opacity=".92" stroke="${l.c}" stroke-opacity=".5"/>`;
+    g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${l.c}" stroke="#fff" stroke-width="2.5"/><text x="${(x - 19).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end" font-size="15" font-weight="800" fill="${l.ink}" ${F}>${lt}</text>`; }
   return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;width:100%;height:auto">${g}</svg>`;
 }
 const igPvRange = () => { const e = S.todayRow?.date; return e ? `ม.ค. ${+e.slice(0, 4) + 543}` : ""; };
@@ -424,7 +428,7 @@ function igFitTiles(ig) {
 function igEpiWk() { return epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
 function buildInfographic(size = "a4", dense = 0) {
   const F = igFocus(), L = LV[F.lv], ig = document.getElementById("ig");
-  ig.className = size; delete ig.dataset.sp; ig.dataset.dense = Math.min(dense, 3); ig.dataset.dx = dense >= 4 ? "1" : ""; ig.dataset.tc = dense >= 7 ? "1" : "";   // ขั้น 7 = การ์ดจังหวัดย่อ (สำรองสุดท้าย)   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
+  ig.className = size; delete ig.dataset.sp; ig.dataset.dense = Math.min(dense, 3); ig.dataset.dx = dense >= 4 ? "1" : ""; ig.dataset.tc = dense >= 7 ? "1" : ""; ig.dataset.dl = dense >= 5 ? "1" : "";   // ขั้น 7 = การ์ดจังหวัดย่อ (สำรองสุดท้าย)   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
   [["--lv", L.c], ["--lv-soft", L.soft], ["--lv-tint", L.tint], ["--lv-ink", L.ink]].forEach(([k, v]) => ig.style.setProperty(k, v));
   const pmTag = `<b class="pm-tag">ค่าฝุ่น PM<sub>2.5</sub></b>`;
   const heroK = F.region ? `${pmTag}สูงสุดในเขตสุขภาพที่ 7 <b class="hp">จ.${F.f?.p.name ?? "–"}</b>` : `${pmTag}<b class="hp">จ.${S.igPv}</b>`;
@@ -470,7 +474,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const wkMax = S.wkMax || 0, rows = igDzRows();
   const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, 2026) }));
   const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
-  const CH = (F.region ? [104, 98, 92, 86, 80, 68, 58, 52] : [136, 128, 120, 112, 104, 94, 84, 76])[dense] + Math.round(IG_GROW * .2),   // รายจังหวัด: กราฟผู้ป่วยใหญ่ขึ้น
+  const CH = (F.region ? [104, 98, 92, 86, 80, 80, 72, 64] : [136, 128, 120, 112, 104, 94, 84, 76])[dense] + Math.round(IG_GROW * .2),   // รายจังหวัด: กราฟผู้ป่วยใหญ่ขึ้น
     CBH = [150, 146, 142, 136, 128, 98, 78, 70][dense] + Math.round(IG_GROW * .55);
   const srcT = `ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai (กรมควบคุมมลพิษ)`;
   const heroA4 = hero.replace('<span class="l">', `<span class="trd4">${igDelta(S.igPv)}</span><span class="l">`).replace(/<\/div><\/div>$/, `<span class="src">${srcT}</span></div></div>`);
@@ -549,7 +553,7 @@ function buildInfographic(size = "a4", dense = 0) {
         canvas = await html2canvas(ig, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", windowWidth: 1400, windowHeight: 1000, logging: false,
           // คัดลอกเฉพาะ head (สไตล์/ฟอนต์), บรรพบุรุษของ #ig และเนื้อหาใน #ig — ส่วนอื่นของหน้าไม่ต้องคัดลอก (เร็วขึ้นมาก)
           ignoreElements: el => !(el === ig || el.contains(ig) || ig.contains(el) || el.closest("head") || el.tagName === "STYLE" || el.tagName === "LINK"),
-          onclone: doc => { const c = doc.getElementById("ig"); if (typeof canvasSafeColors === "function") canvasSafeColors(c); if (typeof igSvgFonts === "function") igSvgFonts(c); } });
+          onclone: doc => { for (const r of [doc.documentElement, doc.body]) if (r) { r.style.webkitTextSizeAdjust = "none"; r.style.textSizeAdjust = "none"; } const c = doc.getElementById("ig"); if (typeof canvasSafeColors === "function") canvasSafeColors(c); if (typeof igSvgFonts === "function") igSvgFonts(c); } });
       }
       step("เกือบเสร็จ…"); await paint();
       const blob = await toBlob(canvas);
