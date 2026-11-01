@@ -99,13 +99,7 @@ const igDzName = d => IG_DZ_NAME[d.key] || d.label;
 // ฤดูฝุ่น = 1 พ.ย. – 31 พ.ค. (แรเงาในกราฟ) · ใช้ 12 เดือน (เลือกแล้ว) · ข้อมูลเริ่มปี 2568 แล้วเลื่อนต่อไปเรื่อย ๆ
 let IG_CB_N = 12;
 const IG_SEASON = m => m >= 10 || m <= 4;   // พ.ย.–พ.ค.
-function igCbMonths() {
-  const ys = Object.keys(S.dz || {}).map(Number).filter(Boolean), cy = Math.max(...ys);
-  if (!isFinite(cy) || !S.wkMax) return [];
-  let y = cy, m = epiMonth(cy, S.wkMax); const a = [];
-  for (let i = 0; i < IG_CB_N; i++) { a.unshift({ y, m }); m === 0 ? (y--, m = 11) : m--; }
-  return a;
-}
+function igCbMonths() { return dzCbMonths(S.dz || {}, S.wkMax, IG_CB_N); }   // ใช้ตัวเดียวกับแดชบอร์ด (เลื่อนข้ามปีตาม meta.dataYear/dataWk)
 // ค่าฝุ่นรายเดือนทั้งเขต = ค่าเฉลี่ยรายวันของ 4 จังหวัด แล้วเฉลี่ยทั้งเดือน (เฉพาะวันที่มีค่า)
 function igPmMonthly(months) {
   const all = S.pm?.allData || {}, acc = {};
@@ -135,8 +129,8 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
 }
 function igComboSec(H) {
   const months = igCbMonths(); if (!months.length) return "";
-  const cy = Math.max(...Object.keys(S.dz).map(Number).filter(Boolean));
-  const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(S.dz?.[y] || [], d.key, y === cy ? S.wkMax : 99, y)]));
+  const end = dzCbEnd(S.dz, S.wkMax), cy = end.y;
+  const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(S.dz?.[y] || [], d.key, y === cy ? end.w : 99, y)]));
   const pm = igPmMonthly(months), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(v => v != null), 0) / 10) * 10);
   const ser = DZ.map(d => ({ d, bars: months.map(({ y, m }) => byY[y]?.[d.key]?.[m] || null) }));
   const f = months[0], l = months.at(-1), rng = `${TH_M[f.m]} ${String(f.y + 543).slice(2)} – ${TH_M[l.m]} ${String(l.y + 543).slice(2)}`;

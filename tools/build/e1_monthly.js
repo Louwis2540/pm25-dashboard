@@ -32,12 +32,18 @@ const dzSeason = m => m >= 10 || m <= 4;         // ฤดูฝุ่น พ.�
 const DZ_NAME = { "ทางเดินหายใจ": "โรคระบบทางเดินหายใจ", "หัวใจ": "โรคระบบหัวใจและหลอดเลือด", "ตาอักเสบ": "โรคเยื่อบุตาอักเสบ", "ผิวหนัง": "โรคผิวหนังอักเสบ" };
 const dzName = d => DZ_NAME[d.key] || d.label;
 const PM25T = "PM" + "2.5";                       // ใช้ในข้อความ tooltip (กันตัวแทนที่ชื่อสารมลพิษ → HTML ตอน build)
-// 12 เดือนล่าสุดนับถึงเดือนของสัปดาห์ระบาดวิทยาล่าสุดที่มีข้อมูลผู้ป่วย
-function dzCbMonths(dz, wkMax) {
-  const ys = Object.keys(dz).map(Number).filter(y => y > 2000);
-  if (!ys.length || !wkMax) return [];
-  const cy = Math.max(...ys); let y = cy, m = epiMonth(cy, wkMax); const a = [];
-  for (let i = 0; i < DZ_CB_N; i++) { a.unshift({ y, m }); if (m === 0) { y--; m = 11; } else m--; }
+// ปี + สัปดาห์ระบาดวิทยาล่าสุดที่นิ่งแล้วของกราฟย้อนหลัง: เซิร์ฟเวอร์ส่งมาใน meta (dataYear / dataWk) เพื่อให้เลื่อนข้ามปีเอง
+// ไม่มี meta (เซิร์ฟเวอร์เก่า/เดโม่) → ใช้ปี 2569 กับสัปดาห์ล่าสุดของหน้า (wkMax)
+function dzCbEnd(dz, wkMax) {
+  const y = Number(dz.meta?.dataYear) || 2026, w = Number(dz.meta?.dataWk);
+  return { y, w: w > 0 ? w : wkMax };
+}
+// n เดือนล่าสุดนับถึงเดือนของสัปดาห์ล่าสุดที่นิ่งแล้ว (เลื่อนตามข้อมูล)
+function dzCbMonths(dz, wkMax, n = DZ_CB_N) {
+  const e = dzCbEnd(dz, wkMax);
+  if (!e.w) return [];
+  let y = e.y, m = epiMonth(e.y, e.w); const a = [];
+  for (let i = 0; i < n; i++) { a.unshift({ y, m }); if (m === 0) { y--; m = 11; } else m--; }
   return a;
 }
 // ค่าฝุ่นรายเดือนทั้งเขต = เฉลี่ยรายวันของ 4 จังหวัด แล้วเฉลี่ยทั้งเดือน (ไม่นับค่า 0 / ว่าง = สถานีไม่มีข้อมูล)
@@ -91,8 +97,9 @@ function dzMonthSvg(ser, months, pm, pmMax, W, pid) {
 }
 // E1 กินเต็มความกว้าง: จอกว้างใช้กราฟ 1100 · จอแคบใช้ 400 (สลับด้วย CSS)
 function dzMonthAll(dz, wkMax) {
-  const months = dzCbMonths(dz, wkMax), cy = months.at(-1).y;
-  const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(dz[y], d.key, y === cy ? wkMax : 99, y)]));
+  const months = dzCbMonths(dz, wkMax); if (!months.length) return "";
+  const end = dzCbEnd(dz, wkMax), cy = end.y;
+  const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(dz[y] || [], d.key, y === cy ? end.w : 99, y)]));
   const ser = DZ.map(d => ({ d, bars: months.map(({ y, m }) => byY[y]?.[d.key]?.[m] || null) }));
   const pm = dzPmMonth(months), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(Boolean).map(o => o.avg), 0) / 10) * 10);
   const f = months[0], l = months.at(-1), rng = `${TH_M[f.m]} ${f.y + 543} – ${TH_M[l.m]} ${l.y + 543}`;
@@ -109,6 +116,6 @@ function dzMonthAll(dz, wkMax) {
       <li><b>พื้นแรเงาส้ม</b> = ช่วงฤดูฝุ่น (1 พ.ย.–31 พ.ค.) · ใช้ดูว่าผู้ป่วยกับฝุ่นขึ้นลงในช่วงเวลาเดียวกันหรือไม่ ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง</li>
       <li>นับตาม<b>สัปดาห์ระบาดวิทยา</b> (อาทิตย์–เสาร์ · สัปดาห์ที่ 1 = 1 ม.ค. ถึงเสาร์แรกของปี) สัปดาห์ที่คร่อมสองเดือนนับเข้าเดือนที่มีวันมากกว่า · แต่ละกลุ่มโรคมีแกนซ้ายของตัวเอง เทียบขนาดจริงจากตัวเลขบนแท่ง</li>
       <li><b>แท่งจางขอบประ และพื้นเทา</b> (เดือนที่มี *) = มีข้อมูลเบื้องต้นรวมอยู่ · <b>เดือนที่มี †</b> = มีสัปดาห์ไม่เต็ม 7 วันรวมอยู่ (สัปดาห์ที่ 1 และสัปดาห์สุดท้ายของปี) ยอดรวมต่ำกว่าจริงเล็กน้อย</li></ul></details>
-    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ${provMonths.length ? ` <span class="nw">* ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${wkMax - DZ_PROV_WK + 1}–${wkMax} · ${epiRange(cy, wkMax - DZ_PROV_WK + 1, wkMax)}) เป็นข้อมูลเบื้องต้น แสดงเป็นแท่งจาง ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงไม่ใช้สรุปแนวโน้ม</span>` : ""}<span class="nw"><b>การอ่านผล</b> เปรียบเทียบเชิงสถานการณ์เพื่อเฝ้าระวัง ไม่ได้ทดสอบความสัมพันธ์เชิงสาเหตุกับฝุ่น</span></div>
+    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ${provMonths.length ? ` <span class="nw">* ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${Math.max(1, end.w - DZ_PROV_WK + 1)}–${end.w} · ${epiRange(cy, Math.max(1, end.w - DZ_PROV_WK + 1), end.w)}) เป็นข้อมูลเบื้องต้น แสดงเป็นแท่งจาง ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงไม่ใช้สรุปแนวโน้ม</span>` : ""}<span class="nw"><b>การอ่านผล</b> เปรียบเทียบเชิงสถานการณ์เพื่อเฝ้าระวัง ไม่ได้ทดสอบความสัมพันธ์เชิงสาเหตุกับฝุ่น</span></div>
     <div class="tip"></div></article>`;
 }
