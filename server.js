@@ -625,63 +625,100 @@ app.get('/api/sheet-disease', async (req, res) => {
   }
 });
 
-// ประกอบข้อมูลโซน F หนึ่งรอบ (2568 จากชีต + 2569 จาก MOPH) แล้วเก็บลง cache
+// ปีปัจจุบัน (ค.ศ. · เวลาไทย) — ใช้เลือกปีที่ต้องดึงข้อมูลโรค เพื่อให้กราฟ 12 เดือน "เลื่อนต่อ" เมื่อขึ้นปีใหม่เอง
+const bkkYear = () => new Date(Date.now() + 7 * 3600e3).getUTCFullYear();
+const DISEASE_HYBRID_FROM = 2026;   // ปี ค.ศ. แรกที่ใช้ MOPH + ชีตแบบ hybrid (ปี 2568 = 2025 อ่านจากชีตอย่างเดียว)
+
+// ข้อมูลโรครายสัปดาห์ของปี ค.ศ. Y = แหล่งที่ใหม่กว่าระหว่าง MOPH (ปี พ.ศ. Y+543) กับแท็บชีตชื่อ Y
+// (ปี 2569 ทำงานเหมือนเดิมทุกอย่าง · ปีถัดไปใช้ตรรกะเดียวกัน แท็บชีตของปีนั้นต้องมีตัวเก็บข้อมูลเขียนไว้ — ไม่มีก็ใช้ MOPH)
+async function buildDiseaseYear(Y, id) {
+  const [moph, csv] = await Promise.all([
+    fetchMophDisease(String(Y + 543)),
+    fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${Y}`]),
+  ]);
+  const sheet = csv ? parseDiseaseData(csv) : [];
+  const mophAge  = diseaseDataAge(moph).ageDays;
+  const sheetAge = diseaseDataAge(sheet).ageDays;
+  const useSheet = !moph.length ||
+    (sheet.length && sheetAge !== null && (mophAge === null || sheetAge < mophAge));
+  return { Y, moph, sheet, useSheet, rows: useSheet ? sheet : moph };
+}
+
+// ปีที่มีข้อมูลล่าสุด + สัปดาห์ล่าสุดที่ "นิ่งแล้ว" (ใช้กับกราฟย้อนหลัง 12 เดือน)
+//   สัปดาห์ล่าสุดของปีที่มีข้อมูลยังรายงานไม่ครบ → ตัดออก 1 สัปดาห์ (reportWeek ของ LINE ถ้ามี — ใช้ได้เฉพาะตอนแสดงข้อมูลชีต)
+//   ต้นปีที่ปีใหม่ยังไม่มีสัปดาห์ที่นิ่ง → ใช้สัปดาห์สุดท้ายของปีก่อนหน้า (ทั้งปีนับว่าจบแล้ว)
+function pickDataYear(yearsAsc, reportWeek) {
+  for (let i = yearsAsc.length - 1; i >= 0; i--) {
+    const { Y, rows, useSheet } = yearsAsc[i];
+    const wks = rows.map(r => Number(r.wk)).filter(Boolean);
+    if (!wks.length) continue;
+    const w = (useSheet && reportWeek) ? reportWeek : Math.max(...wks) - 1;
+    if (w >= 1) return { year: Y, week: w };
+    const prev = yearsAsc[i - 1];
+    const pw = prev ? prev.rows.map(r => Number(r.wk)).filter(Boolean) : [];
+    if (pw.length) return { year: prev.Y, week: Math.max(...pw) };
+    return { year: Y, week: Math.max(...wks) };
+  }
+  return { year: DISEASE_HYBRID_FROM, week: 0 };
+}
+
+// ประกอบข้อมูลโซน F หนึ่งรอบ (2568 จากชีต + 2569 เป็นต้นไป hybrid MOPH/ชีต) แล้วเก็บลง cache
 async function buildDiseaseData() {
   const { api } = readConfig();
   const id      = api.sheet_id;
+  const curY    = Math.max(DISEASE_HYBRID_FROM, bkkYear());
+  const ys      = []; for (let y = DISEASE_HYBRID_FROM; y <= curY; y++) ys.push(y);
 
-  const [csv2025, moph2569, csv2026, csvStatus] = await Promise.all([
+  // ยิงทีละปีต่อเนื่อง (ปีเดียวคือ 2569 ตอนนี้) — ไม่ยิง MOPH พร้อมกันหลายปี
+  const [csv2025, csvStatus] = await Promise.all([
     fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2025`]),
-    fetchMophDisease('2569'),
-    fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=2026`]),
     fetchCSV([`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=_sync_status`]),
   ]);
-  const sheet2569 = csv2026 ? parseDiseaseData(csv2026) : [];
+  const yrs = [];
+  for (const y of ys) yrs.push(await buildDiseaseYear(y, id));
+  const curRes = yrs[yrs.length - 1];
 
   // สัปดาห์ที่ LINE OA รายงาน (trimToStableWeeks_ ใน Apps Script เขียนไว้ที่ _sync_status.report_week)
-  // ใช้จุดตัดเดียวกันทั้ง LINE และหน้าเว็บ — ไม่มี/อ่านไม่ได้ → หน้าเว็บถอยไปใช้ "สัปดาห์รองสุดท้าย" เหมือนเดิม
+  // ใช้จุดตัดเดียวกันทั้ง LINE และหน้าเว็บ — ไม่มี/อ่านไม่ได้ → หน้าเว็บถอยไปใช้ "สัปดาห์ล่าสุด − 1" เอง
   let reportWeek = null;
   for (const line of (csvStatus || '').split('\n')) {
     const [k, v] = csvLine(line).map(s => s.replace(/"/g, ''));
     if (k === 'report_week' && /^\d{1,2}$/.test(v)) reportWeek = Number(v);
   }
 
-  // ใช้แหล่งที่อัพเดทใหม่กว่า (ageDays น้อยกว่า) — เท่ากันหรือเทียบไม่ได้ให้ MOPH ชนะ
-  const mophAge  = diseaseDataAge(moph2569).ageDays;
-  const sheetAge = diseaseDataAge(sheet2569).ageDays;
-  const useSheet = !moph2569.length ||
-    (sheet2569.length && sheetAge !== null && (mophAge === null || sheetAge < mophAge));
-
-  // ทั้ง MOPH (ไม่ครบจังหวัด) และชีตใช้ไม่ได้ แต่มีชุดเดิมที่ครบอยู่แล้ว → คงชุดเดิมไว้ ไม่เอาค่าว่างไปทับ
-  if (!moph2569.length && !sheet2569.length && _lastGood.has('sheet-disease')) {
-    throw new Error('MOPH ไม่ครบจังหวัด (' + (moph2569.missing || []).join(', ') + ') และอ่านชีตไม่ได้ — ใช้ข้อมูลชุดเดิม');
+  // ทุกปีที่ดึงไม่ได้เลย (ทั้ง MOPH ไม่ครบจังหวัดและอ่านชีตไม่ได้) แต่มีชุดเดิมที่ครบอยู่แล้ว → ใช้ชุดเดิม ไม่เขียนทับด้วยชุดว่าง
+  // (ต้นปีใหม่ที่ปีปัจจุบันยังไม่มีข้อมูล แต่ปีก่อนมี → ไม่ถือว่าล้มเหลว)
+  if (yrs.every(r => !r.rows.length) && _lastGood.has('sheet-disease')) {
+    throw new Error('MOPH ไม่ครบจังหวัด (' + (curRes.moph.missing || []).join(', ') + ') และอ่านชีตไม่ได้ — ใช้ข้อมูลชุดเดิม');
   }
 
-  let year2026 = useSheet ? sheet2569 : moph2569;
+  // meta อ้างอิงปีล่าสุดที่มีข้อมูล (ปี 2569 = ปัจจุบัน ไม่เปลี่ยนพฤติกรรม)
+  const latest = [...yrs].reverse().find(r => r.rows.length) || curRes;
+  const useSheet = latest.useSheet;
   let source   = useSheet ? 'sheet' : 'moph';
   let ttl      = useSheet ? 60 * 60 * 1000       // ชีตใหม่กว่า → 1 ชม. (Apps Script เติมวันละครั้ง)
                           : 6 * 60 * 60 * 1000;  // MOPH → 6 ชม. (HDC อัปเดตวันละครั้ง)
-  if (!moph2569.length) ttl = 15 * 60 * 1000;    // MOPH ยิงไม่ผ่าน → cache สั้นๆ เพื่อรีบลองใหม่
+  if (!latest.moph.length) ttl = 15 * 60 * 1000; // MOPH ยิงไม่ผ่าน → cache สั้นๆ เพื่อรีบลองใหม่
 
   // อายุข้อมูล — คำนวณจาก date_com ของ MOPH เอง ไม่ใช่เวลาที่ sync
   // จึงจับได้ทั้งกรณี "ตัวเก็บข้อมูลล่ม" และ "ต้นทางหยุดอัปเดต"
   const staleDays = Number(api.disease_stale_days) || 10;
-  const age       = diseaseDataAge(year2026);
+  const age       = diseaseDataAge(latest.rows);
+  const pick      = pickDataYear(yrs, useSheet ? reportWeek : null);
 
-  const data = {
-    ok:   true,
-    2025: csv2025 ? parseDiseaseData(csv2025) : [],
-    2026: year2026,
-    meta: {
-      source,                                    // 'moph' | 'sheet' = แหล่งที่อัพเดทใหม่กว่า
-      mophMissing: moph2569.missing || [],       // จังหวัดที่ดึงจาก MOPH ไม่ได้รอบนี้ (ว่าง = ครบ 4 จังหวัด)
-      // จุดตัดของ LINE คำนวณจากข้อมูลชีต → ใช้ได้เฉพาะตอนแสดงข้อมูลชีต
-      reportWeek: useSheet ? reportWeek : null,
-      dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
-      ageDays:  age.ageDays,                     // null = ไม่มีวันที่ให้คำนวณ
-      staleDays,
-      stale:    age.ageDays !== null && age.ageDays > staleDays,
-    },
+  const data = { ok: true, 2025: csv2025 ? parseDiseaseData(csv2025) : [] };
+  for (const r of yrs) data[r.Y] = r.rows;
+  data.meta = {
+    source,                                    // 'moph' | 'sheet' = แหล่งที่อัพเดทใหม่กว่า
+    mophMissing: latest.moph.missing || [],    // จังหวัดที่ดึงจาก MOPH ไม่ได้รอบนี้ (ว่าง = ครบ 4 จังหวัด)
+    // จุดตัดของ LINE คำนวณจากข้อมูลชีต → ใช้ได้เฉพาะตอนแสดงข้อมูลชีต
+    reportWeek: useSheet ? reportWeek : null,
+    dataYear: pick.year,                       // ปีที่ข้อมูลล่าสุดของกราฟย้อนหลัง 12 เดือนอยู่ (ค.ศ.)
+    dataWk:   pick.week,                       // สัปดาห์ระบาดวิทยาล่าสุดที่นิ่งแล้วของปีนั้น
+    dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
+    ageDays:  age.ageDays,                     // null = ไม่มีวันที่ให้คำนวณ
+    staleDays,
+    stale:    age.ageDays !== null && age.ageDays > staleDays,
   };
   setCached('sheet-disease', data, ttl);
   return data;
