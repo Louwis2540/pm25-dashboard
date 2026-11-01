@@ -45,7 +45,7 @@ async function provinceSocial(pvName) {
   x.fillStyle = TEAL; x.fillRect(0, 1080, W, 6);
   x.textAlign = "left"; x.textBaseline = "alphabetic";
   // แถบล่าง 3 อย่าง ตัวใหญ่อ่านได้บนมือถือ: แนวโน้มจากเมื่อวาน · คาดการณ์ 3 วัน (เป็นระดับ) · สายด่วน
-  if (tr) { x.font = "700 32px Anuphan"; x.fillStyle = tr.up ? "#c2410c" : tr.dn ? "#0e7a3a" : INK; x.fillText(`วันนี้ ${tr.up ? "▲ สูงขึ้นกว่าเมื่อวาน" : tr.dn ? "▼ ลดลงจากเมื่อวาน" : "● ใกล้เคียงเมื่อวาน"}`, 40, 1128); }
+  if (tr) { x.font = "700 32px Anuphan"; x.fillStyle = tr.up ? "#c2410c" : tr.dn ? "#0e7a3a" : INK; x.fillText(`วันนี้ ${igDelta(pvName).replace(/<\/?b>/g, "")}`, 40, 1128); }   // ข้อความเดียวกับอินโฟกราฟิกระดับเขต (ค่าเมื่อวาน + ตรวจวันที่จริง)
   if (it) {
     const base = new Date((S.gpv.asOf || "").slice(0, 10) + "T00:00:00");
     it.pred.slice(0, 3).forEach((p, k) => {
@@ -85,7 +85,7 @@ function igCaption() {
   const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)), p1 = it?.pred?.[0];
   const head = F.region
     ? `สถานการณ์ฝุ่น PM₂.₅ เขตสุขภาพที่ 7 วัน${ds} (ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME})\n` + PROV.map(p => { const x = S.todayRow?.[p.name]; return x == null ? "" : `• ${p.name} ${f1(x)} µg/m³ ${LV[lvOf(x)].name}`; }).filter(Boolean).join("\n")
-    : `สถานการณ์ฝุ่น PM₂.₅ จ.${pvn} วัน${ds} (ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME})\n${f1(v)} µg/m³ · ระดับ${L.name}${tr ? ` · ${tr.up ? "สูงขึ้นกว่าเมื่อวาน" : tr.dn ? "ลดลงจากเมื่อวาน" : "ใกล้เคียงเมื่อวาน"}` : ""}`;
+    : `สถานการณ์ฝุ่น PM₂.₅ จ.${pvn} วัน${ds} (ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME})\n${f1(v)} µg/m³ · ระดับ${L.name}${tr ? ` · ${igDelta(pvn).replace(/<\/?b>/g, "")}` : ""}`;
   return [head,
     `\nคำแนะนำ${F.region ? ` (ตามระดับสูงสุดในเขต จ.${pvn})` : ""}`,
     `ประชาชนทั่วไป: ${L.pub.join(" / ")}`,
