@@ -113,9 +113,6 @@ function main() {
   const healthData  = getHealthFromSeparateSheets();
   const pheocStatus = recordHistoryAndCheckPHEOC(airData);
 
-  let validPMs = airData.map(d => d.pm25).filter(v => v !== null && v >= 0);
-  let avgPM = validPMs.length > 0 ? (validPMs.reduce((a,b) => a+b, 0) / validPMs.length) : null;
-
   let today = new Date();
   let currentHour = today.getHours();
 
@@ -129,8 +126,8 @@ function main() {
   let thaiYear = parseInt(Utilities.formatDate(today, "GMT+7", "yyyy")) + 543;
   let fullDate = `${Utilities.formatDate(today, "GMT+7", "d")} ${getThaiMonth(today.getMonth())} ${thaiYear}`;
 
-  let textMessage = buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, timeStr, roundText);
-  let flexMessage = buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, timeStr);
+  let textMessage = buildTextMessage(airData, healthData, pheocStatus, fullDate, timeStr, roundText);
+  let flexMessage = buildFlexMessage(airData, healthData, pheocStatus, currentHour, timeStr);
 
   sendLineBroadcast([flexMessage, textMessage]);
 }
@@ -161,11 +158,24 @@ function sendLineBroadcast(messagesArray) {
 // ==========================================================
 // 🎨 Text Message
 // ==========================================================
-function buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, timeStr, roundText) {
-  let overallLevel = getPMLevelInfoForText(avgPM);
-  let overallStatusText = avgPM !== null
-    ? `${overallLevel.icon} สภาพอากาศภาพรวม 4 จังหวัด: ${overallLevel.text} (ค่าเฉลี่ย ${avgPM.toFixed(1)} ไมโครกรัม/ลูกบาศก์เมตร)\n(ระดับค่าฝุ่นตามเกณฑ์มาตรฐาน ไม่เกิน 37.5 ไมโครกรัม/ลูกบาศก์เมตร)`
-    : "🤔 สภาพอากาศภาพรวม 4 จังหวัด: ระบบขัดข้อง/ไม่มีข้อมูล";
+/**
+ * จังหวัดที่ค่าฝุ่นสูงที่สุดในเขต (ใช้ทั้งข้อความและการ์ด)
+ *  - ข้ามจังหวัดที่ไม่มีข้อมูล
+ *  - ค่าเท่ากัน (เทียบที่ทศนิยม 1 ตำแหน่งตามที่แสดง) → คืนทุกจังหวัดที่เท่ากัน
+ *  - ไม่มีข้อมูลสักจังหวัด → null
+ */
+function getMaxProvinces_(airData) {
+  const ok = airData.filter(p => p.pm25 !== null && p.pm25 >= 0);
+  if (!ok.length) return null;
+  const top = Math.max.apply(null, ok.map(p => Number(p.pm25.toFixed(1))));
+  return { pm: top, names: ok.filter(p => Number(p.pm25.toFixed(1)) === top).map(p => p.name) };
+}
+
+function buildTextMessage(airData, healthData, pheocStatus, fullDate, timeStr, roundText) {
+  const top = getMaxProvinces_(airData);
+  let topText = top
+    ? `📍 จังหวัดที่มีค่าฝุ่นสูงที่สุดในเขต: ${top.names.map(n => 'จังหวัด' + n).join(', ')} ${top.pm.toFixed(1)} ไมโครกรัม/ลูกบาศก์เมตร (${getPMLevelInfoForText(top.pm).text})`
+    : "📍 จังหวัดที่มีค่าฝุ่นสูงที่สุดในเขต: ไม่มีข้อมูล";
 
   let pmListText = airData.map(p => {
     if (p.pm25 !== null && p.pm25 >= 0) {
@@ -179,29 +189,28 @@ function buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, tim
     ? `🚨🔴 เขตสุขภาพที่ 7 ในพื้นที่ 4 จังหวัด มีจังหวัดเข้าเกณฑ์เปิด PHEOC ได้แก่: ${pheocStatus.provinces.join(', ')}`
     : `🟢🛡️ เขตสุขภาพที่ 7 ในพื้นที่ 4 จังหวัด ยังไม่มีจังหวัดเข้าเกณฑ์การเปิด PHEOC`;
 
-  let healthText = "💪 สถานการณ์โรคที่ต้องเฝ้าระวังผลกระทบ จากฝุ่น PM2.5\n(ไม่พบข้อมูลอัปเดตจากระบบ)";
+  let healthText = "💪 สถานการณ์โรคที่ต้องเฝ้าระวังผลกระทบ จากฝุ่น PM₂.₅\n(ไม่พบข้อมูลอัปเดตจากระบบ)";
   if (healthData) {
     let yrCurr = healthData.year;
-    healthText = `💪 สถานการณ์โรคที่ต้องเฝ้าระวังผลกระทบ จากฝุ่น PM2.5\n` +
+    healthText = `💪 สถานการณ์โรคที่ต้องเฝ้าระวังผลกระทบ จากฝุ่น PM₂.₅\n` +
                  `👥 ยอดผู้ป่วยสะสม ปี ${yrCurr} ตั้งแต่สัปดาห์ที่ 1 - วันที่อัพเดทข้อมูล (วันที่: ${healthData.dateStr})\n` +
                  `📈 ยอดสะสม ปี ${yrCurr} (ณ สัปดาห์ที่ ${healthData.wk}) \n` +
                  `😷 ระบบทางเดินหายใจ : ${formatNum(healthData.curr[0])} ราย\n` +
                  `❤️ ระบบหัวใจ/หลอดเลือด : ${formatNum(healthData.curr[1])} ราย\n` +
                  `👁️ ตาอักเสบ : ${formatNum(healthData.curr[2])} ราย\n` +
-                 `🧴 ผิวหนัง : ${formatNum(healthData.curr[3])} ราย` +
-                 healthData.ageNote;      // ⚠️ ต่อท้ายเมื่อข้อมูลค้างเกินเกณฑ์ (ปกติเป็นสตริงว่าง)
+                 `🧴 ผิวหนัง : ${formatNum(healthData.curr[3])} ราย`;
   }
 
   let textReport = `เรียน  ท่านผู้บริหาร และผู้เกี่ยวข้อง\n\n` +
-       `       สคร. 7 ขอนแก่น ขอรายงานสถานการณ์ฝุ่นละออง PM2.5 (เฉลี่ย 24 ชม.) พื้นที่เขตสุขภาพที่ 7 ประจำวันที่ ${fullDate} เวลา ${timeStr} (${roundText})\n\n` +
-       `${overallStatusText}\n\n` +
-       `🌪 ค่าฝุ่น PM2.5 รายจังหวัด\n${pmListText}\n\n` +
+       `       สคร. 7 ขอนแก่น ขอรายงานสถานการณ์ฝุ่นละออง PM₂.₅ (เฉลี่ย 24 ชม.) พื้นที่เขตสุขภาพที่ 7 ประจำวันที่ ${fullDate} เวลา ${timeStr} (${roundText})\n\n` +
+       `${topText}\n\n` +
+       `🌪 ค่าฝุ่น PM₂.₅ รายจังหวัด\n${pmListText}\n\n` +
        `${pheocText}\n\n` +
        `${healthText}\n\n` +
        `ข้อเสนอแนะการปฏิบัติตน :\n${buildAdviceSectionForText(airData)}\n` +
-       `ท่านสามารถดูค่าฝุ่นแบบเรียลไทม์ในแผนที่ กดลิงก์เพื่อดู: https://pm25-dashboard-ex8l.onrender.com\n\n` +
+       `ท่านสามารถดูแดชบอร์ดสถานการณ์ฝุ่น PM₂.₅ เขตสุขภาพที่ 7 กดลิงก์เพื่อดู: https://pm25-dashboard-ex8l.onrender.com\n\n` +
        `       จึงเรียนมาเพื่อโปรดทราบ  ขอบพระคุณครับ\n\n` +
-       `(แหล่งข้อมูล: Air4thai, GISTDA PM2.5 Monitoring System, กระทรวงสาธารณสุข HDC)`;
+       `(แหล่งข้อมูล: Air4thai, GISTDA, กระทรวงสาธารณสุข HDC)`;
 
   return { "type": "text", "text": textReport };
 }
@@ -209,16 +218,18 @@ function buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, tim
 // ==========================================================
 // 🎨 Flex Message
 // ==========================================================
-function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, timeStr) {
+function buildFlexMessage(airData, healthData, pheocStatus, currentHour, timeStr) {
+  // หัวการ์ด: จังหวัดที่ค่าฝุ่นสูงที่สุดในเขต · สีหัวการ์ดมาจากระดับของค่านั้น
+  const top = getMaxProvinces_(airData);
   let headerColor = "#9E9E9E";
-  let overallStatusFlexText = "ระบบขัดข้อง/ไม่มีข้อมูล";
-  let avgText = "-";
+  let topLabel = "📍 จังหวัดที่ค่าฝุ่นสูงที่สุดในเขต";
+  let topFlexText = "ไม่มีข้อมูล";
 
-  if (avgPM !== null) {
-    avgText = avgPM.toFixed(1);
-    let levelInfo = getPMLevelInfoForFlex(avgPM);
+  if (top) {
+    let levelInfo = getPMLevelInfoForFlex(top.pm);
     headerColor = levelInfo.color;
-    overallStatusFlexText = `${levelInfo.text} (เฉลี่ย ${avgText} มคก./ลบ.ม.)`;
+    if (top.names.length > 1) topLabel += " (ค่าเท่ากัน)";
+    topFlexText = `${top.names.join(', ')} ${top.pm.toFixed(1)} มคก./ลบ.ม. · ${levelInfo.text}`;
   }
 
   // สร้าง List รายจังหวัด
@@ -271,19 +282,12 @@ function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, 
       createHealthRow("👁️ ตาอักเสบ", healthData.curr[2]),
       createHealthRow("🧴 ผิวหนัง", healthData.curr[3])
     ];
-    // ⚠️ ป้ายเตือนข้อมูลค้าง — ขึ้นเฉพาะตอนต้นทางหยุดอัปเดตเกินเกณฑ์
-    if (healthData.ageNote) {
-      healthBox.push({
-        "type": "text", "text": healthData.ageNote.trim(), "size": "xs",
-        "color": "#C62828", "wrap": true, "margin": "md", "weight": "bold"
-      });
-    }
   }
 
   let timeIcon = ""; if (currentHour < 11) {timeIcon = "🌤️ Morning Report";} else if (currentHour < 15) { timeIcon = "☀️ Midday Report";} else { timeIcon = "☁️ Evening Report";}
 
   return {
-    "type": "flex", "altText": "รายงานสถานการณ์ฝุ่น PM2.5",
+    "type": "flex", "altText": "รายงานสถานการณ์ฝุ่น PM₂.₅",
     "contents": {
       "type": "bubble", "size": "giga",
       "header": { "type": "box", "layout": "vertical", "backgroundColor": headerColor, "paddingAll": "xl",
@@ -293,12 +297,12 @@ function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, 
               { "type": "text", "text": `${timeStr}`, "color": "#FFFFFF", "size": "sm", "align": "end" }
             ]
           },
-          { "type": "text", "text": "สถานการณ์ฝุ่น PM2.5", "weight": "bold", "size": "xxl", "color": "#FFFFFF", "margin": "md" },
+          { "type": "text", "text": "สถานการณ์ฝุ่น PM₂.₅", "weight": "bold", "size": "xxl", "color": "#FFFFFF", "margin": "md" },
           { "type": "text", "text": "สำนักงานป้องกันควบคุมโรคที่ 7 จ.ขอนแก่น", "size": "sm", "color": "#EEEEEE" },
           { "type": "box", "layout": "vertical", "margin": "lg", "backgroundColor": "#FFFFFF4D", "paddingAll": "md", "cornerRadius": "md",
             "contents": [
-              { "type": "text", "text": "สภาพอากาศภาพรวม", "color": "#EEEEEE", "size": "xs" },
-              { "type": "text", "text": overallStatusFlexText, "size": "md", "color": "#FFFFFF", "weight": "bold", "wrap": true }
+              { "type": "text", "text": topLabel, "color": "#EEEEEE", "size": "xs", "wrap": true },
+              { "type": "text", "text": topFlexText, "size": "md", "color": "#FFFFFF", "weight": "bold", "wrap": true }
             ]
           }
         ]
@@ -320,7 +324,7 @@ function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, 
       "footer": { "type": "box", "layout": "vertical", "spacing": "sm",
         "contents": [
           { "type": "button", "style": "primary", "color": "#1976D2", "height": "sm", "action": { "type": "uri", "label": "📍 ดูแผนที่ฝุ่นแบบเรียลไทม์", "uri": "https://pm25-dashboard-ex8l.onrender.com" } },
-          { "type": "text", "text": "ข้อมูล: Air4thai, HDC สธ., GISTDA", "size": "xxs", "align": "center", "color": "#BDBDBD", "wrap": true, "margin": "md" }
+          { "type": "text", "text": "ข้อมูล: Air4thai, GISTDA, HDC สธ.", "size": "xxs", "align": "center", "color": "#BDBDBD", "wrap": true, "margin": "md" }
         ]
       }
     }
@@ -409,12 +413,10 @@ function testReportDryRun() {
     ? '⚠️ เข้าเกณฑ์ ' + pheocStatus.provinces.join(', ')
     : '🟢 ไม่มีจังหวัดเข้าเกณฑ์'));
 
-  let validPMs = airData.map(d => d.pm25).filter(v => v !== null && v >= 0);
-  let avgPM = validPMs.length > 0 ? (validPMs.reduce((a, b) => a + b, 0) / validPMs.length) : null;
-
   Logger.log('── ค่าฝุ่นที่ดึงได้ ──');
   airData.forEach(p => Logger.log('  ' + p.name + ' : ' + (p.pm25 === null ? '(ไม่มีข้อมูล)' : p.pm25) + '  เวลา ' + p.time));
-  Logger.log('  เฉลี่ย 4 จังหวัด : ' + (avgPM === null ? '(คำนวณไม่ได้)' : avgPM.toFixed(1)));
+  const topP = getMaxProvinces_(airData);
+  Logger.log('  สูงที่สุดในเขต : ' + (topP ? topP.names.join(', ') + ' ' + topP.pm.toFixed(1) : '(ไม่มีข้อมูล)'));
   const dec = shouldBroadcast_(airData, new Date().getHours());
   Logger.log('  ตอนนี้ main() จะ ' + (dec.send ? 'ส่ง' : 'ข้ามการส่ง') + ' — ' + dec.reason);
 
@@ -425,7 +427,6 @@ function testReportDryRun() {
     Logger.log('  สัปดาห์ที่รายงาน : ' + healthData.wk + '  (ต้องตรงกับหน้าเว็บ)');
     Logger.log('  ยอดสะสม : ' + healthData.curr.map(n => n.toLocaleString()).join(' | '));
     Logger.log('  วันที่ : ' + healthData.dateStr);
-    Logger.log('  ป้ายเตือนข้อมูลค้าง : ' + (healthData.ageNote ? healthData.ageNote.trim() : '(ไม่มี — ข้อมูลยังสด)'));
   }
 
   const today = new Date();
@@ -435,7 +436,7 @@ function testReportDryRun() {
   const thaiYear  = parseInt(Utilities.formatDate(today, "GMT+7", "yyyy")) + 543;
   const fullDate  = Utilities.formatDate(today, "GMT+7", "d") + ' ' + getThaiMonth(today.getMonth()) + ' ' + thaiYear;
 
-  const msg = buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, timeStr, roundText);
+  const msg = buildTextMessage(airData, healthData, pheocStatus, fullDate, timeStr, roundText);
   Logger.log('── ข้อความที่จะส่ง (ตัวอย่าง) ──\n' + msg.text);
   Logger.log('ℹ️ dry run — ไม่ได้ broadcast และไม่ได้เขียนชีต (PHEOC เช็คจริงจาก API)');
 }
@@ -579,7 +580,52 @@ function getAirDataStrict() {
 // ==========================================================
 // 🛠️ ดึงข้อมูลสุขภาพจากแท็บ 2026
 // ==========================================================
+const DASHBOARD_URL = 'https://pm25-dashboard-ex8l.onrender.com';
+const DISEASE_KEYS  = ['ทางเดินหายใจ', 'หัวใจ', 'ตาอักเสบ', 'ผิวหนัง'];   // ลำดับเดียวกับ DZ ใน index.html
+
+/**
+ * ยอดผู้ป่วยสะสม "ชุดเดียวกับหน้าเว็บ" — อ่านจาก /api/sheet-disease ของแดชบอร์ด
+ * (เซิร์ฟเวอร์เลือกแหล่งที่ใหม่กว่าระหว่าง HDC โดยตรง กับชีต แล้ว)
+ * สัปดาห์ที่ตัด = meta.reportWeek || (สัปดาห์ล่าสุด − 1)  ← สูตรเดียวกับ renderDisease() ใน index.html
+ * ดึงไม่ได้/ข้อมูลว่าง → คืน null ให้ getHealthFromSeparateSheets() ถอยไปอ่านชีตเอง
+ */
+function getHealthFromDashboard_() {
+  try {
+    const res = UrlFetchApp.fetch(DASHBOARD_URL + '/api/sheet-disease', { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) {
+      console.log('⚠️ ดึงข้อมูลโรคจากแดชบอร์ดไม่ได้ (HTTP ' + res.getResponseCode() + ') — ถอยไปอ่านชีต');
+      return null;
+    }
+    const dz   = JSON.parse(res.getContentText());
+    const rows = dz['2026'] || [];
+    const wks  = rows.map(r => Number(r.wk)).filter(Boolean);
+    if (!wks.length) return null;
+
+    const meta  = dz.meta || {};
+    const wkMax = meta.reportWeek || (Math.max.apply(null, wks) - 1);
+    if (!(wkMax >= 1)) return null;
+
+    const curr = DISEASE_KEYS.map(key => rows.reduce((sum, r) => {
+      if (!(Number(r.wk) <= wkMax)) return sum;
+      const k = Object.keys(r).find(x => x.indexOf(key) >= 0);
+      const v = k ? Number(String(r[k]).replace(/,/g, '')) : NaN;
+      return isNaN(v) ? sum : sum + v;
+    }, 0));
+
+    const p = String(meta.dataDate || '').split('/');       // D/M/YYYY (ค.ศ.)
+    const dateStr = p.length === 3 ? (+p[0]) + '/' + (+p[1]) + '/' + ((+p[2]) + 543) : 'ไม่ระบุวันที่';
+
+    return { year: 2569, wk: wkMax, curr: curr, dateStr: dateStr };
+  } catch (e) {
+    console.log('⚠️ ดึงข้อมูลโรคจากแดชบอร์ดผิดพลาด: ' + e.message + ' — ถอยไปอ่านชีต');
+    return null;
+  }
+}
+
 function getHealthFromSeparateSheets() {
+  const fromDashboard = getHealthFromDashboard_();
+  if (fromDashboard) return fromDashboard;
+
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     let sheetCurr = ss.getSheetByName("2026") || ss.getSheetByName("2569");
@@ -640,10 +686,7 @@ function getHealthFromSeparateSheets() {
       year: 2569,
       wk: maxWeek || "-",
       curr: currentSum,
-      dateStr: finalDateStr,
-      // ป้ายเตือน "ข้อมูลค้าง N วัน" — ฟังก์ชันอยู่ใน moph_to_sheet.gs
-      // ปกติคืนสตริงว่าง ข้อความจึงเหมือนเดิมทุกประการ
-      ageNote: (typeof diseaseAgeNote === 'function') ? diseaseAgeNote(dateVal) : ''
+      dateStr: finalDateStr
     };
   } catch (e) {
     console.log("❌ Error ดึงข้อมูลสุขภาพ: " + e.message);
