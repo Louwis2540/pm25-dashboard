@@ -651,12 +651,13 @@ async function buildDiseaseYear(Y) {
 
 // รวมรายจังหวัด × สัปดาห์ (pvRowsFrom) → รายสัปดาห์ทั้งเขต รูปแบบเดียวกับ parseDiseaseData:
 // [{ wk, <หมวดโรค>, อัพเดท }] (อัพเดท = D/M/YYYY ค.ศ. ตามที่หน้าเว็บอ่าน)
-const PV_KEY_INV = Object.fromEntries(Object.entries(PV_KEY).map(([th, k]) => [k, th]));
 function regionRowsFromPv(pvRows, upd) {
+  // PV_KEY ประกาศ (const) ไว้ท้ายไฟล์ในส่วน E2 — อ่านตอนเรียกใช้เท่านั้น ห้ามอ่านตอนโหลดโมดูล (เกิด TDZ → เซิร์ฟเวอร์ไม่ขึ้น)
+  const inv = Object.entries(PV_KEY).map(([th, k]) => [k, th]);   // [คีย์ใน pvRows, ชื่อหมวดโรค]
   const byWk = {};
   for (const r of pvRows) {
-    const o = byWk[r.wk] ||= { wk: r.wk, ...Object.fromEntries(Object.values(PV_KEY_INV).map(c => [c, 0])) };
-    for (const [k, th] of Object.entries(PV_KEY_INV)) o[th] += r[k] || 0;
+    const o = byWk[r.wk] ||= { wk: r.wk, ...Object.fromEntries(inv.map(([, th]) => [th, 0])) };
+    for (const [k, th] of inv) o[th] += r[k] || 0;
   }
   return Object.values(byWk).sort((a, b) => a.wk - b.wk).map(o => upd ? { ...o, 'อัพเดท': upd } : o);
 }
