@@ -826,8 +826,11 @@ async function diseasePvFromSheet(beYear) {
     if (!t1 && dc > (dcPv2[c[iP]] || '')) dcPv2[c[iP]] = dc;
   }
   if (Object.keys(acc).length < provinces.length) return { rows: [] };   // ชีตต้องครบทุกจังหวัดเช่นกัน
-  const minDateCom = Object.values(dcPv2).sort()[0] || '';   // จังหวัดที่ HDC ประมวลผลเก่าสุด (ใช้ตัดสินสัปดาห์นิ่ง)
-  return { rows: pvRowsFrom(acc), rows1: Object.keys(acc1).length === provinces.length ? pvRowsFrom(acc1) : [], dateCom: maxDateCom, minDateCom };
+  const dc2 = Object.values(dcPv2).sort();
+  const minDateCom = dc2[0] || '';                  // จังหวัดที่ HDC ประมวลผลเก่าสุด (ใช้ตัดสินสัปดาห์นิ่ง)
+  const dateCom2   = dc2[dc2.length - 1] || '';     // วันประมวลผลล่าสุดของตาราง s_pm25_2 เท่านั้น (ใช้แสดง "ข้อมูล ณ" ของโซน E2)
+  // dateCom = ล่าสุดของทั้งสองตาราง (ชุดดาวน์โหลดใช้) · dateCom2 = เฉพาะตาราง _2 ที่ตัวเลขโซน E2 มาจาก
+  return { rows: pvRowsFrom(acc), rows1: Object.keys(acc1).length === provinces.length ? pvRowsFrom(acc1) : [], dateCom: maxDateCom, dateCom2, minDateCom };
 }
 
 async function buildDiseasePv() {
@@ -841,7 +844,7 @@ async function buildDiseasePv() {
   }
   if (!src.rows.length) throw new Error('แท็บ latest ไม่ครบ และ MOPH ไม่ครบจังหวัด (' + missing.join(', ') + ')');
 
-  const dataDate = dateComToDmy(src.dateCom || '');
+  const dataDate = dateComToDmy(src.dateCom2 || src.dateCom || '');   // ตัวเลขโซน E2 = ตาราง _2 → ใช้วันประมวลผลของตาราง _2 (ไม่ใช่ของ _1 ที่ใหม่กว่า)
   const staleDays = Number(api.disease_stale_days) || 10;
   const age = diseaseDataAge(dataDate ? [{ 'อัพเดท': dataDate }] : []);
   // ปีก่อนหน้า (Type 1+3) — ให้อินโฟกราฟิกรายจังหวัดแสดงผู้ป่วยย้อนหลังข้ามปี (เช่น พ.ย.–ธ.ค. ปีก่อน) · ข้อมูลนิ่งแล้ว เก็บไว้ 24 ชม.
