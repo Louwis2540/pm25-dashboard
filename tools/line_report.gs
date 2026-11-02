@@ -587,13 +587,18 @@ const DISEASE_KEYS  = ['ทางเดินหายใจ', 'หัวใจ'
  * ยอดผู้ป่วยสะสม "ชุดเดียวกับหน้าเว็บ" — อ่านจาก /api/sheet-disease ของแดชบอร์ด
  * (เซิร์ฟเวอร์เลือกแหล่งที่ใหม่กว่าระหว่าง HDC โดยตรง กับชีต แล้ว)
  * สัปดาห์ที่ตัด = meta.reportWeek || (สัปดาห์ล่าสุด − 1)  ← สูตรเดียวกับ renderDisease() ใน index.html
- * ดึงไม่ได้/ข้อมูลว่าง → คืน null ให้ getHealthFromSeparateSheets() ถอยไปอ่านชีตเอง
+ * ดึงไม่ได้/ข้อมูลว่าง → คืน null (ไม่มีทางสำรองที่ใช้นิยามอื่น)
  */
 function getHealthFromDashboard_() {
   try {
-    const res = UrlFetchApp.fetch(DASHBOARD_URL + '/api/sheet-disease', { muteHttpExceptions: true });
+    let res = null;
+    for (let i = 0; i < 3; i++) {
+      if (i) Utilities.sleep(5000 * i);
+      res = UrlFetchApp.fetch(DASHBOARD_URL + '/api/sheet-disease', { muteHttpExceptions: true });
+      if (res.getResponseCode() === 200) break;
+    }
     if (res.getResponseCode() !== 200) {
-      console.log('⚠️ ดึงข้อมูลโรคจากแดชบอร์ดไม่ได้ (HTTP ' + res.getResponseCode() + ') — ถอยไปอ่านชีต');
+      console.log('⚠️ ดึงข้อมูลโรคจากแดชบอร์ดไม่ได้ (HTTP ' + res.getResponseCode() + ') หลังลอง 3 ครั้ง');
       return null;
     }
     const dz   = JSON.parse(res.getContentText());
@@ -617,81 +622,18 @@ function getHealthFromDashboard_() {
 
     return { year: 2569, wk: wkMax, curr: curr, dateStr: dateStr };
   } catch (e) {
-    console.log('⚠️ ดึงข้อมูลโรคจากแดชบอร์ดผิดพลาด: ' + e.message + ' — ถอยไปอ่านชีต');
+    console.log('⚠️ ดึงข้อมูลโรคจากแดชบอร์ดผิดพลาด: ' + e.message);
     return null;
   }
 }
 
+/**
+ * ข้อมูลโรค = ชุดเดียวกับหน้าเว็บเท่านั้น (ตาราง s_pm25_2_in_week · สัปดาห์นิ่งคำนวณที่เซิร์ฟเวอร์)
+ * ไม่มีทางสำรองที่อ่านแท็บ 2026 ในชีตอีกแล้ว — แท็บนั้นเป็นตาราง s_pm25_1 (นับตามหน่วยบริการ) นิยามไม่ตรงกัน
+ * ดึงไม่ได้ → คืน null แล้วข้อความจะแจ้ง "ไม่พบข้อมูลอัปเดตจากระบบ" แทนการส่งตัวเลขคนละนิยาม
+ */
 function getHealthFromSeparateSheets() {
-  const fromDashboard = getHealthFromDashboard_();
-  if (fromDashboard) return fromDashboard;
-
-  try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheetCurr = ss.getSheetByName("2026") || ss.getSheetByName("2569");
-    if (!sheetCurr) return null;
-
-    const dataCurr = sheetCurr.getDataRange().getValues();
-
-    // เก็บทุกสัปดาห์ที่มีข้อมูลไว้ก่อน ยังไม่รวมยอด
-    let weeks = [];
-    for (let i = 1; i < dataCurr.length; i++) {
-      let wk = parseInt(dataCurr[i][0]);
-      if (isNaN(wk)) continue;
-      if (dataCurr[i][1] === null || String(dataCurr[i][1]) === "") continue;
-      weeks.push({
-        wk: wk,
-        vals: [0, 1, 2, 3].map(c => parseFloat(dataCurr[i][c + 1]) || 0)
-      });
-    }
-    if (weeks.length === 0) return null;
-
-    // ── ตัดสัปดาห์ล่าสุดทิ้ง ──────────────────────────────────────────
-    // HDC เพิ่งเริ่มรายงานสัปดาห์ล่าสุด ยัง query ไม่ครบ (เช่น wk34 มี 3 ราย
-    // เทียบ wk33 ที่มี 1,472) ถ้านับเข้าไปด้วย ยอดสะสมจะต่ำกว่าจริง และเลข
-    // สัปดาห์จะไม่ตรงกับหน้าเว็บ ซึ่งใช้ "สัปดาห์รองสุดท้าย" เหมือนกัน
-    weeks.sort((a, b) => a.wk - b.wk);
-    if (weeks.length > 1) weeks.pop();
-
-    let maxWeek = weeks[weeks.length - 1].wk;
-    let currentSum = [0, 0, 0, 0];
-    weeks.forEach(w => { for (let c = 0; c < 4; c++) currentSum[c] += w.vals[c]; });
-
-    // คอลัมน์ F = "อัพเดท" (A=wk, B-E=หมวดโรค, F=อัพเดท)
-    let dateVal = sheetCurr.getRange("F2").getValue();
-    let finalDateStr = "ไม่ระบุวันที่";
-
-    if (dateVal) {
-      if (dateVal instanceof Date) {
-        let d = Utilities.formatDate(dateVal, "GMT+7", "dd");
-        let m = Utilities.formatDate(dateVal, "GMT+7", "MM");
-        let y = parseInt(Utilities.formatDate(dateVal, "GMT+7", "yyyy"));
-        if (y < 2500) y += 543;
-        finalDateStr = `${d}/${m}/${y}`;
-      } else {
-        // แปลง ค.ศ. → พ.ศ. จากเลขปีจริง ไม่ใช่ replace('2026','2569')
-        // ของเดิมผูกกับปี 2026 ตายตัว พอขึ้นปีใหม่จะแสดงเป็น ค.ศ. เงียบๆ
-        let m2 = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(dateVal).trim());
-        if (m2) {
-          let y2 = parseInt(m2[3], 10);
-          if (y2 < 2500) y2 += 543;
-          finalDateStr = `${parseInt(m2[1], 10)}/${parseInt(m2[2], 10)}/${y2}`;
-        } else {
-          finalDateStr = String(dateVal);
-        }
-      }
-    }
-
-    return {
-      year: 2569,
-      wk: maxWeek || "-",
-      curr: currentSum,
-      dateStr: finalDateStr
-    };
-  } catch (e) {
-    console.log("❌ Error ดึงข้อมูลสุขภาพ: " + e.message);
-    return null;
-  }
+  return getHealthFromDashboard_();
 }
 
 // ==========================================================
