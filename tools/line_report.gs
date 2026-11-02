@@ -592,7 +592,7 @@ const DISEASE_KEYS  = ['ทางเดินหายใจ', 'หัวใจ'
 /**
  * ยอดผู้ป่วยสะสม "ชุดเดียวกับหน้าเว็บ" — อ่านจาก /api/sheet-disease ของแดชบอร์ด
  * (เซิร์ฟเวอร์เลือกแหล่งที่ใหม่กว่าระหว่าง HDC โดยตรง กับชีต แล้ว)
- * สัปดาห์ที่ตัด = meta.reportWeek || (สัปดาห์ล่าสุด − 1)  ← สูตรเดียวกับ renderDisease() ใน index.html
+ * สัปดาห์ที่ตัด = meta.reportWeek || สัปดาห์ล่าสุดที่มี (เซิร์ฟเวอร์ส่ง reportWeek มาเสมอ)
  * ดึงไม่ได้/ข้อมูลว่าง → คืน null (ไม่มีทางสำรองที่ใช้นิยามอื่น)
  */
 function getHealthFromDashboard_() {
@@ -613,7 +613,7 @@ function getHealthFromDashboard_() {
     if (!wks.length) return null;
 
     const meta  = dz.meta || {};
-    const wkMax = meta.reportWeek || (Math.max.apply(null, wks) - 1);
+    const wkMax = meta.reportWeek || Math.max.apply(null, wks);
     if (!(wkMax >= 1)) return null;
 
     const curr = DISEASE_KEYS.map(key => rows.reduce((sum, r) => {

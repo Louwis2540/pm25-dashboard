@@ -646,7 +646,7 @@ async function buildDiseaseYear(Y) {
   const dateCom = src.minDateCom || src.dateCom || '';
   const rows = regionRowsFromPv(src.rows || [], dateComToDmy(dateCom));
   const moph = Object.assign([], { missing });         // ช่องเดิมของ meta.mophMissing
-  return { Y, moph, useSheet, rows, dateCom, stable: stableEpiWeek(Y, rows.map(r => r.wk), dateCom) };
+  return { Y, moph, useSheet, rows, dateCom, latestWk: Math.max(0, ...rows.map(r => Number(r.wk) || 0)) };
 }
 
 // รวมรายจังหวัด × สัปดาห์ (pvRowsFrom) → รายสัปดาห์ทั้งเขต รูปแบบเดียวกับ parseDiseaseData:
@@ -662,37 +662,12 @@ function regionRowsFromPv(pvRows, upd) {
   return Object.values(byWk).sort((a, b) => a.wk - b.wk).map(o => upd ? { ...o, 'อัพเดท': upd } : o);
 }
 
-// สัปดาห์ระบาดวิทยา (อาทิตย์–เสาร์ · สัปดาห์ที่ 1 = สัปดาห์ที่มี 1 ม.ค.) → เวลาสิ้นสัปดาห์ (วันเสาร์ 00:00 UTC)
-const epiWeekEndMs = (Y, w) => {
-  const j1 = Date.UTC(Y, 0, 1);
-  return j1 - new Date(j1).getUTCDay() * 864e5 + (7 * w - 1) * 864e5;
-};
-
-// สัปดาห์ที่ "นิ่ง" = สัปดาห์ล่าสุดที่สิ้นสุดก่อนวันประมวลผลของ HDC (date_com) อย่างน้อย N วัน (ค่าเริ่มต้น 42 = 6 สัปดาห์)
-// ที่มา: เทียบ snapshot ตุลาคม 2569 — สัปดาห์ที่อายุ ≥ 41 วัน ณ วันประมวลผล ถูกแก้ย้อนหลังเพิ่มไม่เกิน ~5%
-// (อายุ 34 วัน +12–26% · 20 วัน +19–39% · 6 วัน +38–63%) · ใช้วันประมวลผลของตารางเอง ไม่ใช่วันนี้
-// จึงไม่เพี้ยนเมื่อต้นทางหยุดอัปเดต · คืน 0 ถ้ายังไม่มีสัปดาห์ไหนอายุถึงเกณฑ์ (ต้นปี)
-function stableEpiWeek(Y, weeks, dateCom, minAgeDays) {
-  const m = /^(\d{4})(\d{2})(\d{2})/.exec(String(dateCom || ''));
-  if (!m) return 0;
-  const cutoff = Date.UTC(+m[1], +m[2] - 1, +m[3]) - (minAgeDays || Number(readConfig().api.disease_stable_days) || 42) * 864e5;
-  return Math.max(0, ...(weeks || []).map(Number).filter(w => w >= 1 && epiWeekEndMs(Y, w) <= cutoff));
-}
-
-// ปีที่มีข้อมูลล่าสุด + สัปดาห์ล่าสุดที่ "นิ่งแล้ว" (ใช้กับกราฟย้อนหลัง 12 เดือน)
-//   สัปดาห์นิ่งคำนวณใน buildDiseaseYear (stableEpiWeek) · ไม่มีวันประมวลผลให้คำนวณ → ถอยไป "สัปดาห์ล่าสุด − 1"
-//   ต้นปีที่ปีใหม่ยังไม่มีสัปดาห์ที่นิ่ง → ใช้สัปดาห์สุดท้ายของปีก่อนหน้า (ทั้งปีนับว่าจบแล้ว)
+// ปีที่มีข้อมูลล่าสุด + สัปดาห์ล่าสุดที่มีในข้อมูล (กราฟรายเดือน และ meta.reportWeek ที่ LINE ใช้)
+//   3 พ.ย. 2569 Louis เลือกแสดงถึงสัปดาห์ล่าสุดที่มี ไม่ตัดสัปดาห์ท้ายเพื่อรอความนิ่ง (ตัวเลขทยอยเพิ่มเอง
+//   หน้าเว็บแสดงเดือนล่าสุดที่มีข้อมูลเป็นแท่งสีจาง) · ปีใหม่ที่ยังไม่มีข้อมูล → ใช้ปีก่อนหน้า
 function pickDataYear(yearsAsc) {
   for (let i = yearsAsc.length - 1; i >= 0; i--) {
-    const { Y, rows, stable, dateCom } = yearsAsc[i];
-    const wks = rows.map(r => Number(r.wk)).filter(Boolean);
-    if (!wks.length) continue;
-    const w = dateCom ? stable : Math.max(...wks) - 1;
-    if (w >= 1) return { year: Y, week: w };
-    const prev = yearsAsc[i - 1];
-    const pw = prev ? prev.rows.map(r => Number(r.wk)).filter(Boolean) : [];
-    if (pw.length) return { year: prev.Y, week: Math.max(...pw) };
-    return { year: Y, week: Math.max(...wks) };
+    if (yearsAsc[i].latestWk >= 1) return { year: yearsAsc[i].Y, week: yearsAsc[i].latestWk };
   }
   return { year: DISEASE_HYBRID_FROM, week: 0 };
 }
@@ -736,9 +711,8 @@ async function buildDiseaseData() {
     source,                                    // 'sheet' = แท็บ latest · 'moph' = MOPH ตรง
     table: 's_pm25_2_in_week',                 // ตารางที่ใช้ (ผู้ป่วยที่อยู่จริง Type 1+3 นับรายคน — ตรงกับเทมเพลต กรมควบคุมโรค)
     mophMissing: latest.moph.missing || [],    // จังหวัดที่ดึงจาก MOPH ไม่ได้รอบนี้ (ว่าง = ครบ 4 จังหวัด)
-    // สัปดาห์ที่รายงาน (นิ่งแล้ว) — LINE และหน้าเว็บอ่านค่าเดียวกันนี้
-    reportWeek: latest.dateCom ? latest.stable : null,
-    stableDays: Number(api.disease_stable_days) || 42,
+    // สัปดาห์ล่าสุดที่มีในข้อมูล — LINE และหน้าเว็บอ่านค่าเดียวกันนี้
+    reportWeek: latest.latestWk || null,
     dataYear: pick.year,                       // ปีที่ข้อมูลล่าสุดของกราฟย้อนหลัง 12 เดือนอยู่ (ค.ศ.)
     dataWk:   pick.week,                       // สัปดาห์ระบาดวิทยาล่าสุดที่นิ่งแล้วของปีนั้น
     dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"

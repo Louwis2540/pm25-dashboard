@@ -469,7 +469,9 @@ function igFitTiles(ig) {
   const tw = ig.classList.contains("social") && !ig.dataset.tc ? IG_TW : IG_TW + (ig.dataset.tc ? 440 : 120); t.style.width = tw + "px";
   const k = box.clientWidth / tw; t.style.transform = `scale(${k})`; box.style.height = (t.offsetHeight * k) + "px";
 }
-function igEpiWk() { return epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
+// สัปดาห์ระบาดวิทยาบนหัวอินโฟกราฟิก = สัปดาห์ล่าสุดที่มีข้อมูลผู้ป่วยเข้ามาจริง (S.wkMax = meta.reportWeek) ไม่ใช่สัปดาห์ของวันนี้
+// ยังโหลดข้อมูลโรคไม่เสร็จ → ถอยไปใช้สัปดาห์ของวันที่รายงาน
+function igEpiWk() { return S.wkMax || epiWeekOf(new Date(S.todayRow?.date + "T00:00:00")); }
 function buildInfographic(size = "a4", dense = 0) {
   const F = igFocus(), L = LV[F.lv], ig = document.getElementById("ig");
   ig.className = size; delete ig.dataset.sp; ig.dataset.dense = Math.min(dense, 3); const rgA4 = size === "a4" && !S.igPv; ig.dataset.dx = dense >= 4 || rgA4 ? "1" : ""; const rgSo = size === "social" && !S.igPv; ig.dataset.tc = dense >= 7 || rgA4 || rgSo ? "1" : ""; ig.dataset.dl = dense >= 5 || rgA4 ? "1" : "";   /* ระดับเขต: การ์ดจังหวัดแบบย่อเสมอ (เน้นกราฟผู้ป่วย) */   // A4 ระดับเขต: ส่วนอื่นแบบกระชับเสมอ พื้นที่ที่เหลือให้กราฟผู้ป่วย   // ขั้น 7 = การ์ดจังหวัดย่อ (สำรองสุดท้าย)   // ขั้น 4 = ขั้น 3 + ย่อเพิ่ม
