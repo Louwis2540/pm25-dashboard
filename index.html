@@ -2533,13 +2533,14 @@ function monthly(rows, key, upToWk, yearCE) {
 }
 const DZ_PROV_WK = 4;
 function monthlyWk(rows, key, upToWk, yearCE) {
+  const curMo = upToWk <= 53 ? epiMonth(yearCE, upToWk) : -1;   // เดือนล่าสุดของข้อมูล = เดือนของสัปดาห์ล่าสุด (upToWk = 99 → ปีที่ผ่านมาแล้ว ไม่มีเดือนจาง)
   const sum = Array(12).fill(0), n = Array(12).fill(0), prov = Array(12).fill(false), wks = Array.from({ length: 12 }, () => []), shortD = Array(12).fill(0);
   for (const r of rows || []) {
     const wk = +r.wk; if (!wk || wk > upToWk) continue;
     const k = Object.keys(r).find(x => x.includes(key)); const v = +String(r[k] ?? "").replace(/,/g, "");
     if (!k || isNaN(v)) continue;
     const mo = epiMonth(yearCE, wk);
-    sum[mo] += v; n[mo]++; wks[mo].push(wk); if (wk > upToWk - DZ_PROV_WK) prov[mo] = true;
+    sum[mo] += v; n[mo]++; wks[mo].push(wk); if (mo === curMo) prov[mo] = true;
     const nd = Math.round((epiEnd(yearCE, wk) - epiStart(yearCE, wk)) / 864e5) + 1; if (nd < 7) shortD[mo] = nd;   // สัปดาห์ไม่เต็ม 7 วัน
   }
   return sum.map((s, i) => n[i] ? { avg: s / n[i], sum: s, n: n[i], prov: prov[i], w0: Math.min(...wks[i]), w1: Math.max(...wks[i]), short: shortD[i] } : null);
@@ -2637,8 +2638,8 @@ function dzMonthAll(dz, wkMax) {
       <li><b>เส้นสีเข้ม</b> = ค่า <span class="pm25">PM<sub>2.5</sub></span> เฉลี่ยของเดือน (เฉลี่ย 4 จังหวัด · ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จากสถานี Air4Thai ร่วมกับดาวเทียม GISTDA) แกนขวาเท่ากันทุกกลุ่มโรค · <b>เส้นประส้ม 37.5</b> = ค่ามาตรฐาน</li>
       <li><b>พื้นแรเงาส้ม</b> = ช่วงฤดูฝุ่น (1 พ.ย.–31 พ.ค.) · ใช้ดูว่าผู้ป่วยกับฝุ่นขึ้นลงในช่วงเวลาเดียวกันหรือไม่ ไม่ได้ยืนยันว่าฝุ่นเป็นสาเหตุโดยตรง</li>
       <li>นับตาม<b>สัปดาห์ระบาดวิทยา</b> (อาทิตย์–เสาร์ · สัปดาห์ที่ 1 = 1 ม.ค. ถึงเสาร์แรกของปี) สัปดาห์ที่คร่อมสองเดือนนับเข้าเดือนที่มีวันมากกว่า · แต่ละกลุ่มโรคมีแกนซ้ายของตัวเอง เทียบขนาดจริงจากตัวเลขบนแท่ง</li>
-      <li><b>แท่งจางขอบประ และพื้นเทา</b> (เดือนที่มี *) = มีข้อมูลเบื้องต้นรวมอยู่ · <b>เดือนที่มี †</b> = มีสัปดาห์ไม่เต็ม 7 วันรวมอยู่ (สัปดาห์ที่ 1 และสัปดาห์สุดท้ายของปี) ยอดรวมต่ำกว่าจริงเล็กน้อย</li></ul></details>
-    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ${provMonths.length ? ` <span class="nw">* ${DZ_PROV_WK} สัปดาห์ล่าสุด (สัปดาห์ที่ ${Math.max(1, end.w - DZ_PROV_WK + 1)}–${end.w} · ${epiRange(cy, Math.max(1, end.w - DZ_PROV_WK + 1), end.w)}) เป็นข้อมูลเบื้องต้น แสดงเป็นแท่งจาง ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงไม่ใช้สรุปแนวโน้ม</span>` : ""}<span class="nw"><b>การอ่านผล</b> เปรียบเทียบเชิงสถานการณ์เพื่อเฝ้าระวัง ไม่ได้ทดสอบความสัมพันธ์เชิงสาเหตุกับฝุ่น</span></div>
+      <li><b>แท่งสีจาง และพื้นเทา</b> (เดือนที่มี *) = เดือนล่าสุดของข้อมูล ตัวเลขยังทยอยเพิ่มขึ้นตามรายงานที่เข้าระบบ · <b>เดือนที่มี †</b> = มีสัปดาห์ไม่เต็ม 7 วันรวมอยู่ (สัปดาห์ที่ 1 และสัปดาห์สุดท้ายของปี) ยอดรวมต่ำกว่าจริงเล็กน้อย</li></ul></details>
+    <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} ตัวเลขทยอยเพิ่มขึ้นตามรายงานที่เข้าระบบ${provMonths.length ? ` <span class="nw">* ${provMonths.join(" ")} = เดือนล่าสุด (ข้อมูลถึงสัปดาห์ที่ ${end.w}) แสดงเป็นแท่งสีจาง ตัวเลขจะเพิ่มขึ้นเรื่อย ๆ จึงไม่ใช้สรุปแนวโน้ม</span>` : ""}<span class="nw"><b>การอ่านผล</b> เปรียบเทียบเชิงสถานการณ์เพื่อเฝ้าระวัง ไม่ได้ทดสอบความสัมพันธ์เชิงสาเหตุกับฝุ่น</span></div>
     <div class="tip"></div></article>`;
 }
 // E2–E5 · การ์ดรายจังหวัด: แถบค่าฝุ่นเฉลี่ยรายสัปดาห์ + อัตราผู้ป่วยต่อแสนประชากร 4 กลุ่มโรค (แกนเวลาเดียวกัน)
@@ -3533,7 +3534,7 @@ function igComboSec(H) {
   return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">จำนวนผู้ป่วย 4 กลุ่มโรคเทียบกับค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ${pv ? `จ.${pv}` : "ทั้งเขตสุขภาพที่ 7"}</small></div>
     <div class="cbk"><span><i class="bar"></i><em>จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
     <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H, months)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? `* ${months.filter((_, i) => ser[0].bars[i]?.prov).map(o => TH_M[o.m]).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}${pv && !window.DZPV?.rowsPrev?.length ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
+    <div class="dzl">${prov ? `* ${months.filter((_, i) => ser[0].bars[i]?.prov).map(o => TH_M[o.m]).join(" ")} = เดือนล่าสุด ตัวเลขยังทยอยเพิ่ม · ` : ""}${pv && !window.DZPV?.rowsPrev?.length ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 const IG_NAME = "R7_PM" + "2.5_dashboard";   // ชื่อที่แสดงท้ายหน้า (QR ยังชี้ไปที่ IG_URL) · แยกสตริงกันตัวแทนที่ชื่อสารมลพิษตอน build
@@ -3706,7 +3707,7 @@ function igSocialRg(ig, head, foot, maxBar, adviceBox, riskNote, act, dense) {
   const prov = last >= 0 && ser[0].m.some(o => o?.prov);
   const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · ทั้งเขตสุขภาพที่ 7</em><small style="margin-left:auto">ราย/เดือน</small></div>
     <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 17)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
+    <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = เดือนล่าสุด ตัวเลขยังทยอยเพิ่ม · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   ig.innerHTML = head + `<div class="ig-body sp sprg">${maxBar}${igTiles()}${igH3()}${adviceBox}${act}${dz}${riskNote}</div>` + foot;
 }
 function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
@@ -3725,7 +3726,7 @@ function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
   const prov = last >= 0 && ser[0].m.some(o => o?.prov);
   const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · จ.${pv}</em><small style="margin-left:auto">ราย/เดือน</small></div>
     <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 18)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
+    <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = เดือนล่าสุด ตัวเลขยังทยอยเพิ่ม · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   ig.innerHTML = head + `<div class="ig-body sp">${top}${adviceBox}${act}${dz}${riskNote}</div>` + foot;   // ฝุ่น (วันนี้ + 30 วัน) → 7 วัน/คาดการณ์ → คำแนะนำ → ผู้ป่วย
 }
 // หัวเรื่อง: ย่อป้าย PHEOC "ถึงเกณฑ์ · จ.ก, ข, ค" → "ถึงเกณฑ์ 3 จังหวัด" (รายชื่อยาวทำให้หัวเรื่องสูงหลายบรรทัด)
@@ -3820,7 +3821,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const provM = last < 0 ? [] : ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean);
   const sec4 = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569${F.region ? "" : ` · จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}</em><small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)</small></div>
     <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${igDzName(s.d)}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, F.region ? 16.5 : 17)}</div>`).join("")}</div>
-    <div class="dzl">${provM.length ? `* ${provM.join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
+    <div class="dzl">${provM.length ? `* ${provM.join(" ")} = เดือนล่าสุด ตัวเลขยังทยอยเพิ่ม · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   const sec5 = igComboSec(CBH);
   ig.innerHTML = head + `
   <div class="ig-body a4v2">

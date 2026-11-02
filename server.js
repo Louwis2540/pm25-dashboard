@@ -668,14 +668,16 @@ const epiWeekEndMs = (Y, w) => {
   return j1 - new Date(j1).getUTCDay() * 864e5 + (7 * w - 1) * 864e5;
 };
 
-// สัปดาห์ที่ "นิ่ง" = สัปดาห์ล่าสุดที่สิ้นสุดก่อนวันประมวลผลของ HDC (date_com) อย่างน้อย N วัน (ค่าเริ่มต้น 42 = 6 สัปดาห์)
-// ที่มา: เทียบ snapshot ตุลาคม 2569 — สัปดาห์ที่อายุ ≥ 41 วัน ณ วันประมวลผล ถูกแก้ย้อนหลังเพิ่มไม่เกิน ~5%
+// สัปดาห์ที่รายงาน = สัปดาห์ล่าสุดที่สิ้นสุด (เสาร์) ก่อนหรือตรงกับวันประมวลผลของ HDC (date_com) ลบ N วัน
+// ค่าเริ่มต้น N = 0 (3 พ.ย. 2569 Louis เลือกแสดงข้อมูลถึงสัปดาห์ล่าสุดที่มี ไม่ตัดสัปดาห์ท้ายเพื่อรอความนิ่ง
+// เดือนล่าสุดแสดงเป็นแท่งสีจางแทน) · ตั้ง config.api.disease_stable_days = 42 เพื่อกลับไปตัดสัปดาห์ที่อายุ < 6 สัปดาห์
+// ข้อมูลประกอบการเลือก N: เทียบ snapshot ต.ค. 2569 — สัปดาห์อายุ ≥ 41 วัน ณ วันประมวลผล ถูกแก้ย้อนหลังเพิ่มไม่เกิน ~5%
 // (อายุ 34 วัน +12–26% · 20 วัน +19–39% · 6 วัน +38–63%) · ใช้วันประมวลผลของตารางเอง ไม่ใช่วันนี้
-// จึงไม่เพี้ยนเมื่อต้นทางหยุดอัปเดต · คืน 0 ถ้ายังไม่มีสัปดาห์ไหนอายุถึงเกณฑ์ (ต้นปี)
+// จึงไม่เพี้ยนเมื่อต้นทางหยุดอัปเดต · คืน 0 ถ้ายังไม่มีสัปดาห์ไหนจบ (ต้นปี)
 function stableEpiWeek(Y, weeks, dateCom, minAgeDays) {
   const m = /^(\d{4})(\d{2})(\d{2})/.exec(String(dateCom || ''));
   if (!m) return 0;
-  const cutoff = Date.UTC(+m[1], +m[2] - 1, +m[3]) - (minAgeDays || Number(readConfig().api.disease_stable_days) || 42) * 864e5;
+  const cutoff = Date.UTC(+m[1], +m[2] - 1, +m[3]) - (minAgeDays ?? (Number(readConfig().api.disease_stable_days) || 0)) * 864e5;
   return Math.max(0, ...(weeks || []).map(Number).filter(w => w >= 1 && epiWeekEndMs(Y, w) <= cutoff));
 }
 
@@ -738,7 +740,7 @@ async function buildDiseaseData() {
     mophMissing: latest.moph.missing || [],    // จังหวัดที่ดึงจาก MOPH ไม่ได้รอบนี้ (ว่าง = ครบ 4 จังหวัด)
     // สัปดาห์ที่รายงาน (นิ่งแล้ว) — LINE และหน้าเว็บอ่านค่าเดียวกันนี้
     reportWeek: latest.dateCom ? latest.stable : null,
-    stableDays: Number(api.disease_stable_days) || 42,
+    stableDays: Number(api.disease_stable_days) || 0,
     dataYear: pick.year,                       // ปีที่ข้อมูลล่าสุดของกราฟย้อนหลัง 12 เดือนอยู่ (ค.ศ.)
     dataWk:   pick.week,                       // สัปดาห์ระบาดวิทยาล่าสุดที่นิ่งแล้วของปีนั้น
     dataDate: age.dataDate,                    // D/M/YYYY (ค.ศ.) ตามที่อยู่ในคอลัมน์ "อัพเดท"
