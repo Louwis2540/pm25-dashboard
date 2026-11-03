@@ -180,6 +180,14 @@
   document.head.appendChild(st);
 })();
 // ส่วนท้ายเป็น position:absolute → เว้นที่ด้านล่างเนื้อหาเท่าความสูงจริงของส่วนท้าย (เดิมโซเชียลเว้นแค่ 14px จึงซ้อนทับ)
+// หมายเหตุ "กลุ่มเสี่ยง… · สายด่วน 1422 · งดเผา… แจ้ง 1650" (A4): ให้อยู่บรรทัดเดียวเสมอ — ถ้ายาวเกินความกว้างให้ย่อฟอนต์ทีละ .25px (ขั้นต่ำ 10px) แทนการตัดขึ้นบรรทัดสองแล้วถูกกรอบตัดทิ้ง (3 พ.ย. 2569)
+function igFitNote(ig) {
+  ig.querySelectorAll(".a4v2 .ig-note").forEach(n => {
+    n.style.whiteSpace = "nowrap"; n.style.fontSize = "";
+    let fs = parseFloat(getComputedStyle(n).fontSize);
+    while (n.scrollWidth > n.clientWidth + .5 && fs > 10) { fs -= .25; n.style.fontSize = fs + "px"; }
+  });
+}
 function igPad(ig) { const f = ig.querySelector(".ig-f"), b = ig.querySelector(".ig-body"); if (f && b) b.style.paddingBottom = (ig.clientHeight - f.offsetTop + 10) + "px"; }
 // ย่อทีละขั้น (โพสต์ 0–4 · A4 0–7) จนไม่ล้น — ล้นตรวจจากส่วนที่เว้นไว้เหนือส่วนท้ายด้วย
 let IG_GROW = 0;   // A4: พื้นที่ว่างที่แจกให้กราฟข้อ 4–5 (px)
@@ -544,7 +552,7 @@ function buildInfographic(size = "a4", dense = 0) {
   <div class="ig-body a4v2">
     ${sec1}${sec2}${sec3}${sec4}${sec5}
   </div>${foot}`;
-  igFitTiles(ig); igPad(ig); igFitPvChart(ig);
+  igFitNote(ig); igFitTiles(ig); igPad(ig); igFitPvChart(ig);
 }
 
 // ================= สร้างภาพ / บันทึกรูป (1 พ.ย. 2569) =================
