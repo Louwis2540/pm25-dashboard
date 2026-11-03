@@ -156,9 +156,15 @@
 #ig .fc4g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}#ig .fc4g .c{display:grid;grid-template-columns:auto 1fr 1fr 1fr;align-items:center;gap:4px;background:#fff;border:1px solid rgba(15,27,45,.1);border-radius:12px;padding:4px 6px}
 #ig .fc4g .n{font-family:Anuphan;font-weight:700;font-size:14px;color:var(--ink-1);padding-right:2px;white-space:nowrap}#ig .fc4g .v{display:flex;flex-direction:column;align-items:center;border-radius:8px;padding:1px 2px 2px;font-family:Anuphan;font-weight:700;font-size:17px;line-height:1.3}#ig .fc4g .v small{display:block;font-family:"IBM Plex Sans Thai";font-size:11px;line-height:1.35;font-weight:600;opacity:.9;white-space:nowrap}
 #ig .ig-date .today-b,#ig .ig-date .d em{display:inline-flex!important;align-items:center;justify-content:center;box-sizing:border-box;height:46px;padding:0 18px!important;line-height:1!important}#ig:not(.social) .ig-date .today-b,#ig:not(.social) .ig-date .d em{height:38px;padding:0 15px!important}#ig:not(.social) .ig-date .d em{font-size:20px!important}#ig:not(.social) .ig-date .today-b{font-size:21px!important}
-/* กรอบคำแนะนำ: ตัวหนังสือไทยมีสระ/วรรณยุกต์ด้านบน → เว้นบนมากกว่าล่างให้หมึกอยู่กึ่งกลาง · ไม่ให้บรรทัด 2 ชนขอบ (1 พ.ย. 2569) */
-#ig#ig .advice .do{display:flex!important;align-items:center!important;line-height:1.36!important;padding:3px 8px 1px!important;min-height:0!important}
-#ig#ig[data-dl="1"] .advice .do,#ig#ig[data-sp="5"] .advice .do,#ig#ig[data-sp="6"] .advice .do{padding:3px 8px 0!important}
+/* กรอบคำแนะนำ: ฟอนต์ LINE Seed วางตัวอักษรไทยต่ำกว่ากึ่งกลางบรรทัดราว 0.1 em (เหลือที่ด้านบนไว้ให้สระ/วรรณยุกต์) → เดิมเว้นบน 3px ล่าง 0 ยิ่งดันข้อความลงจนสระล่างชนขอบ
+   แก้: padding บน-ล่างเท่ากัน แล้วยกข้อความขึ้นด้วย .dt (em) ให้ตัวพยัญชนะอยู่กึ่งกลางแนวเดียวกับไอคอน · ใช้ em เพื่อให้ตามขนาดตัวอักษรทุกแบบ (A4 ระดับเขต 14.5px ใช้ 0.12em + padding 3px เพราะกรอบเตี้ย)
+   โพสต์แบบแน่นสุด (social + data-dl=1 = sp5/sp6) คงของเดิม เพราะกรอบเตี้ยเกินกว่าจะเว้นที่ให้สระบนได้ (3 พ.ย. 2569) */
+#ig#ig .advice .do{display:flex!important;align-items:center!important;line-height:1.36!important;padding:2px 8px!important;min-height:0!important}
+#ig#ig[data-dl="1"].a4 .advice .do{padding:3px 8px!important}
+#ig#ig.social[data-dl="1"] .advice .do{padding:3px 8px 0!important}
+#ig .advice .do .dt{font-style:normal;position:relative;top:-.09em}
+#ig[data-dl="1"].a4 .advice .do .dt{top:-.12em}
+#ig.social[data-dl="1"] .advice .do .dt{top:0}
 #ig#ig .advice .w{padding-bottom:6px!important}
 #ig .advice .do{text-wrap:pretty}
 #ig .sprg .advice .w{padding:4px 12px;gap:3px}#ig .sprg .advice .w h4{margin:0;font-size:16px}#ig .sprg .advice .do{padding:1px 8px;font-size:15px!important;line-height:1.3;min-height:0}#ig .sprg .advice .do span{width:26px;height:26px}#ig .sprg .advice .do span svg{width:18px;height:18px}#ig .sprg .advice{grid-template-columns:170px 1fr 1fr!important}#ig .sprg .advice .lv{padding:6px 8px!important;gap:2px!important}#ig .sprg .advice .lv b{font-size:20px!important;line-height:1.2}#ig .sprg .advice .lv .f{font-size:30px}#ig .sprg .advice .lv>span:last-child{font-size:13.5px;white-space:nowrap}
@@ -487,8 +493,8 @@ function buildInfographic(size = "a4", dense = 0) {
   const maxBar = F.region && F.f ? `<div class="maxbar"><span class="mk">${inl("i-pin", 22)}สูงสุดในเขตสุขภาพที่ 7 วันนี้</span><b class="mp">จ.${F.f.p.name}</b><span class="mv num">${f1(F.f.v)}<small> µg/m³</small><em class="mavg"> (ค่าเฉลี่ย 24 ชม.)</em></span>${igHsPill()}</div>` : "";   // ที่มาค่าฝุ่นอยู่ที่ตารางย้อนหลัง 7 วัน / ท้ายหน้า
   const adviceBox = `<div class="ig-sec"><span>${inl("i-shield", 20)}</span>คำแนะนำการปฏิบัติตัววันนี้</div>
     <div class="advice"><div class="lv"><span class="f">${L.face}</span><b>${L.name}</b><span>${L.range} µg/m³</span></div>
-      <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div>
-      <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
+      <div class="w"><h4>${inl("i-people", 24)}ประชาชนทั่วไป</h4>${L.pub.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span><em class="dt">${x}</em></div>`).join("")}</div>
+      <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span><em class="dt">${x}</em></div>`).join("")}</div></div>`;
   const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === F.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
   const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span class="ig-fl"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_NAME}<br><span class="nw">แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ)</span> · <span class="nw">GISTDA</span> · <span class="nw">HDC กระทรวงสาธารณสุข</span></span><span class="ig-fr">${size === "social" ? "" : `<span class="nw">ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม</span><br>`}<span class="nw">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</span><br><span class="nw">กรมควบคุมโรค</span></span></div>`;
   const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
