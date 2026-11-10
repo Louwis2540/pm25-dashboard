@@ -8,13 +8,13 @@
   5 สรุปช่วงที่แสดง · จำนวนวันที่เกินเกณฑ์          zSummary
   6 จุดความร้อน                                   zHot
   7 แผนที่ค่าฝุ่นวันนี้ (ของเดิม ย้ายลงล่าง)        zMap      (ขั้น 2: รวมกับจุดความร้อน + real-time)
-  8 โรค: รายเดือน 16 เดือน + ฝุ่นกับผู้ป่วยรายสัปดาห์    zDisease
+  8 โรค: ตารางรายเดือน พ.ย. 2568 → เดือนล่าสุด ระดับเขต (ไม่มีกราฟ · ตัดแผงรายจังหวัดออก)  zDisease
   9 คำแนะนำการปฏิบัติตัว 5 ระดับ (ตัดภาพรวมออก)     zAdvice
 
 ไม่แตะ: อินโฟกราฟิกทุกส่วน (b4_*, ig_new.js, pv_social.js, fitInfographic, ig*, แผงดาวน์โหลด Infographic)
 ใช้ร่วมเดโม่ (build_demo.py) — เรียกหลัง nav_apply / c5_apply
 """
-import json, re
+import json, pathlib, re
 
 
 def _sub(html, old, new, count=1):
@@ -55,6 +55,26 @@ CSS = """
 .trend.tr-one,.drill.dr-one{grid-template-columns:minmax(0,1fr)}
 @media (max-width:1100px){.pv-top.ws-side .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.wk-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:680px){.pv-top .facts-box .facts{grid-template-columns:minmax(0,1fr)}}
+
+/* ส่วน 8 · ตารางรายเดือน */
+.dzt-wrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.dzt{width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+.dzt th,.dzt td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line);vertical-align:middle}
+.dzt thead th{font-size:calc(13px*var(--fs,1));font-weight:700;color:var(--ink-2);background:var(--subtle,#f3f6f9);line-height:1.3;vertical-align:bottom}
+.dzt thead th small,.dzt tbody th small{display:block;font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3)}
+.dzt th:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--surface)}
+.dzt thead th:first-child{background:var(--subtle,#f3f6f9)}
+.dzt tbody tr:last-child>*{border-bottom:0}
+.dzt .dzt-m{font-weight:700;color:var(--ink-1);font-size:calc(14.5px*var(--fs,1))}
+.dzt .dzt-m sup{font-size:.75em;color:var(--ink-2);margin-left:1px}
+.dzt .dzt-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.dzt td b{display:block;font-size:calc(15px*var(--fs,1));font-weight:700;color:var(--ink-1)}
+.dzt td small{display:block;font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3)}
+.dzt td.na{color:var(--ink-3);font-weight:600}
+.dzt td.reg,.dzt th.reg{background:color-mix(in srgb,var(--dc,#5f6c80) 9%,#fff);border-left:2px solid color-mix(in srgb,var(--dc,#5f6c80) 30%,#fff)}
+.dzt tr.prov td b{color:var(--ink-2)}
+.dzt td.pmc{border-left:2px solid var(--line)}
+@media (max-width:680px){.dzt th,.dzt td{padding:7px 9px}}
 """
 
 # ไอคอนแถบนำทางของหัวข้อใหม่ (SVG วาดเอง · viewBox 24) — [สีบน, สีล่าง, path]
@@ -120,8 +140,12 @@ def apply(html):
     html = _sub(html, '<div class="a ${i === S.lv ? "cur" : ""}"><b><i style="background:${l.c}"></i>${l.name}${i === S.lv ? " · วันนี้" : ""}</b>',
                 '<div class="a"><b><i style="background:${l.c}"></i>${l.name}</b>')
 
-    # ---------- 6) กลุ่มโรครายเดือน 16 เดือน (อินโฟกราฟิกใช้ IG_CB_N แยกอยู่แล้ว ไม่กระทบ) ----------
-    html = _sub(html, "const DZ_CB_N = 12;", "const DZ_CB_N = 16;")
+    # ---------- 6) ส่วน 8 โรค: ตารางรายเดือน พ.ย. 2568 → เดือนล่าสุด (ไม่มีกราฟ) · ดู dz_tables.js ----------
+    #   อินโฟกราฟิกใช้ IG_CB_N / igDz* ของตัวเอง ไม่เกี่ยว
+    js = (pathlib.Path(__file__).parent / "dz_tables.js").read_text(encoding="utf-8")
+    html = _sub(html, "function e2xBlock(wkMax) { return e2xAll(wkMax); }   // แทนแผงแท่งอัตราป่วยเดิม", js)
+    html = _sub(html, "ผู้ป่วย 4 กลุ่มโรค · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)})",
+                "ผู้ป่วย 4 กลุ่มโรค · ตั้งแต่ พ.ย. 2568 ถึงสัปดาห์ระบาดวิทยาที่ ${wkMax} ปี 2569")
 
     # ---------- 7) แถบนำทางซ้าย: ลำดับ + ชื่อ + ไอคอนใหม่ ----------
     m = re.search(r'const SB_MENU = \[\[.*?\]\];', html, re.S)
