@@ -1,4 +1,4 @@
-"""PHEOC บนเว็บใช้เกณฑ์เดียวกับ LINE (/api/pheoc: เฉลี่ย 24 ชม. ณ 07:00 ≥ 75.1 ติดกัน 2 วัน)
+"""PHEOC บนเว็บใช้เกณฑ์เดียวกับ LINE (/api/pheoc: เฉลี่ย 24 ชม. ณ 07:00 มากกว่า 75 ติดกัน 2 วัน)
 + ค่ารายวันบนเว็บ = ค่า ณ 07.00 น. (PM25_History เปลี่ยนเป็นค่า 07:00 ตั้งแต่ 16 ต.ค. 2569 · เติมย้อนถึง 2 ส.ค.)
 ใช้ร่วมเดโม่และโค้ดจริง: html = apply(html)"""
 import re
@@ -10,7 +10,7 @@ CSS = """
 
 JS = r'''
 // ---------- PHEOC: เกณฑ์เดียวกับรายงาน LINE (server /api/pheoc) ----------
-// ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จาก Air4Thai ถึง 75.1 µg/m³ ติดกัน 2 วัน · ดึงค่าจากสถานีโดยตรง
+// ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จาก Air4Thai มากกว่า 75 µg/m³ ติดกัน 2 วัน · ดึงค่าจากสถานีโดยตรง
 const pheocHit = () => S.pheoc?.ok ? S.pheoc.anyHit : null;
 function pheocLabel(yes, no) {
   if (!S.pheoc) return "กำลังตรวจ…";
@@ -24,7 +24,7 @@ function pheocTitle() {
 }
 '''
 
-PH_RULE = "07.00 น. ≥75.1 ติด 2 วัน"
+PH_RULE = "07.00 น. >75 ติด 2 วัน"
 
 def apply(html, mock=False):
     n0 = html.count("07.00 น.")
@@ -45,7 +45,7 @@ def apply(html, mock=False):
     assert html.count(old) == 1, html.count(old)
     html = html.replace(old, '<div class="fact${pheoc ? " ph-hit" : ""}" title="${esc(pheocTitle())}"><span class="fi" style="background:#e7f0fc;color:#1c6ed6"><svg class="ico"><use href="#i-shield"/></svg></span><div><span>เกณฑ์เปิด PHEOC</span><b>${pheocLabel("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")}</b><small class="fact-s">' + PH_RULE + '</small></div></div>')
     for a in ["เกณฑ์เปิด PHEOC (&gt;75 µg/m³)", "เกณฑ์เปิด PHEOC (เกิน 75)"]:
-        html = html.replace(a, "เกณฑ์เปิด PHEOC (07.00 น. ≥75.1 · 2 วันติด)")
+        html = html.replace(a, "เกณฑ์เปิด PHEOC (07.00 น. >75 · 2 วันติด)")
     # 3) ฟังก์ชัน + โหลดเบื้องหลัง
     anchor = "function renderToday() {"
     assert html.count(anchor) == 1
