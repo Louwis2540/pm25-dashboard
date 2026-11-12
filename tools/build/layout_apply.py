@@ -145,7 +145,7 @@ def apply(html):
     js = (pathlib.Path(__file__).parent / "dz_tables.js").read_text(encoding="utf-8")
     html = _sub(html, "function e2xBlock(wkMax) { return e2xAll(wkMax); }   // แทนแผงแท่งอัตราป่วยเดิม", js)
     html = _sub(html, "ผู้ป่วย 4 กลุ่มโรค · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)})",
-                "ผู้ป่วย 4 กลุ่มโรค · ตั้งแต่ พ.ย. 2568 ถึงสัปดาห์ระบาดวิทยาที่ ${wkMax} ปี 2569")
+                "ผู้ป่วย 4 กลุ่มโรค · เฉพาะช่วงฤดูฝุ่น (พ.ย.–พ.ค.) ตั้งแต่ พ.ย. 2568 · ข้อมูลถึงสัปดาห์ระบาดวิทยาที่ ${wkMax} ปี 2569")
 
     # ---------- 7) แถบนำทางซ้าย: ลำดับ + ชื่อ + ไอคอนใหม่ ----------
     m = re.search(r'const SB_MENU = \[\[.*?\]\];', html, re.S)
