@@ -29,7 +29,7 @@
  *        - ถ้าขึ้น "รูปแบบข้อมูลไม่รู้จัก" = MOPH เปลี่ยนรูปแบบ response อีกแล้ว
  *          (เคยเกิด ส.ค. 2569: เปลี่ยนจาก array เป็น { data, total, limit, offset }
  *           ทำให้สคริปต์พังเงียบ 13 รอบติด — ดู fetchProvinceRows_ ที่รองรับทั้งสองแบบ)
- *   5) ตั้งอัตโนมัติ: เลือกฟังก์ชัน setupSyncTriggers แล้วกด Run 1 ครั้ง (ตั้งวันละ 3 รอบ ตาม SYNC_TRIGGER_HOURS)
+ *   5) ตั้งอัตโนมัติ: เลือกฟังก์ชัน setupSyncTriggers แล้วกด Run 1 ครั้ง (ตั้งวันละ 3 รอบ ตาม SYNC_TRIGGER_HOURS · 09/13/17 น.)
  *      หรือตั้งเองที่ Triggers (⏰) → Add Trigger → syncMophDisease → Time-driven → Day timer
  *      ⚠️ ถ้า MOPH ตอบ HTTP 429 สคริปต์ลองซ้ำเอง (รอ 5/15/45 วิ หรือตาม Retry-After) และพัก 5 วินาทีระหว่างจังหวัด
  *      ⚠️ ถ้าได้ข้อมูลไม่ครบทั้ง 4 จังหวัด จะ “ไม่เขียนชีต” (เดิมเขียนยอดที่ขาดจังหวัดทับของเดิม)
@@ -66,7 +66,8 @@ var MOPH_PAUSE_MS         = 5000;                 // พักระหว่า
 var MOPH_SECOND_PASS_MS   = 30000;                // จังหวัดที่ยังพลาด → รอแล้วลองอีก 1 รอบ
 var MOPH_TIME_BUDGET_MS   = 300000;               // เพดานเวลารอ/ลองซ้ำรวมต่อการรัน 1 ครั้ง (Apps Script ตัดที่ 6 นาที — เหลือเวลาบันทึกสถานะ/ส่งอีเมล)
 var SYNC_T0               = 0;                    // เวลาเริ่มรัน (ms) — ตั้งใน syncMophDisease()
-var SYNC_TRIGGER_HOURS    = [7, 11, 15];          // ใช้กับ setupSyncTriggers() — ชั่วโมงตามเขตเวลาของโปรเจกต์ Apps Script (ควรเป็น Asia/Bangkok)
+var SYNC_TRIGGER_HOURS    = [9, 13, 17];          // ใช้กับ setupSyncTriggers() — ชั่วโมงตามเขตเวลาของโปรเจกต์ Apps Script (ควรเป็น Asia/Bangkok)
+                                                  // เลี่ยง 7/11/15 ของ hdc_snapshot.gs (snapshotJob) ไม่ให้สองสคริปต์ยิง MOPH พร้อมกัน
 
 // ── ตั้งค่าการแจ้งเตือน ──────────────────────────────────────────────
 var ALERT_EMAILS = [];   // เช่น ['someone@moph.go.th','admin@example.com']
