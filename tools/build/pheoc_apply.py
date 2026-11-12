@@ -36,7 +36,7 @@ def apply(html, mock=False):
     assert html.count(src) == 1, html.count(src)
     html = html.replace(src, src + " จากสถานีตรวจวัด Air4Thai กรมควบคุมมลพิษ ร่วมกับค่าจากดาวเทียม GISTDA ในวันที่สถานีไม่มีข้อมูล")
     # 2) PHEOC: เลิกตัดสินจากค่าในชีตวันเดียว
-    expr = r"PROV\.some\(p => \(S\.todayRow\?\.\[p\.name\] \?\? 0\) >= 75\.1\)"
+    expr = r"PROV\.some\(p => \(S\.todayRow\?\.\[p\.name\] \?\? 0\) (?:>= 75\.1|> 75)\)"   # โค้ดฐาน (>= 75.1) และ ig_new.js (> 75)
     html, k1 = re.subn(r'(\b(?:pheoc0?)|' + expr + r') \? "([^"]+)" : "([^"]+)"', lambda m: f'pheocLabel("{m.group(2)}", "{m.group(3)}")', html)
     html, k2 = re.subn(expr, "pheocHit()", html)
     assert k1 >= 1, k1   # อินโฟกราฟิก (ig_new.js) เรียก pheocLabel เองผ่าน igPh() แล้ว — เหลือจุดของหน้าแดชบอร์ด
