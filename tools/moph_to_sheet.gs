@@ -29,7 +29,10 @@
  *        - ถ้าขึ้น "รูปแบบข้อมูลไม่รู้จัก" = MOPH เปลี่ยนรูปแบบ response อีกแล้ว
  *          (เคยเกิด ส.ค. 2569: เปลี่ยนจาก array เป็น { data, total, limit, offset }
  *           ทำให้สคริปต์พังเงียบ 13 รอบติด — ดู fetchProvinceRows_ ที่รองรับทั้งสองแบบ)
- *   5) ตั้งอัตโนมัติ: Triggers (⏰) → Add Trigger → syncMophDisease → Time-driven → Day timer (เช่น 06:00–07:00)
+ *   5) ตั้งอัตโนมัติ: เลือกฟังก์ชัน setupSyncTriggers แล้วกด Run 1 ครั้ง (ตั้งวันละ 3 รอบ ตาม SYNC_TRIGGER_HOURS · 09/13/17 น.)
+ *      หรือตั้งเองที่ Triggers (⏰) → Add Trigger → syncMophDisease → Time-driven → Day timer
+ *      ⚠️ ถ้า MOPH ตอบ HTTP 429 สคริปต์ลองซ้ำเอง (รอ 5/15/45 วิ หรือตาม Retry-After) และพัก 5 วินาทีระหว่างจังหวัด
+ *      ⚠️ ถ้าได้ข้อมูลไม่ครบทั้ง 4 จังหวัด จะ “ไม่เขียนชีต” (เดิมเขียนยอดที่ขาดจังหวัดทับของเดิม)
  *   6) ทดสอบว่าอีเมลแจ้งเตือนถึงจริง: เลือกฟังก์ชัน testAlert แล้วกด Run
  *
  * หมายเหตุสำคัญเรื่อง "ค้างเงียบ" (silent staleness):
@@ -54,6 +57,18 @@ var MOPH_URL   = 'https://opendata.moph.go.th/api/report_data';
 var MOPH_PAGE_SIZE = 5000;
 var MOPH_MAX_PAGES = 20;   // กันลูปไม่รู้จบถ้า total ที่ MOPH ส่งมาเพี้ยน
 
+// ── กันโดน HTTP 429 (MOPH จำกัดจำนวนการเรียก) — เพิ่ม 12/11/2026 ─────────────
+// _log เดือน ต.ค.–พ.ย. 2569: รอบซิงก์ส่วนใหญ่ "ไม่ครบ" เพราะ HTTP 429 ทั้งที่ยิงทีละคำขอห่างกัน ~10 วินาทีผ่านทุกคำขอ
+var MOPH_RETRY_MAX        = 4;                    // ลองสูงสุดกี่ครั้งต่อคำขอ (รวมครั้งแรก) เมื่อ 429 / 5xx / เรียกไม่สำเร็จ
+var MOPH_RETRY_WAIT_MS    = [5000, 15000, 45000]; // รอก่อนลองครั้งถัดไป — ถ้า MOPH ส่ง Retry-After มาจะใช้ค่านั้นแทน (ไม่เกิน MOPH_RETRY_CAP_MS)
+var MOPH_RETRY_CAP_MS     = 60000;
+var MOPH_PAUSE_MS         = 5000;                 // พักระหว่างจังหวัด
+var MOPH_SECOND_PASS_MS   = 30000;                // จังหวัดที่ยังพลาด → รอแล้วลองอีก 1 รอบ
+var MOPH_TIME_BUDGET_MS   = 300000;               // เพดานเวลารอ/ลองซ้ำรวมต่อการรัน 1 ครั้ง (Apps Script ตัดที่ 6 นาที — เหลือเวลาบันทึกสถานะ/ส่งอีเมล)
+var SYNC_T0               = 0;                    // เวลาเริ่มรัน (ms) — ตั้งใน syncMophDisease()
+var SYNC_TRIGGER_HOURS    = [9, 13, 17];          // ใช้กับ setupSyncTriggers() — ชั่วโมงตามเขตเวลาของโปรเจกต์ Apps Script (ควรเป็น Asia/Bangkok)
+                                                  // เลี่ยง 7/11/15 ของ hdc_snapshot.gs (snapshotJob) ไม่ให้สองสคริปต์ยิง MOPH พร้อมกัน
+
 // ── ตั้งค่าการแจ้งเตือน ──────────────────────────────────────────────
 var ALERT_EMAILS = [];   // เช่น ['someone@moph.go.th','admin@example.com']
                          // เว้นว่างไว้ = ส่งหาอีเมลเจ้าของสคริปต์เอง
@@ -72,38 +87,57 @@ var CATS = ['ทางเดินหายใจ', 'หัวใจ', 'ตา�
 
 function syncMophDisease() {
   var started = new Date();
+  SYNC_T0 = started.getTime();
   var acc = {};          // acc[wk][cat] = ยอดรวม (w_NN_m)
   var maxDateCom = '';
   var okCount = 0;
   var errors  = [];      // เก็บสาเหตุรายจังหวัด ไว้ใส่ในอีเมลแจ้งเตือน
 
-  for (var i = 0; i < MOPH_PROVINCES.length; i++) {
-    var pv  = MOPH_PROVINCES[i];
-    var res = fetchProvinceRows_(pv);
-    if (res.error) {
-      errors.push('จังหวัด ' + pv + ' → ' + res.error);
-      Logger.log('❌ province ' + pv + ' → ' + res.error);
-      continue;
+  var pending = MOPH_PROVINCES.slice();
+  var lastErr = {};      // จังหวัด → สาเหตุล่าสุดที่พลาด
+  for (var pass = 1; pass <= 2 && pending.length; pass++) {
+    if (pass === 2) {
+      if (new Date().getTime() - SYNC_T0 + MOPH_SECOND_PASS_MS + 65000 > MOPH_TIME_BUDGET_MS) {   // เหลือเวลาไม่พอสำหรับรอบสอง
+        Logger.log('⏱ ข้ามรอบที่ 2: ใกล้ครบเพดานเวลา ' + (MOPH_TIME_BUDGET_MS / 1000) + ' วินาที');
+        break;
+      }
+      Logger.log('↻ รอบที่ 2: ลองใหม่เฉพาะจังหวัดที่พลาด (' + pending.join(', ') + ') หลังรอ ' + (MOPH_SECOND_PASS_MS / 1000) + ' วินาที');
+      Utilities.sleep(MOPH_SECOND_PASS_MS);
     }
-    var rows = res.rows;
-    Logger.log('• province ' + pv + ' → ' + rows.length + ' แถว');
-    okCount++;
-
-    for (var r = 0; r < rows.length; r++) {
-      var row = rows[r];
-      var cat = DIAG_GROUP[row.diag_main];
-      if (!cat) continue;
-      if (row.date_com && String(row.date_com) > maxDateCom) maxDateCom = String(row.date_com);
-      for (var w = 1; w <= 53; w++) {
-        var key = 'w_' + (w < 10 ? '0' + w : w) + '_m'; // _m = จำนวนที่เข้ารับบริการ
-        var v = row[key];
-        if (typeof v === 'number' && v > 0) {
-          if (!acc[w]) acc[w] = {};
-          acc[w][cat] = (acc[w][cat] || 0) + v;
+    var still = [];
+    for (var i = 0; i < pending.length; i++) {
+      var pv  = pending[i];
+      var res = fetchProvinceRows_(pv);
+      // ตอบ 200 แต่ไม่มีแถวเลย = ผิดปกติ (ปกติ ~500–1,200 แถว/จังหวัด/ปี) ห้ามนับว่าสำเร็จ ไม่งั้นยอดรวมขาดจังหวัดนั้นเงียบๆ
+      var err = res.error || (res.rows.length === 0 ? 'ได้ 0 แถว (ต้นทางตอบว่าง)' : '');
+      if (err) {
+        lastErr[pv] = err;
+        still.push(pv);
+        Logger.log('❌ province ' + pv + ' (รอบ ' + pass + ') → ' + err);
+      } else {
+        var rows = res.rows;
+        Logger.log('• province ' + pv + ' → ' + rows.length + ' แถว');
+        okCount++;
+        for (var r = 0; r < rows.length; r++) {
+          var row = rows[r];
+          var cat = DIAG_GROUP[row.diag_main];
+          if (!cat) continue;
+          if (row.date_com && String(row.date_com) > maxDateCom) maxDateCom = String(row.date_com);
+          for (var w = 1; w <= 53; w++) {
+            var key = 'w_' + (w < 10 ? '0' + w : w) + '_m'; // _m = จำนวนที่เข้ารับบริการ
+            var v = row[key];
+            if (typeof v === 'number' && v > 0) {
+              if (!acc[w]) acc[w] = {};
+              acc[w][cat] = (acc[w][cat] || 0) + v;
+            }
+          }
         }
       }
+      if (i < pending.length - 1) Utilities.sleep(MOPH_PAUSE_MS);   // พักระหว่างจังหวัด ลดโอกาสโดน 429
     }
+    pending = still;
   }
+  pending.forEach(function (pv) { errors.push('จังหวัด ' + pv + ' → ' + lastErr[pv]); });
 
   // ── ชั้นที่ 1: ดึงไม่ได้เลยสักจังหวัด ──────────────────────────────
   // ตั้งใจ return ก่อนถึง clearContents() เพื่อไม่ให้ข้อมูลเดิมในชีตหาย
@@ -127,6 +161,27 @@ function syncMophDisease() {
       '• HTTP 403 = Cloudflare ของ MOPH บล็อก IP ที่ยิงออกไป\n' +
       '• HTTP 404 = MOPH ถอด/ย้าย endpoint แล้ว ต้องประสานผู้ดูแล MOPH Open Data\n' +
       '• HTTP 5xx / timeout = ต้นทางล่มชั่วคราว รอรอบถัดไปได้\n');
+    return;
+  }
+
+  // ── ชั้นที่ 1.2: ได้ไม่ครบทุกจังหวัด → ไม่เขียนชีต ───────────────────
+  // (เดิมเขียนยอดที่ "ขาดบางจังหวัด" ทับของเดิม → ตัวเลขทั้งเว็บและ LINE ต่ำกว่าจริงชั่วคราว) ตอนนี้คงข้อมูลเดิมไว้
+  // ข้อมูลเดิมที่ค้างจะถูกแจ้งโดยตัวเฝ้าระวัง "ค้าง" (STALE_DAYS) ถ้าพลาดต่อเนื่อง
+  if (okCount < MOPH_PROVINCES.length) {
+    var streakP = bumpFailStreak_();
+    var reasonP = 'ดึงได้ ' + okCount + '/' + MOPH_PROVINCES.length + ' จังหวัด (ลองซ้ำแล้ว) — ไม่เขียนชีต เพื่อไม่ให้ยอดรวมขาดจังหวัด\n' + errors.join('\n');
+    writeStatus_(started, false, '', reasonP, streakP);
+    Logger.log('⚠️ ' + reasonP + ' — ข้อมูลเดิมในชีตยังอยู่ครบ (ไม่ถูกแตะ)');
+
+    alertOnce_('partial',
+      '[PM2.5 สคร.7] ⚠️ ดึงข้อมูลโรคได้ไม่ครบ ' + okCount + '/' + MOPH_PROVINCES.length + ' จังหวัด',
+      'syncMophDisease ลองซ้ำแล้วแต่ยังได้ข้อมูลไม่ครบทุกจังหวัด จึง "ไม่เขียนชีต" เพื่อไม่ให้ยอดรวมขาดจังหวัด\n\n' +
+      'เวลาที่รัน   : ' + fmtTime_(started) + '\n' +
+      'ล้มต่อเนื่อง : ' + streakP + ' ครั้ง\n\n' +
+      'จังหวัดที่พลาด:\n' + errors.join('\n') + '\n\n' +
+      '── ผลกระทบ ──\n' +
+      'ชีตแท็บ "' + TAB_NAME + '" ยังเก็บข้อมูลเดิมไว้ครบ หน้าเว็บ/LINE จะรายงานตัวเลขเดิมจนกว่ารอบถัดไปจะดึงได้ครบ\n' +
+      '(HTTP 429 = MOPH จำกัดการเรียก รอบถัดไปมักผ่านเอง)\n');
     return;
   }
 
@@ -195,15 +250,6 @@ function syncMophDisease() {
     // ข้อมูลขยับแล้ว → ล้าง cooldown เพื่อให้รอบหน้าเตือนได้ทันทีถ้าค้างอีก
     PropertiesService.getScriptProperties().deleteProperty('alert_stale');
   }
-
-  // บางจังหวัดพลาด แต่ไม่ทั้งหมด → ยอดรวมขาด ต้องรู้ด้วย
-  if (okCount < MOPH_PROVINCES.length) {
-    alertOnce_('partial',
-      '[PM2.5 สคร.7] ⚠️ ดึงข้อมูลโรคได้ไม่ครบ ' + okCount + '/' + MOPH_PROVINCES.length + ' จังหวัด',
-      'ยอดรวมรายสัปดาห์ที่เขียนลงชีตรอบนี้ "ขาดบางจังหวัด" จึงต่ำกว่าความจริง\n\n' +
-      'เวลาที่รัน : ' + fmtTime_(started) + '\n\n' +
-      'จังหวัดที่พลาด:\n' + errors.join('\n') + '\n');
-  }
 }
 
 /**
@@ -219,24 +265,21 @@ function fetchProvinceRows_(pv) {
   var rows = [];
 
   for (var page = 0; page < MOPH_MAX_PAGES; page++) {
-    var resp;
-    try {
-      resp = UrlFetchApp.fetch(MOPH_URL, {
-        method: 'post',
-        contentType: 'application/json',
-        payload: JSON.stringify({
-          tableName: 's_pm25_1_in_week',
-          year: String(BE_YEAR),
-          province: String(pv),
-          type: 'json',
-          limit: MOPH_PAGE_SIZE,
-          offset: page * MOPH_PAGE_SIZE
-        }),
-        muteHttpExceptions: true
-      });
-    } catch (e) {
-      return { error: 'เรียกไม่สำเร็จ: ' + e.message };
-    }
+    var got = fetchMophWithRetry_({
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        tableName: 's_pm25_1_in_week',
+        year: String(BE_YEAR),
+        province: String(pv),
+        type: 'json',
+        limit: MOPH_PAGE_SIZE,
+        offset: page * MOPH_PAGE_SIZE
+      }),
+      muteHttpExceptions: true
+    });
+    if (got.error) return { error: got.error };
+    var resp = got.resp;
 
     var code = resp.getResponseCode();
     if (code !== 200 && code !== 201) {
@@ -436,4 +479,64 @@ function resetAlertCooldown() {
   var props = PropertiesService.getScriptProperties();
   ['alert_sync_fail', 'alert_stale', 'alert_partial', 'alert_sync_empty'].forEach(function (k) { props.deleteProperty(k); });
   Logger.log('🔄 ล้าง cooldown การแจ้งเตือนแล้ว');
+}
+
+
+/**
+ * เรียก MOPH พร้อมลองซ้ำเมื่อ HTTP 429 / 5xx / เรียกไม่สำเร็จ (รอแบบถอยหลัง หรือตาม Retry-After)
+ * คืน { resp } เมื่อได้คำตอบที่ไม่ใช่ 429/5xx · หรือ { error } เมื่อลองครบแล้วยังพลาด
+ * (HTTP 403/404 ฯลฯ คืน resp ตามปกติ ให้ผู้เรียกรายงานเอง — ไม่ลองซ้ำเพราะซ้ำก็ไม่หาย)
+ */
+function fetchMophWithRetry_(options) {
+  var lastErr = '';
+  for (var attempt = 1; attempt <= MOPH_RETRY_MAX; attempt++) {
+    var waitMs = MOPH_RETRY_WAIT_MS[Math.min(attempt - 1, MOPH_RETRY_WAIT_MS.length - 1)];
+    try {
+      var resp = UrlFetchApp.fetch(MOPH_URL, options);
+      var code = resp.getResponseCode();
+      if (code !== 429 && code < 500) return { resp: resp };
+      lastErr = 'HTTP ' + code;
+      var ra = retryAfterMs_(resp);
+      if (ra !== null) waitMs = Math.min(ra, MOPH_RETRY_CAP_MS);
+    } catch (e) {
+      lastErr = 'เรียกไม่สำเร็จ: ' + e.message;
+    }
+    if (attempt < MOPH_RETRY_MAX) {
+      if (SYNC_T0 && new Date().getTime() - SYNC_T0 + waitMs > MOPH_TIME_BUDGET_MS) {   // กันชนเพดาน 6 นาทีของ Apps Script
+        return { error: lastErr + ' (หยุดลองซ้ำ: ใกล้ครบเพดานเวลา)' };
+      }
+      Logger.log('⏳ ' + lastErr + ' — ลองใหม่ครั้งที่ ' + (attempt + 1) + '/' + MOPH_RETRY_MAX + ' หลังรอ ' + (waitMs / 1000) + ' วินาที');
+      Utilities.sleep(waitMs);
+    }
+  }
+  return { error: lastErr + ' (ลองครบ ' + MOPH_RETRY_MAX + ' ครั้งแล้ว)' };
+}
+
+/** อ่านหัว Retry-After (วินาที) → มิลลิวินาที · ไม่มี/อ่านไม่ได้ = null */
+function retryAfterMs_(resp) {
+  try {
+    var h = resp.getHeaders() || {};
+    for (var k in h) {
+      if (String(k).toLowerCase() === 'retry-after') {
+        var sec = parseInt(h[k], 10);
+        return isNaN(sec) || sec < 0 ? null : sec * 1000;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+/**
+ * ตั้ง trigger รายวัน syncMophDisease วันละหลายรอบ (SYNC_TRIGGER_HOURS) — รัน "ครั้งเดียว" ด้วยมือ
+ * ลบ trigger เดิมของ syncMophDisease ก่อน (กันซ้ำ) แล้วสร้างใหม่ · อีเมลแจ้งเตือนมี cooldown 24 ชม. ไม่ถล่มแม้รันหลายรอบ
+ * ตรวจเขตเวลาโปรเจกต์ที่ Project Settings → Time zone = Asia/Bangkok
+ */
+function setupSyncTriggers() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'syncMophDisease') ScriptApp.deleteTrigger(t);
+  });
+  SYNC_TRIGGER_HOURS.forEach(function (h) {
+    ScriptApp.newTrigger('syncMophDisease').timeBased().everyDays(1).atHour(h).nearMinute(11).create();
+  });
+  Logger.log('✅ ตั้ง trigger syncMophDisease วันละ ' + SYNC_TRIGGER_HOURS.length + ' รอบ ที่ชั่วโมง ' + SYNC_TRIGGER_HOURS.join(', ') + ' (เขตเวลา ' + Session.getScriptTimeZone() + ')');
 }

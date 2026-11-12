@@ -324,7 +324,7 @@ function igDelta(pv) {
   const d = r1(v - y), w = d > 0 ? "▲ เพิ่มขึ้น" : d < 0 ? "▼ ลดลง" : "● เท่ากับ";
   return `${w} ${d ? Math.abs(d).toFixed(1) + " " : ""}· ${igPrevLbl()} <b>${f1(y)}</b>`;
 }
-// PHEOC ในอินโฟกราฟิก = เกณฑ์เดียวกับหน้าเว็บและ LINE (/api/pheoc: ค่าเฉลี่ย 24 ชม. ณ 07.00 น. ≥ 75.1 ติดกัน 2 วัน)
+// PHEOC ในอินโฟกราฟิก = เกณฑ์เดียวกับหน้าเว็บและ LINE (/api/pheoc: ค่าเฉลี่ย 24 ชม. ณ 07.00 น. > 75 ติดกัน 2 วัน)
 // เดิมเว็บจริงใช้ "มีจังหวัด ≥ 75.1 วันนี้" วันเดียว (ตัวแปลงของ pheoc_apply ทำงานก่อนที่โค้ดนี้จะถูกใส่) → เรียก pheocLabel ตรง ๆ
 // จุดความร้อนของอินโฟกราฟิก: รายจังหวัด = เฉพาะจังหวัดนั้น · ระดับเขต = ทั้งเขต
 const igHs = () => S.igPv ? (S.hsToday || []).filter(f => f.properties?.changwat === S.igPv) : (S.hsToday || []);
@@ -338,7 +338,7 @@ function igHsPill() {
 const igHsLbl = () => S.igPv ? `จ.${S.igPv}` : "เขตสุขภาพที่ 7";
 function igPh(yes, no) {
   if (typeof pheocLabel === "function") return pheocLabel(yes, no);
-  return PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1) ? yes : no;
+  return PROV.some(p => (S.todayRow?.[p.name] ?? 0) > 75) ? yes : no;
 }
 // กราฟเส้นค่าฝุ่นรายวันของจังหวัด ตั้งแต่ 1 ม.ค. ของปีปัจจุบัน (Louis 1 พ.ย. 2569: เอาแค่ปี 2569) จนถึงวันนี้ · แถบเกณฑ์ 37.5–75 (ส้ม) / เกิน 75 (แดง)
 function igPvChart(pv, W, H) {
@@ -478,9 +478,9 @@ function buildInfographic(size = "a4", dense = 0) {
   const pmTag = `<b class="pm-tag">ค่าฝุ่น PM<sub>2.5</sub></b>`;
   const heroK = F.region ? `${pmTag}สูงสุดในเขตสุขภาพที่ 7 <b class="hp">จ.${F.f?.p.name ?? "–"}</b>` : `${pmTag}<b class="hp">จ.${S.igPv}</b>`;
   const hero = `<div class="avg">${weatherArt(F.lv, size === "social" ? 220 : 150, size === "social" ? 160 : 110)}<div style="display:flex;flex-direction:column"><span class="k">${heroK}</span><span class="v num">${F.f ? f1(F.f.v) : "–"}<small> µg/m³</small></span><span class="l">${L.name}</span></div></div>`;
-  const overN = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5), pheoc0 = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
-  const over75 = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);   // เกิน 75 = เกณฑ์ PHEOC (≥ 75.1)
-  // แสดง "เกิน 75" และ "PHEOC" เฉพาะวันที่มีจังหวัดเข้าเกณฑ์ PHEOC (≥ 75.1 ติดกัน 2 วัน · /api/pheoc) — วันปกติแสดงแค่จุดความร้อน
+  const overN = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5), pheoc0 = PROV.some(p => (S.todayRow?.[p.name] ?? 0) > 75);
+  const over75 = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 75);   // เกิน 75 = เกณฑ์ PHEOC (> 75)
+  // แสดง "เกิน 75" และ "PHEOC" เฉพาะวันที่มีจังหวัดเข้าเกณฑ์ PHEOC (> 75 ติดกัน 2 วัน · /api/pheoc) — วันปกติแสดงแค่จุดความร้อน
   const phHit = !!(S.pheoc?.ok && S.pheoc.anyHit);
   const kline = `<span class="kl">${phHit ? `<span class="kls">เกิน 75 µg/m³: <b>${over75.length} จังหวัด</b></span> · <span class="kls">PHEOC <b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่ถึงเกณฑ์"))}</b></span> · ` : ""}</span>`.replace(/ · <\/span>$/, "</span>");   // จุดความร้อนย้ายไปแถบสูงสุดในเขต / การ์ดจังหวัดแล้ว
   const scope = F.region ? `${L.face} ระดับสูงสุดในเขตสุขภาพที่ 7: ${L.name}` : `${L.face} จ.${S.igPv}: ${L.name}`;
@@ -492,7 +492,7 @@ function buildInfographic(size = "a4", dense = 0) {
       <div class="w"><h4>${inl("i-heartp", 24)}กลุ่มเสี่ยง*</h4>${L.risk.map(x => `<div class="do"><span>${inl(actIcon(x), 22)}</span>${x}</div>`).join("")}</div></div>`;
   const scaleBox = `<div class="scale">${LV.map((l, i) => `<div class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><b>${l.face} ${l.name}${i === F.lv ? " · วันนี้" : ""}</b>${l.range}</div>`).join("")}</div>`;
   const foot = `<div class="ig-f"><span class="qr">${igQR(size === "social" ? 92 : 84)}</span><span class="ig-fl"><b>สแกนดูแดชบอร์ดเต็ม</b> กราฟ แนวโน้ม ข้อมูลโรครายจังหวัด<br>${IG_NAME}<br><span class="nw">แหล่งข้อมูล: Air4Thai (กรมควบคุมมลพิษ)</span> · <span class="nw">GISTDA</span> · <span class="nw">HDC กระทรวงสาธารณสุข</span></span><span class="ig-fr">${size === "social" ? "" : `<span class="nw">ผู้รายงาน: กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม</span><br>`}<span class="nw">สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น</span><br><span class="nw">กรมควบคุมโรค</span></span></div>`;
-  const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) >= 75.1);
+  const pheoc = PROV.some(p => (S.todayRow?.[p.name] ?? 0) > 75);
   const fc1 = (() => { const it = S.gpv?.items.find(i => i.code === String(F.f?.p.code)); const x = it?.pred?.[0]; return x == null ? null : x; })();
   const facts3 = `<div class="facts3"${phHit ? ' style="grid-template-columns:repeat(2,1fr)"' : ' style="grid-template-columns:1fr"'}>${phHit ? `<div><span class="fi" style="background:#e7f0fc;color:#1c6ed6">${inl("i-shield", 26)}</span><span><span class="k">เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)</span><b>${igPhShort(igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์"))}</b></span></div>` : ""}
     <div><span class="fi" style="background:${fc1 != null ? LV[lvOf(fc1)].soft : "var(--subtle)"};color:${fc1 != null ? LV[lvOf(fc1)].ink : "var(--ink-2)"}">${inl("i-cal", 26)}</span><span><span class="k">พรุ่งนี้ (คาดการณ์) · ${F.f?.p.name ?? ""}</span><b>${fc1 != null ? `${f1(fc1)} · ${LV[lvOf(fc1)].name}` : "–"}</b></span></div></div>`;

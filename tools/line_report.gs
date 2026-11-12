@@ -14,7 +14,7 @@
  *   2. ยอดสะสมโรคใช้ "สัปดาห์รองสุดท้าย" ให้ตรงกับหน้าเว็บ
  *   3. ต่อป้ายเตือน diseaseAgeNote() เมื่อข้อมูล HDC ค้าง
  *   4. ไม่บันทึก 0 เมื่อสถานีไม่มีข้อมูล (เดิม `|| 0`)
- *   5. PHEOC ใช้ค่า 07:00 จาก Air4Thai history ถึง 75.1 ติดกัน 2 วัน
+ *   5. PHEOC ใช้ค่า 07:00 จาก Air4Thai history มากกว่า 75 ติดกัน 2 วัน (แก้ 12/11/2026: เดิมเขียน "ถึง 75.1" ผลเท่ากัน)
  *      (เดิมเทียบแถวสุดท้ายในชีต = ค่า ณ เวลาที่รัน ซึ่งเป็นบ่าย ไม่ใช่เช้า)
  *   6. เขียนทับแถวของวันนี้แทนการ appendRow ซ้ำทุกรอบ
  *
@@ -45,7 +45,7 @@ const TARGET_STATIONS = [
 // ใช้ค่า PM2.5 "เวลา 07:00 น." เท่านั้น ถึงเกณฑ์ติดกัน 2 วัน = เข้าเกณฑ์
 // ค่า 07:00 ดึงจาก Air4Thai history API ไม่ใช่ค่า ณ เวลาที่สคริปต์รัน
 // (main รันบ่าย 3 — LastUpdate จะเป็นค่าบ่าย ใช้ตัดสิน PHEOC ไม่ได้)
-const PHEOC_THRESHOLD = 75.1;   // µg/m³ — "ถึง 75.1 ขึ้นไป" = แถบสีแดงตามเกณฑ์ไทย
+const PHEOC_THRESHOLD = 75;     // µg/m³ — เข้าเกณฑ์เมื่อ "มากกว่า 75" (ค่าปัดทศนิยม 1 ตำแหน่ง) · เกณฑ์เดียวกับหน้าเว็บ config.json → pheoc.gt
 const PHEOC_HOUR      = '07';   // ชั่วโมงที่ใช้ตัดสิน (24 ชม.)
 const AIR4THAI_HISTORY = 'https://air4thai.pcd.go.th/forweb/getHistoryData.php';
 const PHEOC_VALUE     = 'avg24'; // 'avg24' = เฉลี่ย 24 ชม. สิ้นสุด 07:00 · 'hour' = ค่ารายชั่วโมง 07:00 (แบบเดิม) — ต้องตรงกับ config.json → pheoc.value
@@ -403,7 +403,7 @@ function testReportDryRun() {
 
   // เช็ค PHEOC ได้จริงใน dry run — ตอนนี้มันแค่อ่าน API ไม่เขียนชีต
   // ส่วน recordHistory ยังข้ามอยู่ เพราะอันนั้นเขียนข้อมูลจริง
-  Logger.log('── เกณฑ์ PHEOC (ค่า 07:00 ถึง ' + PHEOC_THRESHOLD + ' ติดกัน 2 วัน) ──');
+  Logger.log('── เกณฑ์ PHEOC (ค่าเฉลี่ย 24 ชม. ณ 07:00 มากกว่า ' + PHEOC_THRESHOLD + ' ติดกัน 2 วัน) ──');
   const pheocStatus = { provinces: checkPheoc07_(true) };
   Logger.log('  สรุป : ' + (pheocStatus.provinces.length
     ? '⚠️ เข้าเกณฑ์ ' + pheocStatus.provinces.join(', ')
@@ -796,7 +796,7 @@ function record07Rows_(hist) {
 }
 
 /**
- * เข้าเกณฑ์เปิด PHEOC ไหม — ค่า 07:00 ถึง PHEOC_THRESHOLD ติดกัน 2 วัน
+ * เข้าเกณฑ์เปิด PHEOC ไหม — ค่า 07:00 มากกว่า PHEOC_THRESHOLD ติดกัน 2 วัน
  * คืน array ชื่อจังหวัดที่เข้าเกณฑ์ (ว่าง = ไม่มี)
  *
  * วันไหนไม่มีค่า 07:00 ถือว่า "ไม่เข้าเกณฑ์" โดยตั้งใจ — ไม่เดาแทนข้อมูลที่ขาด
@@ -816,7 +816,7 @@ function checkPheoc07_(dryRun) {
     const byDate = hist[st.id.toLowerCase()] || {};
     const y = byDate[d0] ? byDate[d0].v : undefined, t = byDate[d1] ? byDate[d1].v : undefined;
     const ok = typeof y === 'number' && typeof t === 'number' &&
-               y >= PHEOC_THRESHOLD && t >= PHEOC_THRESHOLD;
+               y > PHEOC_THRESHOLD && t > PHEOC_THRESHOLD;
     console.log('  PHEOC ' + st.name + ' 07:00 → ' + d0 + ': ' + fmtVal_(y) +
                 ' , ' + d1 + ': ' + fmtVal_(t) + (ok ? '  ⚠️ เข้าเกณฑ์' : ''));
     if (ok) hit.push(st.name);
