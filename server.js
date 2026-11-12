@@ -872,34 +872,82 @@ function pheocValue(byHour, d, rule) {
   return { v: Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10, n: v.length };
 }
 
+// ดึงประวัติรายชั่วโมงจาก Air4Thai — HTTPS ก่อน แล้วสำรอง HTTP (แบบเดียวกับ /api/air4thai) · ลองซ้ำทางละ 2 ครั้ง
+// แก้ 12/11/2026: /api/pheoc ตอบ 502 "fetch failed" ต่อเนื่อง (เซิร์ฟเวอร์ต่อ Air4Thai ไม่ได้) ทั้งที่ LINE (Apps Script) ตรวจได้ปกติ
+async function a4tHistory(qs) {
+  let last;
+  for (const base of [A4T_HISTORY, A4T_HISTORY.replace(/^https:/, 'http:')]) {
+    for (let i = 0; i < 2; i++) {
+      try {
+        const r = await fetch(base + qs, { signal: AbortSignal.timeout(12000) });
+        if (!r.ok) throw new Error('Air4Thai HTTP ' + r.status);
+        return await r.json();
+      } catch (e) {
+        last = e;
+        if (i === 0) await sleep(1500);
+      }
+    }
+  }
+  const code = last?.cause?.code ? ` (${last.cause.code})` : '';   // เช่น ECONNRESET / UNABLE_TO_VERIFY_LEAF_SIGNATURE
+  throw new Error((last?.message || 'ไม่ทราบสาเหตุ') + code);
+}
+
+// ทางสำรองสุดท้าย: ค่าเฉลี่ย 24 ชม. ณ 07:00 ที่ Apps Script (รหัส.gs → record07Rows_) บันทึกลงแท็บ PM25_07 ทุกรอบ
+// = ค่าชุดเดียวกับที่รายงาน LINE ใช้ตัดสิน PHEOC
+async function pheocDaysFromSheet07(provinces, dates) {
+  const { api } = readConfig();
+  const csv = await fetchCSV([`https://docs.google.com/spreadsheets/d/${api.sheet_id}/gviz/tq?tqx=out:csv&sheet=PM25_07`]);
+  if (!csv) throw new Error('อ่านแท็บ PM25_07 ไม่ได้');
+  const { allData } = parseSheetData(csv, provinces);
+  return provinces.map(p => dates.map(d => {
+    const v = allData[d]?.[p.name];
+    return { date: d, v: typeof v === 'number' && v > 0 ? v : null, n: null };
+  }));
+}
+
+// เกณฑ์ PHEOC: ค่าเฉลี่ย 24 ชม. ณ 07:00 น. "มากกว่า gt" (75 µg/m³) ติดกัน days วัน → เข้าเกณฑ์ (หน้าเว็บเข้าโหมดแจ้งเตือน)
+// ค่าถูกปัดทศนิยม 1 ตำแหน่งก่อนเทียบ → "> 75" ให้ผลเท่ากับ "≥ 75.1" ของรายงาน LINE ทุกกรณี
 async function buildPheoc() {
   const { provinces, pheoc: rule0 } = readConfig();
-  const rule = { threshold: 75.1, hour: 7, days: 2, value: 'avg24', min_hours: 18, ...(rule0 || {}) };
+  const rule = { gt: 75, hour: 7, days: 2, value: 'avg24', min_hours: 18, ...(rule0 || {}) };
+  const over = v => v != null && (rule.gt != null ? v > rule.gt : v >= rule.threshold);
   const today = bkkDate();
   const dates = Array.from({ length: rule.days }, (_, i) => addDaysIso(today, i - rule.days + 1));
   const ids = provinces.map(p => p.air4thai_station).filter(Boolean);
-  const url = `${A4T_HISTORY}?stationID=${ids.join(',')}&param=PM25&type=hr&sdate=${addDaysIso(dates[0], -1)}&edate=${today}&stime=00&etime=23`;
-  const r = await fetch(url, { signal: AbortSignal.timeout(12000) });
-  if (!r.ok) throw new Error('Air4Thai HTTP ' + r.status);
-  const j = await r.json();
-  const byStation = {};
-  for (const st of (j.stations || [])) {
-    const m = {};
-    for (const row of (st.data || [])) {
-      const v = typeof row.PM25 === 'number' ? row.PM25 : parseFloat(row.PM25);
-      const dt = String(row.DATETIMEDATA || '');
-      if (!isNaN(v) && v >= 0 && /^\d{4}-\d{2}-\d{2} \d{2}/.test(dt)) m[dt.slice(0, 13) + ':00:00'] = v;
+  const qs = `?stationID=${ids.join(',')}&param=PM25&type=hr&sdate=${addDaysIso(dates[0], -1)}&edate=${today}&stime=00&etime=23`;
+
+  let daysByPv, source, note;
+  try {
+    const j = await a4tHistory(qs);
+    const byStation = {};
+    for (const st of (j.stations || [])) {
+      const m = {};
+      for (const row of (st.data || [])) {
+        const v = typeof row.PM25 === 'number' ? row.PM25 : parseFloat(row.PM25);
+        const dt = String(row.DATETIMEDATA || '');
+        if (!isNaN(v) && v >= 0 && /^\d{4}-\d{2}-\d{2} \d{2}/.test(dt)) m[dt.slice(0, 13) + ':00:00'] = v;
+      }
+      byStation[String(st.stationID).toLowerCase()] = m;
     }
-    byStation[String(st.stationID).toLowerCase()] = m;
+    daysByPv = provinces.map(p => {
+      const m = byStation[String(p.air4thai_station || '').toLowerCase()] || {};
+      return dates.map(d => ({ date: d, ...pheocValue(m, d, rule) }));
+    });
+    source = 'Air4Thai (getHistoryData รายชั่วโมง)';
+  } catch (e) {
+    console.warn('PHEOC: ดึงประวัติ Air4Thai ไม่ได้ (' + e.message + ') → ใช้ค่า 07:00 จากแท็บ PM25_07');
+    daysByPv = await pheocDaysFromSheet07(provinces, dates);   // อ่านไม่ได้อีก → throw → 502 ตามเดิม
+    source = 'PM25_07 (Apps Script · เฉลี่ย 24 ชม. ณ 07:00 จาก Air4Thai)';
+    note = 'ดึง Air4Thai จากเซิร์ฟเวอร์ไม่ได้: ' + e.message;
   }
-  const list = provinces.map(p => {
-    const m = byStation[String(p.air4thai_station || '').toLowerCase()] || {};
-    const days = dates.map(d => ({ date: d, ...pheocValue(m, d, rule) }));
-    const hit = days.every(x => x.v != null && x.v >= rule.threshold);
-    return { name: p.name, station: p.air4thai_station, days, hit };
+
+  const list = provinces.map((p, k) => {
+    const days = daysByPv[k];
+    return { name: p.name, station: p.air4thai_station, days, hit: days.every(x => over(x.v)) };
   });
   const todayReady = list.some(p => p.days.at(-1).v != null);
-  return { ok: true, rule, dates, todayReady, anyHit: list.some(p => p.hit), hit: list.filter(p => p.hit).map(p => p.name), provinces: list, source: 'Air4Thai (getHistoryData รายชั่วโมง)', fetchedAt: new Date().toISOString() };
+  return { ok: true, rule, dates, todayReady, anyHit: list.some(p => p.hit), hit: list.filter(p => p.hit).map(p => p.name),
+           provinces: list, source, ...(note ? { note } : {}), fetchedAt: new Date().toISOString() };
 }
 
 app.get('/api/pheoc', async (req, res) => {
