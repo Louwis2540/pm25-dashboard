@@ -3,8 +3,8 @@
 รวม 2 ส่วนเดิม (zHot = Leaflet จุดความร้อน · zMap = แผนที่ SVG ค่าฝุ่น) เป็นส่วนเดียว id="zMap":
   • Leaflet แผนที่เดียว: พื้นที่จังหวัดสีตามระดับฝุ่น + ป้ายค่า + จุดความร้อน · ชิปเปิด/ปิดแต่ละชั้น
   • แผงข้างแผนที่ (#hotSide): ค่าฝุ่นและจำนวนจุดความร้อนรายจังหวัด รวมที่มา/คำอธิบายสี
-  • real-time ทั้งค่าฝุ่นและจุดความร้อน: ค่าฝุ่น = Air4Thai ค่าเฉลี่ย 24 ชม. ล่าสุดรายชั่วโมง (/api/air4thai-live · ขอใหม่ทุกต้นชั่วโมง+10 นาที)
-    จุดความร้อน = GISTDA (/api/hotspot · ทุก 10 นาที) · ปุ่มรีเฟรช
+  • ค่าฝุ่นเป็นค่าเฉลี่ยรายชั่วโมง · จุดความร้อนแบบเดิม (ไม่เรียลไทม์): ค่าฝุ่น = Air4Thai ค่าเฉลี่ย 24 ชม. ล่าสุดรายชั่วโมง (/api/air4thai-live · ขอใหม่ทุกต้นชั่วโมง+10 นาที)
+    จุดความร้อน = GISTDA VIIRS ย้อนหลัง 24 ชม. ดึงตอนเปิดหน้า (ไม่รีเฟรชอัตโนมัติ) · ปุ่มรีเฟรชขอเฉพาะค่าฝุ่น
   • แถบนำทางซ้ายเหลือรายการเดียว "แผนที่ค่าฝุ่น · จุดความร้อน"
 ไม่แตะ: อินโฟกราฟิกทุกส่วน · เว็บจริง (ใช้ร่วมเดโม่ build_demo.py เท่านั้น เรียกหลัง layout_apply)
 """
@@ -70,7 +70,7 @@ def _cut(html, a, b):
 
 
 DEMO_MOCK = r"""<script>
-/* DEMO — ค่าฝุ่นล่าสุดรายชั่วโมงจำลอง (เดโม่เท่านั้น · เว็บจริงใช้ /api/air4thai-live จาก Air4Thai) */
+/* DEMO — ค่าเฉลี่ยรายชั่วโมงจำลอง (เดโม่เท่านั้น · เว็บจริงใช้ /api/air4thai-live จาก Air4Thai) */
 (function () {
   const f = window.fetch.bind(window), BASE = { "ขอนแก่น": 12.4, "มหาสารคาม": 21.8, "ร้อยเอ็ด": 31.2, "กาฬสินธุ์": 48.6 };
   window.fetch = (u, o) => {
@@ -93,11 +93,11 @@ def apply(html, demo=True):
     sec = f"""  <!-- 6) แผนที่รวม ค่าฝุ่น + จุดความร้อน (ขั้น 2) -->
   <section id="zMap" style="--sec:#1c6ed6">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-map"/></svg></div>
-      <div><h2>แผนที่ค่าฝุ่น {pm} และจุดความร้อน</h2><p>ค่าฝุ่นรายจังหวัดล่าสุด (เฉลี่ย 24 ชม. · Air4Thai · อัปเดตรายชั่วโมง) ซ้อนกับจุดความร้อน (GISTDA VIIRS · ย้อนหลัง 24 ชม.) · คลิกจังหวัดบนแผนที่เพื่อดูรายละเอียด</p></div></div>
+      <div><h2>แผนที่ค่าฝุ่น {pm} และจุดความร้อน</h2><p>ค่าเฉลี่ยรายชั่วโมงรายจังหวัด (Air4Thai) ซ้อนกับจุดความร้อน (GISTDA VIIRS · ย้อนหลัง 24 ชม.) · คลิกจังหวัดบนแผนที่เพื่อดูรายละเอียด</p></div></div>
     <div class="mm-bar" id="mmBar">
       <div class="mm-ctl">
         <div class="mm-layers" role="group" aria-label="ชั้นข้อมูลบนแผนที่">
-          <button type="button" class="mm-chip" data-l="pm" aria-pressed="true"><i class="d pm"></i><span>ค่าฝุ่น {pm} รายจังหวัด<small>ค่าเฉลี่ย 24 ชม. · Air4Thai</small></span></button>
+          <button type="button" class="mm-chip" data-l="pm" aria-pressed="true"><i class="d pm"></i><span>ค่าฝุ่น {pm} รายจังหวัด<small>ค่าเฉลี่ยรายชั่วโมง · Air4Thai</small></span></button>
           <button type="button" class="mm-chip" data-l="hs" aria-pressed="true"><i class="d hs"></i><span>จุดความร้อน<small>GISTDA VIIRS · ย้อนหลัง 24 ชม.</small></span></button>
         </div>
       </div>
