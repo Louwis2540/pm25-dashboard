@@ -4,7 +4,7 @@
   • Leaflet แผนที่เดียว: พื้นที่จังหวัดสีตามระดับฝุ่น + ป้ายค่า + จุดความร้อน · ชิปเปิด/ปิดแต่ละชั้น
   • แผงข้างแผนที่ (#hotSide): ค่าฝุ่นและจำนวนจุดความร้อนรายจังหวัด รวมที่มา/คำอธิบายสี
   • real-time ทั้งค่าฝุ่นและจุดความร้อน: ค่าฝุ่น = Air4Thai ค่าเฉลี่ย 24 ชม. ล่าสุดรายชั่วโมง (/api/air4thai-live · ขอใหม่ทุกต้นชั่วโมง+10 นาที)
-    จุดความร้อน = GISTDA (/api/hotspot · ทุก 10 นาที) · สวิตช์สลับ "ล่าสุด | 07.00 น." · ปุ่มรีเฟรช
+    จุดความร้อน = GISTDA (/api/hotspot · ทุก 10 นาที) · ปุ่มรีเฟรช
   • แถบนำทางซ้ายเหลือรายการเดียว "แผนที่ค่าฝุ่น · จุดความร้อน"
 ไม่แตะ: อินโฟกราฟิกทุกส่วน · เว็บจริง (ใช้ร่วมเดโม่ build_demo.py เท่านั้น เรียกหลัง layout_apply)
 """
@@ -25,11 +25,6 @@ CSS = """
 .mm-chip[aria-pressed="false"]{opacity:.6}
 .mm-chip:focus-visible,.mm-rf:focus-visible,.mm-row:focus-visible{outline:3px solid var(--sec,#1c6ed6);outline-offset:2px}
 .mm-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
-.mm-segw{display:flex;align-items:center;gap:8px;font-size:calc(12.5px*var(--fs,1));color:var(--ink-3);font-weight:600}
-.mm-seg{display:inline-flex;border:1.5px solid var(--line-strong);border-radius:999px;background:#fff;padding:2px}
-.mm-seg button{border:0;background:none;border-radius:999px;padding:6px 14px;font:600 calc(12.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;color:var(--ink-2);cursor:pointer}
-.mm-seg button[aria-pressed="true"]{background:var(--sec,#1c6ed6);color:#fff}
-.mm-seg button:focus-visible{outline:3px solid var(--sec,#1c6ed6);outline-offset:2px}
 .mm-live{display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:calc(12.5px*var(--fs,1));color:var(--ink-2);font-weight:600;position:relative}
 .mm-ln{display:flex;align-items:center;flex-wrap:wrap;gap:2px 10px}
 .mm-ln.err{color:#b45309}.mm-ln em{font-style:normal;color:#b45309;font-weight:700}
@@ -64,7 +59,7 @@ CSS = """
 .mm-pm{display:inline-block;text-align:center;border-radius:999px;padding:1px 0;font-weight:700}
 .mm-src{font-size:calc(11.5px*var(--fs,1));color:var(--ink-3);line-height:1.5;font-weight:500}
 @media (max-width:1100px){.hot.mm{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:680px){.mm-main #map{height:420px}.mm-badge{max-width:170px;font-size:11.5px}.mm-chip{flex:1 1 100%}.mm-segw{width:100%;justify-content:space-between}.mm-lab b{font-size:11px}.mm-lab span{font-size:13px;padding:0 6px}}
+@media (max-width:680px){.mm-main #map{height:420px}.mm-badge{max-width:170px;font-size:11.5px}.mm-chip{flex:1 1 100%}.mm-lab b{font-size:11px}.mm-lab span{font-size:13px;padding:0 6px}}
 @media (prefers-reduced-motion:reduce){.mm-dot{animation:none}}
 """
 
@@ -105,11 +100,6 @@ def apply(html, demo=True):
           <button type="button" class="mm-chip" data-l="pm" aria-pressed="true"><i class="d pm"></i><span>ค่าฝุ่น {pm} รายจังหวัด<small>ค่าเฉลี่ย 24 ชม. · Air4Thai</small></span></button>
           <button type="button" class="mm-chip" data-l="hs" aria-pressed="true"><i class="d hs"></i><span>จุดความร้อน<small>GISTDA VIIRS · ย้อนหลัง 24 ชม.</small></span></button>
         </div>
-        <div class="mm-segw"><span class="mm-segl">ค่าฝุ่นที่แสดง</span>
-          <div class="mm-seg" role="group" aria-label="ค่าฝุ่นที่แสดงบนแผนที่">
-            <button type="button" data-m="live" aria-pressed="true">ล่าสุด (รายชั่วโมง)</button>
-            <button type="button" data-m="07" aria-pressed="false">07.00 น.</button>
-          </div></div>
       </div>
       <div class="mm-live" id="mmLive" role="status"></div>
     </div>
