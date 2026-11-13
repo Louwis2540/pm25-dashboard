@@ -3,17 +3,26 @@
 //  • ชั้น "ค่าฝุ่น": พื้นที่จังหวัดสีตามระดับ + ป้ายค่า
 //      - โหมด "ล่าสุด (รายชั่วโมง)" (ค่าเริ่มต้น): ค่าเฉลี่ย 24 ชม. ล่าสุดจาก Air4Thai ผ่าน /api/air4thai-live · ขอข้อมูลใหม่ทุกต้นชั่วโมง + MM.PM_MIN นาที
 //      - โหมด "07.00 น.": ค่าเฉลี่ย 24 ชม. ณ 07.00 น. (S.todayRow) ตรงกับการ์ดจังหวัด/รายงาน/LINE
-//      - ดึงค่าล่าสุดไม่ได้ → แสดงค่า 07.00 น. แทน พร้อมแจ้งบนแถบสถานะ (ไม่เงียบ)
+//      - ดึงค่าล่าสุดไม่ได้ → แสดง "ค่าก่อนหน้า" (ครั้งล่าสุดที่ดึงสำเร็จ · เก็บใน localStorage ข้ามการโหลดหน้า ไม่เกิน 24 ชม.) พร้อมแจ้งเวลาของค่านั้น
+//        ไม่เคยมีค่าก่อนหน้าเลย → ใช้ค่า 07.00 น. เป็นทางสุดท้าย พร้อมแจ้ง (ไม่เงียบ)
+//  • พื้นหลังแผนที่: ไทล์ OpenStreetMap (ถ้าโหลดได้) + เส้นเขตอำเภอที่วาดเอง (ใช้ได้แม้ไม่มีไทล์ เช่นในหน้า Artifact ที่บล็อกรูปภายนอก) + ชื่ออำเภอเมื่อซูมเข้า + สเกล + ป้ายบอกค่าบนแผนที่
 //  • ชั้น "จุดความร้อน": GISTDA VIIRS · ดึง /api/hotspot ซ้ำทุก 10 นาที (เซิร์ฟเวอร์ดึง GISTDA ทุก 60 นาที)
 const MM = { on: { pm: true, hs: true }, mode: "live", HS_EVERY: 10 * 60 * 1000, PM_MIN: 10,
   hsLast: null, hsNext: 0, hsBusy: false, hsOk: true,
-  live: null, pmAt: null, pmNext: 0, pmBusy: false, pmOk: true, pmStale: false,
+  live: null, pmAt: null, pmNext: 0, pmBusy: false, pmOk: true, pmStale: false, fromCache: false,
   sample: false, timer: null, bound: false, shapes: {} };
 const mmPad = n => String(n).padStart(2, "0");
 const mmClock = d => d ? `${mmPad(d.getHours())}:${mmPad(d.getMinutes())}:${mmPad(d.getSeconds())}` : "–";
 const mmHM = d => `${mmPad(d.getHours())}:${mmPad(d.getMinutes())}`;
 const mmLeft = t => { const s = Math.max(0, Math.round((t - Date.now()) / 1000)), h = Math.floor(s / 3600); return `${h ? h + ":" : ""}${mmPad(Math.floor(s % 3600 / 60))}:${mmPad(s % 60)}`; };
 function mmNextPm() { const t = new Date(); t.setMinutes(MM.PM_MIN, 0, 0); if (t.getTime() <= Date.now()) t.setHours(t.getHours() + 1); return t.getTime(); }   // ต้นชั่วโมงถัดไป + PM_MIN นาที (รอ Air4Thai อัปเดต)
+
+// ---- เก็บ "ค่าก่อนหน้า" ข้ามการโหลดหน้า (localStorage อาจใช้ไม่ได้ → ข้ามเงียบ ๆ) ----
+const MM_KEY = "mm_live_v1", MM_KEEP = 24 * 3600 * 1000;
+function mmSave() { try { localStorage.setItem(MM_KEY, JSON.stringify({ at: Date.now(), live: MM.live })); } catch (_) {} }
+function mmLoad() { try { const o = JSON.parse(localStorage.getItem(MM_KEY) || "null"); if (o?.live && Date.now() - o.at < MM_KEEP) { MM.live = o.live; MM.fromCache = true; } } catch (_) {} }
+// ค่าที่แสดงเป็น "ค่าก่อนหน้า" = โหมดล่าสุดที่ยังไม่ได้ค่าใหม่ (ดึงไม่สำเร็จ หรือเป็นค่าจากครั้งก่อนระหว่างรอค่าใหม่)
+const mmPrev = () => MM.mode === "live" && !!MM.live && (!MM.pmOk || MM.fromCache);
 
 // ---- ค่าฝุ่นที่ใช้วาด: ล่าสุด หรือ 07.00 น. ----
 const mmUseLive = () => MM.mode === "live" && !!MM.live;
@@ -33,11 +42,15 @@ function mmNote() {   // กล่องค่าสูงสุด/ต่ำส
 // ---- แถบสถานะ real-time (ค่าฝุ่น + จุดความร้อน) ----
 function mmLive() {
   const el = document.getElementById("mmLive"); if (!el) return;
-  const pmRow = MM.mode === "07"
-    ? `<div class="mm-ln"><span class="mm-dot off" aria-hidden="true"></span><b>ค่าฝุ่น</b><span>ค่าเฉลี่ย 24 ชม. ณ 07.00 น. · ตรงกับการ์ดจังหวัดด้านบน</span></div>`
-    : `<div class="mm-ln${MM.pmOk ? "" : " err"}"><span class="mm-dot" aria-hidden="true"></span><b>ค่าฝุ่น ${MM.pmOk ? "สด" : "ดึงไม่สำเร็จ"}</b>
-        <span>${MM.live ? `ค่าเฉลี่ย 24 ชม. ล่าสุด ณ ${mmPmTime() || "–"}` : MM.pmBusy ? "กำลังขอค่าล่าสุด…" : "ยังไม่มีค่าล่าสุด · แสดงค่า 07.00 น. แทน"}${MM.pmStale ? " · <em>ข้อมูลค้าง</em>" : ""}</span>
-        <span class="mm-nx">ขอข้อมูลใหม่ทุกชั่วโมง (ครั้งถัดไป ${mmHM(new Date(MM.pmNext))} น. · อีก <b id="mmCdP">${mmLeft(MM.pmNext)}</b>)</span></div>`;
+  const pt = mmPmTime() || "–";
+  let pmRow;
+  if (MM.mode === "07") pmRow = `<div class="mm-ln"><span class="mm-dot off" aria-hidden="true"></span><b>ค่าฝุ่น</b><span>ค่าเฉลี่ย 24 ชม. ณ 07.00 น. · ตรงกับการ์ดจังหวัดด้านบน</span></div>`;
+  else {
+    const nx = `<span class="mm-nx">ขอข้อมูลใหม่ทุกชั่วโมง (ครั้งถัดไป ${mmHM(new Date(MM.pmNext))} น. · อีก <b id="mmCdP">${mmLeft(MM.pmNext)}</b>)</span>`;
+    if (!MM.live) pmRow = `<div class="mm-ln${MM.pmBusy ? "" : " err"}"><span class="mm-dot${MM.pmBusy ? "" : " off"}" aria-hidden="true"></span><b>ค่าฝุ่น ${MM.pmBusy ? "กำลังขอค่าล่าสุด…" : "ดึงไม่สำเร็จ"}</b>${MM.pmBusy ? "" : `<span>ยังไม่มีค่าก่อนหน้า · แสดงค่า 07.00 น. แทน</span>`}${nx}</div>`;
+    else if (mmPrev()) pmRow = `<div class="mm-ln err"><span class="mm-dot off" aria-hidden="true"></span><b>${MM.pmBusy ? "กำลังขอค่าล่าสุด…" : !MM.pmOk ? "ดึงค่าใหม่ไม่สำเร็จ" : "ค่าจากครั้งก่อน"}</b><span>แสดงค่าก่อนหน้า ณ ${pt} (ค่าเฉลี่ย 24 ชม.)</span>${nx}</div>`;
+    else pmRow = `<div class="mm-ln"><span class="mm-dot" aria-hidden="true"></span><b>ค่าฝุ่น สด</b><span>ค่าเฉลี่ย 24 ชม. ล่าสุด ณ ${pt}${MM.pmStale ? " · <em>ข้อมูลค้าง</em>" : ""}</span>${nx}</div>`;
+  }
   const hsRow = `<div class="mm-ln${MM.hsOk ? "" : " err"}"><span class="mm-dot" aria-hidden="true"></span><b>จุดความร้อน ${MM.hsOk ? "สด" : "ดึงไม่สำเร็จ"}</b>
         <span>GISTDA · อัปเดต ${mmClock(MM.hsLast)} น.</span>
         <span class="mm-nx">รีเฟรชทุก ${MM.HS_EVERY / 60000} นาที (อีก <b id="mmCdH">${mmLeft(MM.hsNext)}</b>)</span></div>`;
@@ -60,8 +73,8 @@ async function mmPmFetch() {
     const j = await getJSON("/api/air4thai-live");
     if (j?.ok && Array.isArray(j.data)) {
       MM.live = Object.fromEntries(j.data.map(o => [o.name, { v: o.pm25, date: o.date, time: o.time, n: o.n, stale: !!o.stale }]));
-      MM.pmStale = !!j.stale || j.data.every(o => o.stale); MM.pmOk = true; MM.pmAt = new Date();
-    } else MM.pmOk = false;
+      MM.pmStale = !!j.stale || j.data.every(o => o.stale); MM.pmOk = true; MM.fromCache = false; MM.pmAt = new Date(); mmSave();
+    } else MM.pmOk = false;   // ดึงไม่ได้ → คง MM.live เดิม (ค่าก่อนหน้า) ไว้ ไม่ล้าง
   } catch (_) { MM.pmOk = false; }
   MM.pmBusy = false; MM.pmNext = mmNextPm();
   mmRepaint();
@@ -69,6 +82,7 @@ async function mmPmFetch() {
 function mmStart() {
   if (MM.timer) return;
   MM.hsLast = new Date(); MM.hsNext = Date.now() + MM.HS_EVERY; MM.pmNext = mmNextPm();
+  mmLoad();       // มีค่าก่อนหน้าจากครั้งที่แล้ว → แสดงไว้ก่อนระหว่างรอค่าใหม่
   mmPmFetch();   // ขอค่าล่าสุดทันทีที่เปิดหน้า
   MM.timer = setInterval(() => {
     if (document.visibilityState !== "visible") return;                 // แท็บที่ซ่อนอยู่ไม่ดึง · กลับมาเห็นแล้วเลยเวลาจะดึงทันที
@@ -96,10 +110,38 @@ function mmBase() {
         const n = f.properties.name_th; MM.shapes[n] = ly;
         ly.on("click", () => { renderDrill(n); document.getElementById("drillPanel")?.scrollIntoView({ behavior: "smooth", block: "center" }); });
       },
-    }).addTo(MM.pmG);
+    }).addTo(MM.pmG); MM.geoLayer = g;
     MAP.fitBounds(g.getBounds(), { padding: [6, 6] });
   }
   MM.pmG.addTo(MAP); MM.labG.addTo(MAP); MM.hsG.addTo(MAP);
+  const b = MM.geoLayer ? MM.geoLayer.getBounds() : null;
+  if (b) { MAP.setMaxBounds(b.pad(.5)); MAP.setMinZoom(Math.floor(MAP.getBoundsZoom(b) - 1)); }
+  L.control.scale({ metric: true, imperial: false, position: "bottomleft" }).addTo(MAP);
+  MM.badge = L.control({ position: "topright" });
+  MM.badge.onAdd = () => { const d = L.DomUtil.create("div", "mm-badge"); L.DomEvent.disableClickPropagation(d); MM.badgeEl = d; return d; };
+  MM.badge.addTo(MAP);
+  mmDistricts();
+}
+// เส้นเขตอำเภอ + ชื่ออำเภอ (แสดงเมื่อซูมเข้า) — พื้นหลังที่วาดเอง ไม่พึ่งไทล์ภายนอก
+async function mmDistricts() {
+  let g = null; try { g = await (S.ampGeoP ??= getJSON("/districts-r7.geojson")); } catch (_) {}
+  if (!g?.features?.length || !MAP || MM.distG) return;
+  MM.distG = L.geoJSON(g, { style: { color: "#5b7089", weight: .9, opacity: .8, dashArray: "3 3", fill: false }, interactive: false }).addTo(MAP);
+  MM.distLab = L.layerGroup(g.features.map(f => L.marker(L.geoJSON(f).getBounds().getCenter(), { interactive: false, keyboard: false,
+    icon: L.divIcon({ className: "", iconSize: [0, 0], html: `<div class="mm-dl">${esc(f.properties.name)}</div>` }) })));
+  const z = () => { if (MAP.getZoom() >= 10) MM.distLab.addTo(MAP); else MM.distLab.remove(); };
+  MAP.on("zoomend", z); z(); mmOrder();
+}
+function mmOrder() {   // ลำดับซ้อน: ค่าฝุ่น (พื้นที่) → เส้นอำเภอ → จุดความร้อน
+  MM.distG?.bringToFront(); MM.hsG?.eachLayer(l => l.bringToFront && l.bringToFront());
+}
+function mmBadge() {   // ป้ายบนแผนที่: บอกว่าตัวเลขบนแผนที่คือค่าอะไร ณ เมื่อไหร่
+  const el = MM.badgeEl; if (!el) return;
+  const pv = mmPrev(), live = mmUseLive(), pt = mmPmTime();
+  el.className = "mm-badge" + (pv || (MM.mode === "live" && !MM.live) ? " prev" : "");
+  el.innerHTML = MM.mode === "07" ? `<b>${PM25T}</b> ค่าเฉลี่ย 24 ชม. ณ 07.00 น.<small>Air4Thai (กรมควบคุมมลพิษ)</small>`
+    : live ? `<b>${PM25T}</b> ${pv ? "ค่าก่อนหน้า" : "ล่าสุด"} ณ ${esc(pt || "–")}<small>ค่าเฉลี่ย 24 ชม. · Air4Thai${pv ? ` · ${MM.pmBusy ? "กำลังขอค่าใหม่…" : !MM.pmOk ? "ดึงค่าใหม่ไม่สำเร็จ" : "ค่าจากครั้งก่อน"}` : ""}${MM.pmStale && !pv ? " · ข้อมูลค้าง" : ""}</small>`
+    : `<b>${PM25T}</b> ค่า 07.00 น. แทน<small>ยังไม่มีค่ารายชั่วโมง</small>`;
 }
 function mmLayers() {   // เปิด/ปิดชั้นข้อมูลตามชิป
   const set = (g, on) => { if (on) g.addTo(MAP); else g.remove(); };
@@ -133,7 +175,7 @@ function renderHotspot(feats, isSample) {
         { className: "hs-tip", direction: "top", offset: [0, -r], sticky: false })
       .addTo(MM.hsG);
   }
-  mmLayers(); mmNote();
+  mmLayers(); mmOrder(); mmNote(); mmBadge();
   // --- แผงข้างแผนที่: ค่าฝุ่น + จำนวนจุดความร้อนรายจังหวัด ---
   document.getElementById("hotSide").innerHTML = `
     <div class="label">${isSample ? "ข้อมูลตัวอย่าง 7 พ.ค. 2569" : "จุดความร้อนรวม 4 จังหวัด · 24 ชม."}</div>

@@ -43,7 +43,12 @@ CSS = """
 .mm-rf{border:1.5px solid var(--line-strong);background:#fff;border-radius:999px;padding:4px 14px;font:600 calc(12.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;color:var(--ink-1);cursor:pointer}
 .mm-rf:disabled{opacity:.55;cursor:default}
 #drillMap[hidden]{display:none!important}
-.mm-main #map{height:520px}
+.mm-main #map{height:520px;background:#e7edf3}
+.mm-badge{background:rgba(255,255,255,.94);border:1.5px solid var(--line-strong);border-radius:12px;padding:6px 11px;font:600 12.5px "IBM Plex Sans Thai",sans-serif;color:var(--ink-1);line-height:1.35;box-shadow:0 2px 8px rgba(15,27,45,.18);max-width:230px}
+.mm-badge small{display:block;font-weight:500;font-size:11px;color:var(--ink-3)}
+.mm-badge.prev{background:#fff8e6;border-color:#f0c36d;color:#7a5200}.mm-badge.prev small{color:#9a6b00}
+.mm-dl{transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;font:600 11px "IBM Plex Sans Thai",sans-serif;color:#33475f;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff}
+.mm-main .leaflet-control-scale-line{font:600 11px "IBM Plex Sans Thai",sans-serif}
 .mm-main .legend{justify-content:center;margin-top:8px}
 .mm-main .map-note{margin-top:10px}
 .mm-lab{transform:translate(-50%,-50%);text-align:center;pointer-events:none;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -59,7 +64,7 @@ CSS = """
 .mm-pm{display:inline-block;text-align:center;border-radius:999px;padding:1px 0;font-weight:700}
 .mm-src{font-size:calc(11.5px*var(--fs,1));color:var(--ink-3);line-height:1.5;font-weight:500}
 @media (max-width:1100px){.hot.mm{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:680px){.mm-main #map{height:420px}.mm-chip{flex:1 1 100%}.mm-segw{width:100%;justify-content:space-between}.mm-lab b{font-size:11px}.mm-lab span{font-size:13px;padding:0 6px}}
+@media (max-width:680px){.mm-main #map{height:420px}.mm-badge{max-width:170px;font-size:11.5px}.mm-chip{flex:1 1 100%}.mm-segw{width:100%;justify-content:space-between}.mm-lab b{font-size:11px}.mm-lab span{font-size:13px;padding:0 6px}}
 @media (prefers-reduced-motion:reduce){.mm-dot{animation:none}}
 """
 
