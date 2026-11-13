@@ -755,6 +755,8 @@ import c5_apply
 html = c5_apply.apply(html)
 import layout_apply
 html = layout_apply.apply(html)   # จัดลำดับหน้าใหม่ (ขั้น 1) — ไม่แตะอินโฟกราฟิก
+import map_merge
+html = map_merge.apply(html)   # รวมแผนที่ค่าฝุ่น + จุดความร้อน (ขั้น 2) — ไม่แตะอินโฟกราฟิก
 # ขนาดตัวอักษรทุกจุด (CSS และ style ในเทมเพลต) คูณด้วย --fs ตามขนาดจอ — ต่ำกว่า 1366 px = เท่าเดิม
 html = re.sub(r"font-size:\s*([0-9.]+)px", lambda m: f"font-size:calc({m.group(1)}px*var(--fs,1))", html)
 # โซนชุดข้อมูล: แถบซ้ายข้างแดชบอร์ด สร้างโดย ds_module.js (buildSide)
