@@ -597,6 +597,44 @@ app.get('/api/air4thai', async (req, res) => {
   res.json(data);
 });
 
+/* ── ค่าฝุ่นล่าสุดรายชั่วโมง (Air4Thai) — ใช้กับ "แผนที่รวม" เท่านั้น ──
+   /api/air4thai ยังจำกัดรอบ 07:00 น. ตามเกณฑ์ของรายงาน · ตัวนี้ส่งรอบล่าสุดที่มีข้อมูลต่อจังหวัด (เวลาไทย)
+   แคช 10 นาที (Air4Thai อัปเดตรายชั่วโมง) · ดึงไม่ได้ → ส่งสำเนาล่าสุดที่เคยดึงสำเร็จพร้อม stale: true · ไม่มีเลย → 502 */
+const { buildLive } = require('./air4thai_live');
+app.get('/api/air4thai-live', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const cached = getCached('air4thai-live');
+  if (cached) return res.json(cached);
+  try {
+    const data = await singleFlight('air4thai-live', async () => {
+      const URLS = [
+        'https://air4thai.pcd.go.th/services/getNewAQI_JSON.php?region=5',
+        'http://air4thai.pcd.go.th/services/getNewAQI_JSON.php?region=5',
+      ];
+      let stations = [];
+      for (const url of URLS) {
+        for (let k = 0; k < 2 && !stations.length; k++) {
+          try {
+            const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+            if (r.ok) { const j = await r.json(); if (j.stations?.length) stations = j.stations; }
+          } catch (_) { /* ลองซ้ำ/ทางสำรอง */ }
+        }
+        if (stations.length) break;
+      }
+      if (!stations.length) throw new Error('ดึง Air4Thai ไม่สำเร็จ');
+      const out = { ok: true, source: 'Air4Thai (กรมควบคุมมลพิษ) · ค่าเฉลี่ย 24 ชม. ล่าสุดรายชั่วโมง', fetchedAt: new Date().toISOString(),
+                    data: buildLive(stations, readConfig().provinces) };
+      setCached('air4thai-live', out, 10 * 60 * 1000);
+      return out;
+    });
+    res.json(data);
+  } catch (e) {
+    const last = _lastGood.get('air4thai-live');
+    if (last) return res.json({ ...last, stale: true, note: 'ดึงข้อมูลใหม่ไม่สำเร็จ ใช้ค่าล่าสุดที่เคยดึงได้' });
+    res.status(502).json({ ok: false, message: e.message });
+  }
+});
+
 // โซน F — โรคเฝ้าระวัง (Hybrid):
 //   • ปี 2568 (key '2025', แท่ง) ← Google Sheet เดิม (ข้อมูลย้อนหลังที่นิ่งแล้ว)
 //   • ปี 2569 (key '2026', เส้น) ← MOPH Open Data API (opendata.moph.go.th เปิดให้เรียกแล้ว

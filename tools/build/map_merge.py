@@ -3,7 +3,8 @@
 รวม 2 ส่วนเดิม (zHot = Leaflet จุดความร้อน · zMap = แผนที่ SVG ค่าฝุ่น) เป็นส่วนเดียว id="zMap":
   • Leaflet แผนที่เดียว: พื้นที่จังหวัดสีตามระดับฝุ่น + ป้ายค่า + จุดความร้อน · ชิปเปิด/ปิดแต่ละชั้น
   • แผงข้างแผนที่ (#hotSide): ค่าฝุ่นและจำนวนจุดความร้อนรายจังหวัด รวมที่มา/คำอธิบายสี
-  • real-time เฉพาะจุดความร้อน (รีเฟรชอัตโนมัติ + เวลาอัปเดต + ปุ่มรีเฟรช) · ค่าฝุ่นยึดค่าเฉลี่ย 24 ชม. ณ 07.00 น. ตามเกณฑ์ของหน้า
+  • real-time ทั้งค่าฝุ่นและจุดความร้อน: ค่าฝุ่น = Air4Thai ค่าเฉลี่ย 24 ชม. ล่าสุดรายชั่วโมง (/api/air4thai-live · ขอใหม่ทุกต้นชั่วโมง+10 นาที)
+    จุดความร้อน = GISTDA (/api/hotspot · ทุก 10 นาที) · สวิตช์สลับ "ล่าสุด | 07.00 น." · ปุ่มรีเฟรช
   • แถบนำทางซ้ายเหลือรายการเดียว "แผนที่ค่าฝุ่น · จุดความร้อน"
 ไม่แตะ: อินโฟกราฟิกทุกส่วน · เว็บจริง (ใช้ร่วมเดโม่ build_demo.py เท่านั้น เรียกหลัง layout_apply)
 """
@@ -23,12 +24,22 @@ CSS = """
 .mm-chip[aria-pressed="true"]{border-color:var(--sec,#1c6ed6);background:color-mix(in srgb,var(--sec,#1c6ed6) 9%,#fff);color:var(--ink-1);box-shadow:0 3px 10px -5px var(--sec,#1c6ed6)}
 .mm-chip[aria-pressed="false"]{opacity:.6}
 .mm-chip:focus-visible,.mm-rf:focus-visible,.mm-row:focus-visible{outline:3px solid var(--sec,#1c6ed6);outline-offset:2px}
-.mm-live{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;font-size:calc(12.5px*var(--fs,1));color:var(--ink-2);font-weight:600}
+.mm-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.mm-segw{display:flex;align-items:center;gap:8px;font-size:calc(12.5px*var(--fs,1));color:var(--ink-3);font-weight:600}
+.mm-seg{display:inline-flex;border:1.5px solid var(--line-strong);border-radius:999px;background:#fff;padding:2px}
+.mm-seg button{border:0;background:none;border-radius:999px;padding:6px 14px;font:600 calc(12.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;color:var(--ink-2);cursor:pointer}
+.mm-seg button[aria-pressed="true"]{background:var(--sec,#1c6ed6);color:#fff}
+.mm-seg button:focus-visible{outline:3px solid var(--sec,#1c6ed6);outline-offset:2px}
+.mm-live{display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:calc(12.5px*var(--fs,1));color:var(--ink-2);font-weight:600;position:relative}
+.mm-ln{display:flex;align-items:center;flex-wrap:wrap;gap:2px 10px}
+.mm-ln.err{color:#b45309}.mm-ln em{font-style:normal;color:#b45309;font-weight:700}
+.mm-dot.off{background:#94a3b8;animation:none}
 .mm-live b{color:var(--ink-1)}
 .mm-dot{width:10px;height:10px;border-radius:50%;background:#16a34a;flex:none;animation:mmPulse 2s infinite}
 @keyframes mmPulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 9px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
 .mm-live.err .mm-dot{background:#d97706;animation:none}
 .mm-live .mm-nx{color:var(--ink-3);font-weight:500}
+.mm-live .mm-rf{align-self:flex-start;margin-top:2px}
 .mm-rf{border:1.5px solid var(--line-strong);background:#fff;border-radius:999px;padding:4px 14px;font:600 calc(12.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;color:var(--ink-1);cursor:pointer}
 .mm-rf:disabled{opacity:.55;cursor:default}
 #drillMap[hidden]{display:none!important}
@@ -42,12 +53,13 @@ CSS = """
 .mm-th,.mm-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 56px;gap:8px;align-items:center}
 .mm-th{font-size:calc(11.5px*var(--fs,1));font-weight:600;color:var(--ink-3);padding:0 0 4px}
 .mm-th span:nth-child(n+2),.mm-row b{text-align:center}
+.mm-th small{display:block;font-size:calc(10.5px*var(--fs,1));font-weight:500}
 .mm-row{width:100%;background:none;border:0;border-top:1px solid var(--line);padding:6px 0;cursor:pointer;font:inherit;color:inherit;text-align:left}
 .mm-row:hover{background:rgba(15,27,45,.04)}
 .mm-pm{display:inline-block;text-align:center;border-radius:999px;padding:1px 0;font-weight:700}
 .mm-src{font-size:calc(11.5px*var(--fs,1));color:var(--ink-3);line-height:1.5;font-weight:500}
 @media (max-width:1100px){.hot.mm{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:680px){.mm-main #map{height:420px}.mm-chip{flex:1 1 100%}.mm-lab b{font-size:11px}.mm-lab span{font-size:13px;padding:0 6px}}
+@media (max-width:680px){.mm-main #map{height:420px}.mm-chip{flex:1 1 100%}.mm-segw{width:100%;justify-content:space-between}.mm-lab b{font-size:11px}.mm-lab span{font-size:13px;padding:0 6px}}
 @media (prefers-reduced-motion:reduce){.mm-dot{animation:none}}
 """
 
@@ -57,7 +69,23 @@ def _cut(html, a, b):
     return html[:i], html[i:j], html[j:]
 
 
-def apply(html):
+DEMO_MOCK = r"""<script>
+/* DEMO — ค่าฝุ่นล่าสุดรายชั่วโมงจำลอง (เดโม่เท่านั้น · เว็บจริงใช้ /api/air4thai-live จาก Air4Thai) */
+(function () {
+  const f = window.fetch.bind(window), BASE = { "ขอนแก่น": 12.4, "มหาสารคาม": 21.8, "ร้อยเอ็ด": 31.2, "กาฬสินธุ์": 48.6 };
+  window.fetch = (u, o) => {
+    const k = String(u).replace(/^https?:\/\/[^/]+/, "").split("?")[0];
+    if (k !== "/api/air4thai-live") return f(u, o);
+    const d = new Date(), p = n => String(n).padStart(2, "0"), hh = d.getHours(), date = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    const data = Object.keys(BASE).map((n, i) => ({ name: n, pm25: Math.round(BASE[n] * (1 + .35 * Math.sin(hh / 24 * 2 * Math.PI + i)) * 10) / 10, date, time: p(hh) + ":00", n: 3, stations: [], stale: false }));
+    return new Promise(r => setTimeout(r, 1200)).then(() => new Response(JSON.stringify({ ok: true, source: "Air4Thai (จำลอง)", data }), { headers: { "Content-Type": "application/json" } }));
+  };
+})();
+</script>
+"""
+
+
+def apply(html, demo=True):
     # ---------- 1) แทนส่วน zHot + zMap เดิม (ที่ layout_apply วางติดกัน) ด้วยส่วนเดียว ----------
     head, old, tail = _cut(html, "  <!-- 6) Hotspot -->", "  <!-- 8) โรค -->")
     assert 'id="zHot"' in old and 'id="zMap"' in old, "map_merge: ไม่พบ zHot/zMap ตามลำดับของ layout_apply"
@@ -65,11 +93,18 @@ def apply(html):
     sec = f"""  <!-- 6) แผนที่รวม ค่าฝุ่น + จุดความร้อน (ขั้น 2) -->
   <section id="zMap" style="--sec:#1c6ed6">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-map"/></svg></div>
-      <div><h2>แผนที่ค่าฝุ่น {pm} และจุดความร้อน</h2><p>ค่าฝุ่นรายจังหวัด (เฉลี่ย 24 ชม. ณ 07.00 น. · Air4Thai) ซ้อนกับจุดความร้อนล่าสุด (GISTDA VIIRS · 24 ชม.) · คลิกจังหวัดบนแผนที่เพื่อดูรายละเอียด</p></div></div>
+      <div><h2>แผนที่ค่าฝุ่น {pm} และจุดความร้อน</h2><p>ค่าฝุ่นรายจังหวัดล่าสุด (เฉลี่ย 24 ชม. · Air4Thai · อัปเดตรายชั่วโมง) ซ้อนกับจุดความร้อน (GISTDA VIIRS · ย้อนหลัง 24 ชม.) · คลิกจังหวัดบนแผนที่เพื่อดูรายละเอียด</p></div></div>
     <div class="mm-bar" id="mmBar">
-      <div class="mm-layers" role="group" aria-label="ชั้นข้อมูลบนแผนที่">
-        <button type="button" class="mm-chip" data-l="pm" aria-pressed="true"><i class="d pm"></i><span>ค่าฝุ่น {pm} รายจังหวัด<small>ค่าเฉลี่ย 24 ชม. ณ 07.00 น.</small></span></button>
-        <button type="button" class="mm-chip" data-l="hs" aria-pressed="true"><i class="d hs"></i><span>จุดความร้อน<small>GISTDA VIIRS · ย้อนหลัง 24 ชม.</small></span></button>
+      <div class="mm-ctl">
+        <div class="mm-layers" role="group" aria-label="ชั้นข้อมูลบนแผนที่">
+          <button type="button" class="mm-chip" data-l="pm" aria-pressed="true"><i class="d pm"></i><span>ค่าฝุ่น {pm} รายจังหวัด<small>ค่าเฉลี่ย 24 ชม. · Air4Thai</small></span></button>
+          <button type="button" class="mm-chip" data-l="hs" aria-pressed="true"><i class="d hs"></i><span>จุดความร้อน<small>GISTDA VIIRS · ย้อนหลัง 24 ชม.</small></span></button>
+        </div>
+        <div class="mm-segw"><span class="mm-segl">ค่าฝุ่นที่แสดง</span>
+          <div class="mm-seg" role="group" aria-label="ค่าฝุ่นที่แสดงบนแผนที่">
+            <button type="button" data-m="live" aria-pressed="true">ล่าสุด (รายชั่วโมง)</button>
+            <button type="button" data-m="07" aria-pressed="false">07.00 น.</button>
+          </div></div>
       </div>
       <div class="mm-live" id="mmLive" role="status"></div>
     </div>
@@ -97,6 +132,12 @@ def apply(html):
     anchor = "// ---------- โรค: แท่งรายเดือน 2568 (เทา) vs 2569 (สีกลุ่มโรค) ----------"
     assert html.count(anchor) == 1, html.count(anchor)
     html = html.replace(anchor, js + "\n" + anchor)
+
+    # ---------- 3b) เดโม่: จำลอง /api/air4thai-live (วางก่อนสคริปต์หลัก ต่อจากตัวจำลองเดิมของ build_demo) ----------
+    if demo:
+        mk = "<script>\n/* ==="
+        assert html.count(mk) == 1, html.count(mk)
+        html = html.replace(mk, DEMO_MOCK + mk)
 
     # ---------- 4) CSS: <style> ก้อนสุดท้ายก่อน <body> (ชนะ CSS เดิม) ----------
     body = html.index('<body id="top"'); k = html.rindex("</style>", 0, body)
