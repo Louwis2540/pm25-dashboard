@@ -37,7 +37,7 @@ CSS = """
 .mm-live .mm-rf{align-self:flex-start;margin-top:2px}
 .mm-rf{border:1.5px solid var(--line-strong);background:#fff;border-radius:999px;padding:4px 14px;font:600 calc(12.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;color:var(--ink-1);cursor:pointer}
 .mm-rf:disabled{opacity:.55;cursor:default}
-#drillMap[hidden]{display:none!important}
+#drillMap[hidden],#mapNote[hidden]{display:none!important}
 .mm-main #map{height:520px;background:#e7edf3}
 .mm-badge{background:rgba(255,255,255,.94);border:1.5px solid var(--line-strong);border-radius:12px;padding:6px 11px;font:600 12.5px "IBM Plex Sans Thai",sans-serif;color:var(--ink-1);line-height:1.35;box-shadow:0 2px 8px rgba(15,27,45,.18);max-width:230px}
 .mm-badge small{display:block;font-weight:500;font-size:11px;color:var(--ink-3)}
@@ -108,7 +108,7 @@ def apply(html, demo=True):
         <div id="map"></div>
         <svg id="drillMap" hidden aria-hidden="true" viewBox="0 0 400 290"></svg>
         <div class="legend" id="aqiLegend"></div>
-        <div class="map-note" id="mapNote"></div>
+        <div class="map-note" id="mapNote" hidden></div>   <!-- เลิกแสดงกล่องค่าสูงสุด/ต่ำสุด · คงองค์ประกอบไว้ให้ renderDrill/renderToday เดิมเขียนได้ไม่ error -->
       </div>
       <div class="card hot-side" id="hotSide"></div>
     </div>

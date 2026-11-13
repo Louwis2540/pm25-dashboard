@@ -28,12 +28,6 @@ function mmPmTime() {   // เวลาของค่าล่าสุด (ร
   const today = new Date(); const ds = `${today.getFullYear()}-${mmPad(today.getMonth() + 1)}-${mmPad(today.getDate())}`;
   return t.startsWith(ds) ? `${t.slice(11)} น.` : `${+t.slice(8, 10)} ${TH_M[+t.slice(5, 7) - 1]} ${t.slice(11)} น.`;
 }
-function mmNote() {   // กล่องค่าสูงสุด/ต่ำสุดใต้แผนที่ ให้ตรงกับค่าที่แสดงบนแผนที่
-  const el = document.getElementById("mapNote"); if (!el) return;
-  const sorted = PROV.map(p => ({ n: p.name, v: mmVal(p.name) })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
-  const note = (o, ic, t) => { const l = LV[lvOf(o.v)]; return `<div><span class="ni" style="background:${l.soft};color:${l.ink}"><svg class="ico"><use href="#${ic}"/></svg></span><span>${t}<b>${o.n} ${f1(o.v)}</b></span></div>`; };
-  el.innerHTML = sorted.length > 1 ? note(sorted[0], "i-up", "ค่าสูงสุด") + note(sorted.at(-1), "i-dn", "ค่าต่ำสุด") : "";
-}
 
 // ---- แถบสถานะ (ค่าเฉลี่ยรายชั่วโมง + ที่มาจุดความร้อน) ----
 function mmLive() {
@@ -153,7 +147,7 @@ function renderHotspot(feats, isSample) {
         { className: "hs-tip", direction: "top", offset: [0, -r], sticky: false })
       .addTo(MM.hsG);
   }
-  mmLayers(); mmOrder(); mmNote(); mmBadge();
+  mmLayers(); mmOrder(); mmBadge();
   // --- แผงข้างแผนที่: ค่าฝุ่น + จำนวนจุดความร้อนรายจังหวัด ---
   document.getElementById("hotSide").innerHTML = `
     <div class="label">${isSample ? "ข้อมูลตัวอย่าง 7 พ.ค. 2569" : "จุดความร้อนรวม 4 จังหวัด · 24 ชม."}</div>
@@ -175,8 +169,7 @@ function renderHotspot(feats, isSample) {
   if (!MM.bound) {
     MM.bound = true;
     document.querySelectorAll("#mmBar .mm-chip").forEach(b => b.addEventListener("click", () => { MM.on[b.dataset.l] = !MM.on[b.dataset.l]; mmLayers(); }));
-    const rd = renderDrill; renderDrill = function (pv, level, amp) { const r = rd.apply(this, arguments); try { mmSelect(pv); mmNote(); } catch (_) {} return r; };   // เลือกจังหวัดจากการ์ด → ไฮไลต์บนแผนที่ · กล่องสูงสุด/ต่ำสุดตรงกับค่าบนแผนที่
-    const rt = renderToday; renderToday = function () { const r = rt.apply(this, arguments); try { mmNote(); } catch (_) {} return r; };   // renderToday เขียนกล่องสูงสุด/ต่ำสุดด้วยค่า 07.00 น. ทับ → เขียนใหม่ตามค่าที่แสดงบนแผนที่
+    const rd = renderDrill; renderDrill = function (pv, level, amp) { const r = rd.apply(this, arguments); try { mmSelect(pv); } catch (_) {} return r; };   // เลือกจังหวัดจากการ์ด → ไฮไลต์บนแผนที่ · กล่องสูงสุด/ต่ำสุดตรงกับค่าบนแผนที่
     mmStart();
   }
   mmLive();
