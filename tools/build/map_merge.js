@@ -93,12 +93,12 @@ function mmDistTip(f) {
 // ---- แผนที่ ----
 const MM_PV_STYLE = { color: "#fff", weight: 2 }, MM_PV_SEL = { color: "#0e2a47", weight: 4 }, MM_AP_STYLE = { color: "#5b7089", weight: .9, opacity: .8, dashArray: "3 3", fill: true, fillColor: "#0e2a47", fillOpacity: 0 };
 const MM_AP_HOV = { color: "#0e2a47", weight: 2, opacity: 1, dashArray: null, fillOpacity: .14 };
-// แผนที่ฐาน 2 แบบ: ดาวเทียม (ค่าเริ่มต้น) / ถนน · เส้นเขตและพื้นจังหวัดปรับให้อ่านชัดบนแต่ละแบบ
+// แผนที่ฐาน 2 แบบ: ถนน (ค่าเริ่มต้น เหมือนเว็บจริง) / ดาวเทียม · เส้นเขตและพื้นจังหวัดปรับให้อ่านชัดบนแต่ละแบบ
 const MM_BASES = {
   sat: { label: "ดาวเทียม", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: "Tiles © Esri — Esri, Maxar, Earthstar Geographics",
     fill: 0, pv: { color: "#fff", weight: 1.6, opacity: .85 }, sel: { color: "#fff", weight: 4, opacity: 1 }, ap: { color: "#fff", weight: .9, opacity: .55, dashArray: "3 3" }, hov: { color: "#fff", weight: 2.4, opacity: 1, dashArray: null, fillColor: "#fff", fillOpacity: .2 } },
   st: { label: "แผนที่ถนน", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attr: "© OpenStreetMap",
-    fill: .3, pv: { color: "#fff", weight: 2, opacity: 1 }, sel: { color: "#0e2a47", weight: 4, opacity: 1 }, ap: { color: "#5b7089", weight: .9, opacity: .8, dashArray: "3 3" }, hov: { color: "#0e2a47", weight: 2, opacity: 1, dashArray: null, fillColor: "#0e2a47", fillOpacity: .14 } },
+    fill: .8, pv: { color: "#fff", weight: 2, opacity: 1 }, sel: { color: "#0e2a47", weight: 4, opacity: 1 }, ap: { color: "#5b7089", weight: .9, opacity: .8, dashArray: "3 3" }, hov: { color: "#0e2a47", weight: 2, opacity: 1, dashArray: null, fillColor: "#0e2a47", fillOpacity: .14 } },
 };
 function mmNote(t) {   // ข้อความเล็กกลางแผนที่
   if (!MAP) return; let n = MM.noteEl;
@@ -151,7 +151,7 @@ function mmBase() {
     d.innerHTML = Object.entries(MM_BASES).map(([k, T]) => `<button type="button" data-b="${k}" aria-pressed="false">${T.label}</button>`).join("");
     d.querySelectorAll("button").forEach(b => b.addEventListener("click", () => mmSetBase(b.dataset.b, true))); return d; };
   bc.addTo(MAP);
-  let k0 = "sat"; try { const v = localStorage.getItem("mmBase"); if (MM_BASES[v]) k0 = v; } catch (_) {}
+  let k0 = "st"; try { const v = localStorage.getItem("mmBase"); if (MM_BASES[v]) k0 = v; } catch (_) {}
   mmSetBase(k0);
   mmDistricts();
 }
