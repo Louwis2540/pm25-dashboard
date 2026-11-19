@@ -8,10 +8,15 @@ name: ปลุก Render ไม่ให้หลับ
 # จึงตั้ง 5 นาที (ถี่สุดที่ GitHub ยอม) เผื่อไว้ — cron ของ GitHub เป็น best-effort
 # ดีเลย์ได้ 10-20 นาทีตอนระบบโหลดหนัก ถ้าตั้ง 10 นาทีแล้วโดนดีเลย์ 2 รอบ Render จะหลับพอดี
 
+# เพิ่ม 19 พ.ย. 2569: สำรองจุดความร้อนรายวัน — GISTDA ให้ดูย้อนหลังได้แค่ 24 ชม. และเซิร์ฟเวอร์ขอ GISTDA เฉพาะตอนมีคำขอ /api/hotspot
+# รอบทุก 6 ชม. (ตลอด 24 ชม. รวมวันหยุด) ปลุกเครื่องแล้วขอจุดความร้อนให้เซิร์ฟเวอร์สำรองลงชีต → ห่างกันไม่เกิน ~6 ชม. (พลาด 1 รอบก็ยังไม่เกิน 12 ชม.)
+# ใช้ชั่วโมงเครื่องเพิ่มราว 30 ชม./เดือน (ตื่นราว 16 นาที × 4 รอบ/วัน)
 on:
   schedule:
     # เวลา UTC — 00:00-11:59 UTC ตรงกับ 07:00-18:59 น. เวลาไทย (UTC+7) จันทร์-ศุกร์
     - cron: '*/5 0-11 * * 1-5'
+    # ทุก 6 ชม. ตลอดวัน (UTC) — สำรองจุดความร้อน
+    - cron: '17 */6 * * *'
   workflow_dispatch:        # กดรันเองได้จากแท็บ Actions
 
 # ถ้ารอบก่อนยังค้างอยู่ (Render ตื่นช้า) ให้ยกเลิกแล้วใช้รอบใหม่แทน ไม่ให้ทับกัน
@@ -34,3 +39,14 @@ jobs:
                --output /dev/null \
                --write-out 'HTTP %{http_code} · ใช้เวลา %{time_total}s\n' \
                https://pm25-dashboard-ex8l.onrender.com/api/data-status
+      - name: ขอจุดความร้อน (เซิร์ฟเวอร์สำรองลงชีต)
+        # เฉพาะรอบทุก 6 ชม. หรือกดรันเอง — รอบ 5 นาทีเวลาราชการไม่ต้องขอ (เบา และไม่ยิง GISTDA ถี่)
+        if: ${{ github.event.schedule == '17 */6 * * *' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          curl --silent --show-error --fail \
+               --retry 3 --retry-delay 20 --retry-all-errors \
+               --max-time 120 \
+               --output /tmp/hs.json \
+               --write-out 'HTTP %{http_code} · ใช้เวลา %{time_total}s\n' \
+               https://pm25-dashboard-ex8l.onrender.com/api/hotspot
+          python3 -c "import json; d = json.load(open('/tmp/hs.json')); print('จุดความร้อน', d.get('count'), '· ตรวจพบล่าสุด', d.get('latest'), '· ข้อมูลค้าง' if d.get('stale') else '')"
