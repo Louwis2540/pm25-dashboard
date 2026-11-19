@@ -7,7 +7,7 @@
 """
 import re
 
-ORDER = ["zToday", "zTrend", "zSummary", "zDrill", "zWeek", "zMap", "zDisease", "zAdvice"]
+ORDER = ["zToday", "zTrend", "zDrill", "zWeek", "zMap", "zDisease", "zAdvice"]   # zSummary ย้ายเข้าไปติดกับกราฟเส้นใน zTrend
 MENU = ('const SB_MENU = [["zToday", "ฝุ่นภาพรวม"], ["zDrill", "เจาะลึกรายจังหวัด"], ["zWeek", "ย้อนหลัง 7 วัน · คาดการณ์ 3 วัน"],\n'
         '  ["zMap", "ความร้อน · ค่าฝุ่นรายชั่วโมง"], ["zDisease", "ผู้ป่วย"], ["zAdvice", "คำแนะนำการปฏิบัติตัว"], ["zData", "ดาวน์โหลดข้อมูล"]];\n'
         'const SB_GRP = { zToday: "ภาค A · ฝุ่นและความร้อน", zDisease: "ภาค B · ผลต่อสุขภาพ" };')
@@ -19,6 +19,10 @@ CSS = """
 .part::before,.part::after{content:"";flex:1;border-top:2px dotted var(--line-strong,#b8c4d3)}
 .part span{padding:3px 16px;border-radius:999px;border:1px solid currentColor;background:#fff}
 .part-a{color:#1c6ed6}.part-b{color:#c2415d}
+.trend-sum{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.trend-sum .sum-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px;padding:4px 6px 0}
+.trend-sum .sum-h h3{margin:0;font:700 calc(19px*var(--fs,1)) "Anuphan","IBM Plex Sans Thai",sans-serif}
+.trend-sum .sum-h p{margin:0;font-size:calc(13px*var(--fs,1));color:var(--ink-3,#6b7689)}
 .sb-c li.sb-grp{list-style:none;margin:12px 4px 2px;font:600 calc(11.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;letter-spacing:.04em;color:#5f6c80;text-transform:none}
 .sb-c li.sb-grp:first-child{margin-top:2px}
 """
@@ -36,13 +40,25 @@ def apply(html):
     rest = body
     for b in blocks.values():
         rest = rest.replace(b, "", 1)
+    # "สรุปช่วงที่แสดง" อยู่ติดใต้กราฟเส้นในส่วนเดียวกัน (Louis 20 พ.ย. 2569) — ย้ายการ์ด #trStats เข้า zTrend คงถ้อยคำหัวข้อเดิม
+    sm = re.search(r"<h2>(.*?)</h2><p>(.*?)</p>", blocks["zSummary"], re.S)
+    if not sm or 'id="trStats"' not in blocks["zSummary"]:
+        raise SystemExit("reorder_apply: โครงสร้าง zSummary ไม่ตรงที่คาด")
+    tz = blocks["zTrend"]
+    if tz.count('<div class="trend">') != 1 or not tz.rstrip().endswith("    </div>\n  </section>"):
+        raise SystemExit("reorder_apply: โครงสร้าง zTrend ไม่ตรงที่คาด")
+    tz = tz.replace('<div class="trend">', '<div class="trend tr-one">', 1)
+    cut = tz.rindex("    </div>\n  </section>")
+    tz = tz[:cut] + ('      <div class="trend-sum" id="zSummary"><div class="sum-h"><h3>' + sm.group(1) + '</h3><p>' + sm.group(2) + '</p></div>'
+                     '<div class="card chart-card" id="trStats"></div></div>\n') + tz[cut:]
+    blocks["zTrend"] = tz
     missing = [k for k in ORDER if k not in blocks]
     if missing:
         raise SystemExit(f"reorder_apply: ไม่พบส่วน {missing}")
     if rest.strip() and 'id="zData"' not in rest:
         raise SystemExit("reorder_apply: มีเนื้อหาใน <main> นอกเหนือจากส่วนที่รู้จัก: " + rest.strip()[:120])
     out = PART_A
-    for k in ORDER:
+    for k in ORDER:   # zSummary ไม่ถูกวางแยกอีกแล้ว
         if k == "zDisease":
             out += PART_B
         out += blocks[k]
