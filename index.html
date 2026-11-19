@@ -1137,12 +1137,15 @@ body.dp-open{overflow:hidden}
 .wk-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:stretch}
 .wk-grid .fc{position:static}
 .trend.tr-one,.drill.dr-one{grid-template-columns:minmax(0,1fr)}
-/* คำอธิบายสั้น 3 ข้อของกราฟผู้ป่วยรายเดือน (อ่านง่ายสำหรับคนทั่วไป) */
-.e1p-read{list-style:none;margin:10px 0 12px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.e1p-read li{background:#f5f8fc;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:calc(13px*var(--fs,1));line-height:1.5;color:var(--ink-2)}
-.e1p-read li b{display:block;color:var(--ink-1);font-weight:700;margin-bottom:2px}
-@media (max-width:900px){.e1p-read{grid-template-columns:minmax(0,1fr)}}
+/* ชื่อจังหวัดในการ์ดค่าฝุ่นห้ามถูกไอคอนท้องฟ้าทับ (ตัวเลือก .pv-top ให้ความจำเพาะเท่ากับกฎ 18px/72px ด้านบน) */
 /* กราฟผู้ป่วยรายเดือน ม.ค. 69 – พ.ค. 70: จอแคบเลื่อนซ้าย-ขวาในกรอบของตัวเอง (หน้าไม่เลื่อนแนวนอน) */
+/* จอแคบมาก (320–360 px): ป้ายระดับฝุ่นในการ์ดห้ามดันหน้าให้เลื่อนแนวนอน — ให้ขึ้นบรรทัดใหม่ได้ */
+.ws-v2 .tile{min-width:0}
+@container (max-width:225px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(17px*var(--fs,1))}.ws-v2 .pv-top .tile .th .chip{font-size:calc(16px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:60px}}
+@container (max-width:185px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(16px*var(--fs,1))}.ws-v2 .pv-top .tile .th .chip{font-size:calc(15px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:52px}}
+@container (max-width:170px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(14.5px*var(--fs,1));line-height:1.1}.ws-v2 .pv-top .tile .th .chip{font-size:calc(14px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:42px}}
+@container (max-width:135px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(13px*var(--fs,1));white-space:normal;overflow-wrap:anywhere}.ws-v2 .pv-top .tile .th .chip{font-size:calc(13px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:36px}}   /* ชื่อจังหวัดยาว (มหาสารคาม) ห้ามถูกไอคอนท้องฟ้าทับ · จอแคบมาก ให้ขึ้นบรรทัดใหม่ได้ */
+.ws-v2 .tile .th .chip{white-space:normal;max-width:100%;min-width:0;text-align:center;line-height:1.3;padding-block:2px}
 .e1p-sc{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px}
 .e1p-sc svg.bars{width:640px;max-width:none;height:auto;display:block}
 .e1p-gh{display:flex;flex-direction:column;gap:2px;margin:12px 0 2px;font-size:calc(12px*var(--fs,1));color:#5f6c80;line-height:1.45}
@@ -3409,11 +3412,7 @@ function dzMonthAll(dz, wkMax) {
   return `<article class="card dz dz-all" style="--dsoft:#eef2f7;--dc:#5f6c80">
     <div class="dz-top"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-chart"/></svg></div>
       <div><h3>จำนวนผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น ในแต่ละเดือน</h3><div class="icd">ทั้งเขตสุขภาพที่ 7 · ม.ค. 2569 – พ.ค. 2570${lastTxt ? ` (มีข้อมูลถึง ${lastTxt} เพิ่มทีละเดือน)` : ""} · <b>1 แท่ง = จำนวนผู้ป่วยรวมของเดือนนั้น</b> (หน่วย: ราย)</div></div><button type="button" class="ds-jump" data-preset="weekly" style="margin-left:auto"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลดข้อมูล</button></div>
-    <ul class="e1p-read" aria-label="วิธีอ่านกราฟแบบสั้น">
-      <li><b>กราฟนี้บอกอะไร</b><span>จำนวนผู้ป่วยที่มารับบริการด้วยโรค 4 กลุ่มนี้ในแต่ละเดือน นับรวมทุกสาเหตุของการป่วย</span></li>
-      <li><b>ดูแนวโน้มอย่างไร</b><span>เทียบความสูงของแท่งแต่ละเดือน เส้นที่ลากเชื่อมช่วยให้เห็นทิศทาง: ชี้ขึ้น = มีผู้มารับบริการมากขึ้น ชี้ลง = น้อยลง กราฟบอกจำนวน แต่ไม่ได้บอกสาเหตุ</span></li>
-      <li><b>ข้อควรรู้</b><span>ตัวเลขนี้ไม่ได้แยกว่าใครป่วยเพราะฝุ่น ฝุ่น PM<sub>2.5</sub> อาจเป็นปัจจัยหนึ่งหรือไม่เกี่ยวเลยก็ได้ อากาศเย็น โรคติดเชื้อตามฤดูกาล วันหยุดยาว และความครบของการรายงาน ทำให้ตัวเลขขึ้นลงได้เช่นกัน จึงใช้ดูแนวโน้มเพื่อเฝ้าระวัง ไม่ใช่หลักฐานว่าฝุ่นเป็นสาเหตุ</span></li></ul>
-    <div class="e1lg"><span><i class="ssn"></i><em>พื้นส้มอ่อน = ช่วงฤดูฝุ่น (พ.ย.–พ.ค.)</em></span><span><b class="e1p-mk">ปีใหม่</b><em>คำใต้ชื่อเดือน = เดือนที่มีวันหยุดยาว (ปีใหม่ · สงกรานต์) สัปดาห์ที่หยุดหลายวันผู้มารับบริการมักลดลงชั่วคราว ยอดเดือนนั้นอาจต่ำกว่าปกติเล็กน้อย ไม่ได้แปลว่าผู้ป่วยลดลงจริง</em></span>${hasProv ? `<span><i class="bar" style="opacity:.4;outline:1.5px dashed currentColor"></i><em>แท่งจางขอบประ (*) = ข้อมูลเดือนนั้นยังเข้าไม่ครบ</em></span>` : ""}<span class="e1p-swipe"><em>เลื่อนกราฟซ้าย-ขวาเพื่อดูเดือนอื่น</em></span></div>
+    <div class="e1lg"><span><i class="ssn"></i><em>พื้นส้มอ่อน = ช่วงฤดูฝุ่น (พ.ย.–พ.ค.)</em></span>${hasProv ? `<span><i class="bar" style="opacity:.4;outline:1.5px dashed currentColor"></i><em>แท่งจางขอบประ (*) = ข้อมูลเดือนนั้นยังเข้าไม่ครบ</em></span>` : ""}<span><b class="e1p-mk">ปีใหม่</b><em>คำใต้ชื่อเดือน = เดือนที่มีวันหยุดยาว (ปีใหม่ · สงกรานต์) สัปดาห์ที่หยุดหลายวันผู้มารับบริการมักลดลงชั่วคราว ยอดเดือนนั้นอาจต่ำกว่าปกติเล็กน้อย ไม่ได้แปลว่าผู้ป่วยลดลงจริง</em></span><span class="e1p-swipe"><em>เลื่อนกราฟซ้าย-ขวาเพื่อดูเดือนอื่น</em></span></div>
     ${e1pSvg(ser, cols, 1100, lastI)}<div class="e1p-n">${ser.map(s => { const h = e1pHead(s, cols);
       return `<div class="e1p-gh"><b><i style="background:${s.d.c}"></i>${dzName(s.d)}<small> · ราย/เดือน</small></b>${h ? `<span>${h.a}<strong>${h.bT}</strong>${h.c ? ` · <strong style="color:${h.col}">${h.c}</strong>` : ""}${h.why}</span>` : ""}</div><div class="e1p-sc" data-last="${last2.toFixed(0)}">${e1pSvg([s], cols, W2, lastI, true)}</div>`; }).join("")}</div>
     <details class="pv-guide pg-fold dz-fold"><summary class="pg-h"><svg class="ico"><use href="#i-chart"/></svg><b>รายละเอียดเพิ่มเติม (สำหรับเจ้าหน้าที่)</b><span class="pg-more">กดเพื่อเปิด/ปิด</span></summary>
@@ -3718,6 +3717,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     const t = e.target, k = t.dataset.k, f = st.f;
     if (t.name === "dsFmt") { st.fmt = t.value; return render(); }
     if (!k) return;
+    if (/^d[01]$/.test(k) && !/^\d{4}-\d{2}-\d{2}$/.test(t.value)) return;   // กำลังลบ/พิมพ์วันที่อยู่ (ค่าว่าง) → ยังไม่วาดแผงใหม่ ไม่งั้นช่องถูกล้างและเคอร์เซอร์หลุด
     if (t.type === "checkbox") { const s = new Set(f[k]); t.checked ? s.add(t.value) : s.delete(t.value); f[k] = k === "pv" ? PROV.map(p => p.name).filter(n => s.has(n)) : GK.filter(g => s.has(g)); }
     else f[k] = /^w[01]$/.test(k) ? +t.value : t.value;
     render();
@@ -3740,6 +3740,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     if (!document.getElementById("dsBody")) return;
     const el = document.getElementById("dsBody"); if (el.dataset.on) return render();
     el.dataset.on = 1; el.addEventListener("change", onChange); el.addEventListener("click", onClick);
+    el.addEventListener("focusout", e => { const k = e.target.dataset?.k; if (/^d[01]$/.test(k || "") && !e.target.value) render(); });   // ออกจากช่องวันที่โดยปล่อยว่าง → คืนค่าเดิม
     pick("analysis");
   };
 })();

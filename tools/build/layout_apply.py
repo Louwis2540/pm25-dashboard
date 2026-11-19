@@ -53,12 +53,15 @@ CSS = """
 .wk-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:stretch}
 .wk-grid .fc{position:static}
 .trend.tr-one,.drill.dr-one{grid-template-columns:minmax(0,1fr)}
-/* คำอธิบายสั้น 3 ข้อของกราฟผู้ป่วยรายเดือน (อ่านง่ายสำหรับคนทั่วไป) */
-.e1p-read{list-style:none;margin:10px 0 12px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.e1p-read li{background:#f5f8fc;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5;color:var(--ink-2)}
-.e1p-read li b{display:block;color:var(--ink-1);font-weight:700;margin-bottom:2px}
-@media (max-width:900px){.e1p-read{grid-template-columns:minmax(0,1fr)}}
+/* ชื่อจังหวัดในการ์ดค่าฝุ่นห้ามถูกไอคอนท้องฟ้าทับ (ตัวเลือก .pv-top ให้ความจำเพาะเท่ากับกฎ 18px/72px ด้านบน) */
 /* กราฟผู้ป่วยรายเดือน ม.ค. 69 – พ.ค. 70: จอแคบเลื่อนซ้าย-ขวาในกรอบของตัวเอง (หน้าไม่เลื่อนแนวนอน) */
+/* จอแคบมาก (320–360 px): ป้ายระดับฝุ่นในการ์ดห้ามดันหน้าให้เลื่อนแนวนอน — ให้ขึ้นบรรทัดใหม่ได้ */
+.ws-v2 .tile{min-width:0}
+@container (max-width:225px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(17px*var(--fs,1))}.ws-v2 .pv-top .tile .th .chip{font-size:calc(16px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:60px}}
+@container (max-width:185px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(16px*var(--fs,1))}.ws-v2 .pv-top .tile .th .chip{font-size:calc(15px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:52px}}
+@container (max-width:170px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(14.5px*var(--fs,1));line-height:1.1}.ws-v2 .pv-top .tile .th .chip{font-size:calc(14px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:42px}}
+@container (max-width:135px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(13px*var(--fs,1));white-space:normal;overflow-wrap:anywhere}.ws-v2 .pv-top .tile .th .chip{font-size:calc(13px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:36px}}   /* ชื่อจังหวัดยาว (มหาสารคาม) ห้ามถูกไอคอนท้องฟ้าทับ · จอแคบมาก ให้ขึ้นบรรทัดใหม่ได้ */
+.ws-v2 .tile .th .chip{white-space:normal;max-width:100%;min-width:0;text-align:center;line-height:1.3;padding-block:2px}
 .e1p-sc{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px}
 .e1p-sc svg.bars{width:640px;max-width:none;height:auto;display:block}
 .e1p-gh{display:flex;flex-direction:column;gap:2px;margin:12px 0 2px;font-size:12px;color:#5f6c80;line-height:1.45}

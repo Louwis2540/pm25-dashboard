@@ -265,6 +265,7 @@
     const t = e.target, k = t.dataset.k, f = st.f;
     if (t.name === "dsFmt") { st.fmt = t.value; return render(); }
     if (!k) return;
+    if (/^d[01]$/.test(k) && !/^\d{4}-\d{2}-\d{2}$/.test(t.value)) return;   // กำลังลบ/พิมพ์วันที่อยู่ (ค่าว่าง) → ยังไม่วาดแผงใหม่ ไม่งั้นช่องถูกล้างและเคอร์เซอร์หลุด
     if (t.type === "checkbox") { const s = new Set(f[k]); t.checked ? s.add(t.value) : s.delete(t.value); f[k] = k === "pv" ? PROV.map(p => p.name).filter(n => s.has(n)) : GK.filter(g => s.has(g)); }
     else f[k] = /^w[01]$/.test(k) ? +t.value : t.value;
     render();
@@ -287,6 +288,7 @@
     if (!document.getElementById("dsBody")) return;
     const el = document.getElementById("dsBody"); if (el.dataset.on) return render();
     el.dataset.on = 1; el.addEventListener("change", onChange); el.addEventListener("click", onClick);
+    el.addEventListener("focusout", e => { const k = e.target.dataset?.k; if (/^d[01]$/.test(k || "") && !e.target.value) render(); });   // ออกจากช่องวันที่โดยปล่อยว่าง → คืนค่าเดิม
     pick("analysis");
   };
 })();
