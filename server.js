@@ -918,6 +918,7 @@ async function buildDiseasePv() {
   }
   const data = {
     ok: true, mock: false,
+    yearBe: Number(beYear),   // ปี พ.ศ. ของข้อมูลรายจังหวัด (config.json population.year_be) — หน้าเว็บใช้เป็นปีของกราฟรายสัปดาห์รายจังหวัด
     pop: population.midyear, popNote: population.label, popMethod: population.method,
     rows: src.rows, rows1: src.rows1 || [], dateCom: src.dateCom || '',
     rowsPrev: prev.rows, prevYearBe: prev.beYear,

@@ -7,10 +7,10 @@ window._e2xView = window._e2xView || "x";        // "x" = เทียบแน�
 window._e2xMode = "dual";   // เลือกแบบแกนคู่อย่างเดียว (Louis 16 ต.ค. 2569)
 window._e2xK = window._e2xK || DZ[0].key;
 const E2X_PMAX = 100;
-const e2xDays = wk => Math.round((epiEnd(2026, wk) - epiStart(2026, wk)) / 864e5) + 1;   // จำนวนวันในสัปดาห์ระบาดวิทยา (สัปดาห์ที่ 1 อาจไม่ครบ 7)
+const e2xDays = wk => Math.round((epiEnd(PY(), wk) - epiStart(PY(), wk)) / 864e5) + 1;   // จำนวนวันในสัปดาห์ระบาดวิทยา (สัปดาห์ที่ 1 อาจไม่ครบ 7)
 function e2xNice(v) { const p = 10 ** Math.floor(Math.log10(v)), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
 function e2xPmWeek(PMD, pv, wk) {   // ค่าเฉลี่ยและ SD ของค่าฝุ่นรายวันในสัปดาห์ (ต้องมีค่าอย่างน้อย 4 วัน)
-  const s = epiStart(2026, wk), nd = Math.round((epiEnd(2026, wk) - s) / 864e5) + 1, v = [];
+  const s = epiStart(PY(), wk), nd = Math.round((epiEnd(PY(), wk) - s) / 864e5) + 1, v = [];
   for (let i = 0; i < nd; i++) { const d = new Date(s.getTime() + i * 864e5), iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const x = PMD[iso]?.[pv]; if (x != null && x > 0) v.push(x); }
   if (v.length < Math.min(4, nd)) return null;
   const m = v.reduce((a, b) => a + b, 0) / v.length, sd = v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1)) : 0;
@@ -34,7 +34,7 @@ function e2xSvg(o, s, n, lastOk, W, mode, RMAX) {
   const yAx = P2.top + P2.h, H = yAx + fs * 3.2;
   const YP = v => P1.top + P1.h - Math.min(v, E2X_PMAX) / E2X_PMAX * P1.h;
   const YR = v => P2.top + P2.h - Math.min(v, RMAX) / RMAX * P2.h;
-  const wkT = i => { const a = epiStart(2026, i + 1), b = epiEnd(2026, i + 1), d = e2xDays(i + 1); return `สัปดาห์ที่ ${i + 1} (${dmy(a)}–${dmy(b)})${d < 7 ? ` · สัปดาห์ไม่เต็ม มี ${d} วัน อัตราจึงต่ำกว่าสัปดาห์ปกติ` : ""}`; };
+  const wkT = i => { const a = epiStart(PY(), i + 1), b = epiEnd(PY(), i + 1), d = e2xDays(i + 1); return `สัปดาห์ที่ ${i + 1} (${dmy(a)}–${dmy(b)})${d < 7 ? ` · สัปดาห์ไม่เต็ม มี ${d} วัน อัตราจึงต่ำกว่าสัปดาห์ปกติ` : ""}`; };
   const short = i => e2xDays(i + 1) < 7;
   const pmC = PM_INK, rC = s.d.c;
   let g = "";
@@ -55,7 +55,7 @@ function e2xSvg(o, s, n, lastOk, W, mode, RMAX) {
     g += `<text x="${L - 5}" y="${P1.top - 7}" text-anchor="end" font-size="${fs - 1.5}" font-weight="700" fill="${pmC}">µg/m³</text>`
       + `<text x="${W - R + 5}" y="${P1.top - 7}" font-size="${fs - 1.5}" font-weight="700" fill="${rC}">ต่อแสน</text>`;
   }
-  HOLI26.filter(h => h.wk <= n).forEach(h => { g += `<line x1="${X(h.wk - 1)}" x2="${X(h.wk - 1)}" y1="${P1.top}" y2="${yAx}" stroke="#8a96a8" stroke-dasharray="2 3"/><text x="${X(h.wk - 1) + 3}" y="${yAx + fs * 2.3}" font-size="${fs - 1.5}" fill="#6b7689">${h.t}</text>`; });
+  HOLI26().filter(h => h.wk <= n).forEach(h => { g += `<line x1="${X(h.wk - 1)}" x2="${X(h.wk - 1)}" y1="${P1.top}" y2="${yAx}" stroke="#8a96a8" stroke-dasharray="2 3"/><text x="${X(h.wk - 1) + 3}" y="${yAx + fs * 2.3}" font-size="${fs - 1.5}" fill="#6b7689">${h.t}</text>`; });
   // แถบ ± SD ค่าฝุ่น (เป็นช่วงต่อเนื่องเฉพาะสัปดาห์ที่มีค่า)
   let band = "", seg = [];
   const flush = () => { if (seg.length > 1) band += `<path d="M${seg.map(([i, q]) => `${X(i).toFixed(1)} ${YP(q.m + q.sd).toFixed(1)}`).join("L")}L${seg.slice().reverse().map(([i, q]) => `${X(i).toFixed(1)} ${YP(Math.max(0, q.m - q.sd)).toFixed(1)}`).join("L")}Z" fill="${pmC}" opacity=".13"/>`; seg = []; };
@@ -74,7 +74,7 @@ function e2xSvg(o, s, n, lastOk, W, mode, RMAX) {
   s.rate.forEach((v, i) => { if (v != null) g += short(i)
     ? `<circle cx="${X(i)}" cy="${YR(v)}" r="3" fill="#fff" stroke="${rC}" stroke-width="1.6" opacity=".7"/><text x="${X(i) + 5}" y="${YR(v) + 3.5}" font-size="${fs - 2}" font-weight="700" fill="${rC}" opacity=".85">${e2xDays(i + 1)} วัน</text>`
     : `<circle cx="${X(i)}" cy="${YR(v)}" r="2.2" fill="${rC}"${i + 1 > lastOk ? ` opacity=".45"` : ""}/>`; });
-  let lm = -1; for (let i = 0; i < n; i++) { const m = epiMonth(2026, i + 1); if (m !== lm) { g += `<text x="${L + i * slot + 3}" y="${yAx + fs + 1}" font-size="${fs - 1.5}" fill="#5f6c80">${TH_M[m]}</text>`; lm = m; } }
+  let lm = -1; for (let i = 0; i < n; i++) { const m = epiMonth(PY(), i + 1); if (m !== lm) { g += `<text x="${L + i * slot + 3}" y="${yAx + fs + 1}" font-size="${fs - 1.5}" fill="#5f6c80">${TH_M[m]}</text>`; lm = m; } }
   for (let i = 0; i < n; i++) {
     const q = o.pm[i], v = s.rate[i];
     const t = `${wkT(i)}${i + 1 > lastOk ? " · ข้อมูลเบื้องต้น" : ""}&#10;ค่าฝุ่นเฉลี่ย: ${q ? `${f1(q.m)} ± ${f1(q.sd)} µg/m³ (SD จาก ${q.n} วัน · ต่ำสุด ${f1(q.lo)} สูงสุด ${f1(q.hi)})` : "ไม่มีข้อมูลค่าฝุ่น"}&#10;${s.d.label}: ${v == null ? "–" : `${f1(v)} ต่อแสน (${fmt(s.c[i])} ราย)`}`;
@@ -99,19 +99,20 @@ function e2xCard(o, s, n, lastOk, mode, RMAX) {
     <div class="tip"></div></article>`;
 }
 function e2xAll(wkMax) {
+  wkMax = PWK(wkMax);   // ข้อมูลรายจังหวัดคนละปีกับระดับเขต (ต้นปีใหม่ ก่อนอัปเดต config ประชากร) → ใช้สัปดาห์ของปีรายจังหวัด
   const src = window.DZPV; if (!src) return "";
   const n = wkMax, lastOk = wkMax - DZ_PROV_WK, data = e2xData(wkMax), k = DZ.findIndex(d => d.key === window._e2xK), mode = window._e2xMode;
   const RMAX = e2xNice(Math.max(...data.flatMap(o => o.ser[k].rate.filter(v => v != null))) * 1.05);   // สเกลเดียวกันทุกจังหวัด (ต่อกลุ่มโรค)
   const tabs = DZ.map((d, i) => `<button type="button" data-k="${d.key}" aria-pressed="${i === k}" style="--c:${d.c}"><i></i>${d.label}</button>`).join("");
-  const firstPm = (() => { const PMD = window.PMREAL || S.pm?.allData || {}; const ds = Object.keys(PMD).filter(d => d >= "2026-01-01").sort(); if (!ds.length) return ""; const d = new Date(ds[0] + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; })();
+  const firstPm = (() => { const PMD = window.PMREAL || S.pm?.allData || {}; const ds = Object.keys(PMD).filter(d => d >= `${PY()}-01-01`).sort(); if (!ds.length) return ""; const d = new Date(ds[0] + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; })();
   const guide = `<details class="pv-guide pg-fold">
     <summary class="pg-h"><svg class="ico"><use href="#i-chart"/></svg><b>วิธีอ่านกราฟ</b><span class="pg-more">กดเพื่อเปิด/ปิด</span></summary>
-    <ul><li><b>ช่วงข้อมูล</b> ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${n} (${epiRange(2026, 1, n)}) · ผู้ป่วยนับเฉพาะผู้อยู่อาศัยจริงในจังหวัด (Type area 1+3) · ค่าฝุ่นจากสถานีตรวจวัด Air4Thai</li>
+    <ul><li><b>ช่วงข้อมูล</b> ปี ${PYB()} สัปดาห์ระบาดวิทยาที่ 1–${n} (${epiRange(PY(), 1, n)}) · ผู้ป่วยนับเฉพาะผู้อยู่อาศัยจริงในจังหวัด (Type area 1+3) · ค่าฝุ่นจากสถานีตรวจวัด Air4Thai</li>
       <li><b>แกนซ้าย · เส้นประเทาเข้ม</b> = ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ 0–100 µg/m³ (เฉลี่ยค่ารายวัน 24 ชม. ในสัปดาห์ระบาดวิทยา ต้องมีอย่างน้อย 4 วัน) · <b>แถบเทาจาง</b> = ± 1 SD ของค่ารายวันในสัปดาห์นั้น (กว้าง = ฝุ่นแกว่งมากระหว่างวัน) · <b>จุดส้ม</b> = สัปดาห์ที่ค่าเฉลี่ยเกิน 37.5 µg/m³ (เส้นประส้ม = เกณฑ์ค่ามาตรฐาน 24 ชม.)</li>
       <li><b>แกนขวา · เส้นทึบสีตามกลุ่มโรค</b> = อัตราผู้ป่วยต่อแสนประชากร Type area 1+3 รายสัปดาห์ · สเกลเดียวกันทั้ง 4 จังหวัด (เปลี่ยนตามกลุ่มโรคที่เลือก) · ${DZ_PROV_WK} สัปดาห์ล่าสุดเป็นเส้นประจาง = ข้อมูลเบื้องต้น</li>
       <li>ทั้งสองแกนล็อกสเกลคงที่และเริ่มที่ 0 · <u>ระยะห่างหรือการตัดกันของสองเส้นขึ้นกับการตั้งสเกล ไม่ได้บอกความสัมพันธ์</u> ให้ดูที่<b>จังหวะขึ้นลง</b>ว่าตรงกันหรือเหลื่อมกันกี่สัปดาห์</li>
       <li><b>กล่องตัวเลขใต้กราฟ</b> = ค่าเฉลี่ย ± SD ระหว่างสัปดาห์ของทั้งสองตัวแปร คำนวณจาก<b>สัปดาห์ชุดเดียวกัน</b> (มีค่าฝุ่นและอัตราป่วยครบ เป็นสัปดาห์เต็ม 7 วัน และพ้นช่วงข้อมูลเบื้องต้น) เพื่อให้เทียบกันได้ในช่วงเวลาเดียวกัน</li>
-      <li><b>จุดกลวงต้นปี</b> = สัปดาห์ที่ 1 มีไม่ครบ 7 วัน (1–3 ม.ค. 2569 มี 3 วัน) อัตราผู้ป่วยจึงต่ำกว่าสัปดาห์ปกติ แสดงไว้เพื่อความครบถ้วน แต่ไม่นำมาคิดค่าเฉลี่ย</li>
+      <li><b>จุดกลวงต้นปี</b> = สัปดาห์ที่ 1 มีไม่ครบ 7 วัน (${dmy(epiStart(PY(), 1))}–${dmy(epiEnd(PY(), 1))} ${PYB()} มี ${e2xDays(1)} วัน) อัตราผู้ป่วยจึงต่ำกว่าสัปดาห์ปกติ แสดงไว้เพื่อความครบถ้วน แต่ไม่นำมาคิดค่าเฉลี่ย</li>
       <li>เลือกกลุ่มโรคจากแถบด้านบน · ชี้หรือแตะที่สัปดาห์ใดก็ได้เพื่อดูค่าฝุ่น (เฉลี่ย ± SD, ต่ำสุด–สูงสุด) และอัตราป่วยของสัปดาห์นั้น</li>
       <li>ค่าฝุ่นสถานีมีตั้งแต่ <b>${firstPm || "–"}</b> · เส้นฝุ่นขาดช่วง = สัปดาห์ที่มีค่าไม่ถึง 4 วัน</li></ul>
     <p class="pg-ref">อ้างอิง: Bhaskaran K et al. Time series regression studies in environmental epidemiology. <i>Int J Epidemiol</i> 2013;42:1187–95 · Isenberg P et al. A study on dual-scale data charts. <i>IEEE TVCG</i> 2011;17:2469–78</p></details>
@@ -120,7 +121,7 @@ function e2xAll(wkMax) {
   return `<section class="pv-block e2x" aria-labelledby="pvH">
     <div class="pv-bh"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-map"/></svg></div>
       <div><h3 id="pvH">ค่าฝุ่นกับผู้ป่วยรายสัปดาห์ แยกรายจังหวัด</h3>
-      <div class="icd">ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ (µg/m³) · อัตราผู้ป่วยต่อแสนประชากร · ปี 2569</div></div>
+      <div class="icd">ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ (µg/m³) · อัตราผู้ป่วยต่อแสนประชากร · ปี ${PYB()}</div></div>
 </div>
     <div class="x-bar"><div class="x-tabs" role="group" aria-label="เลือกกลุ่มโรค">${tabs}</div></div>
     ${lg}

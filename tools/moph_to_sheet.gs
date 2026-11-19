@@ -46,8 +46,12 @@
 
 // ── ตั้งค่า ──────────────────────────────────────────────────────────
 var SHEET_ID   = '1bBOvPusSvh7R0AXG5ej9CxagtRkJXLaaJo79I4s9PX8'; // Sheet ปลายทาง (จาก config.json)
-var TAB_NAME   = '2026';        // แท็บที่ server.js อ่านสำหรับปี 2569
-var BE_YEAR    = '2569';        // ปีงบ พ.ศ. ที่ดึงจาก MOPH
+// ขึ้นปีใหม่เปลี่ยนเอง (เวลาไทย): ม.ค. 2570 → เขียนแท็บ "2027" และขอ MOPH ปี 2570 · แท็บของปีก่อน ("2026") คงไว้ตามเดิม server.js อ่านทุกปี
+var CUR_YEAR   = Number(Utilities.formatDate(new Date(), 'GMT+7', 'yyyy'));
+var TAB_NAME   = String(CUR_YEAR);          // แท็บที่ server.js อ่านสำหรับปีนี้ (ค.ศ.)
+var BE_YEAR    = String(CUR_YEAR + 543);    // ปีงบ พ.ศ. ที่ดึงจาก MOPH
+// 14 วันแรกของปี HDC ยังไม่มีข้อมูลสัปดาห์ของปีใหม่ → ข้อมูลว่างเป็นเรื่องปกติ ไม่ต้องส่งอีเมลเตือน
+var IN_NEW_YEAR_GRACE = Number(Utilities.formatDate(new Date(), 'GMT+7', 'M')) === 1 && Number(Utilities.formatDate(new Date(), 'GMT+7', 'd')) <= 14;
 // ตั้งชื่อเฉพาะ (ไม่ใช้ PROVINCES) เพราะไฟล์อื่นในโปรเจกต์ Apps Script มี PROVINCES เป็น object
 // ซึ่งทับตัวนี้ → PROVINCES.length = undefined → ลูปไม่ทำงานเลย → "ดึงไม่สำเร็จเลยสักจังหวัด"
 var MOPH_PROVINCES = [40, 44, 45, 46];  // เขตสุขภาพ 7: ขอนแก่น มหาสารคาม ร้อยเอ็ด กาฬสินธุ์
@@ -203,6 +207,10 @@ function syncMophDisease() {
   // ── ชั้นที่ 1.5: ดึงได้ (HTTP 200) แต่ไม่มีข้อมูลรายสัปดาห์เลย ─────
   // out มีแต่หัวตาราง = ต้นทางส่งข้อมูลว่าง/รูปแบบเปลี่ยน → ห้ามล้างแท็บเดิม
   // (ของเดิม: นับว่า "สำเร็จ" แล้ว clearContents() เขียนทับด้วยหัวตารางอย่างเดียว)
+  if (out.length < 2 && IN_NEW_YEAR_GRACE) {
+    Logger.log('ℹ️ ต้นปีใหม่ (ไม่เกิน 14 ม.ค.): MOPH ยังไม่มีข้อมูลรายสัปดาห์ของปี ' + BE_YEAR + ' — ไม่ถือว่าผิดปกติ ไม่เขียนแท็บ "' + TAB_NAME + '" และไม่ส่งอีเมลเตือน (ข้อมูลของปีก่อนยังอยู่ครบ)');
+    return;
+  }
   if (out.length < 2) {
     var streakEmpty = bumpFailStreak_();
     var reasonEmpty = 'MOPH ตอบสำเร็จ ' + okCount + '/' + MOPH_PROVINCES.length +
@@ -468,7 +476,8 @@ function testAlert() {
  *    ผู้ติดตามทุกคนจะได้รับข้อความทดสอบไปด้วย ฟังก์ชันนี้แค่อ่านชีตแล้ว log เฉยๆ
  */
 function testDiseaseNote() {
-  var v = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_NAME).getRange('F2').getValue();
+  var tab = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_NAME) || SpreadsheetApp.openById(SHEET_ID).getSheetByName(String(CUR_YEAR - 1));   // ต้นปีใหม่แท็บของปีนี้อาจยังไม่ถูกสร้าง
+  var v = tab.getRange('F2').getValue();
   Logger.log('ค่าที่อ่านได้จาก F2 : ' + v + '   (ชนิดข้อมูล: ' + (Object.prototype.toString.call(v)) + ')');
   Logger.log('อายุข้อมูล          : ' + dataAgeDays_(v) + ' วัน  (เกณฑ์เตือน ' + STALE_DAYS + ' วัน)');
   Logger.log('ข้อความที่จะต่อท้าย : ' + (diseaseAgeNote(v) || '(ว่าง — ข้อมูลยังสด ไม่ต้องเตือน)'));

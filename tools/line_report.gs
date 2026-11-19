@@ -577,28 +577,33 @@ function getAirDataStrict() {
 }
 
 // ==========================================================
-// 🛠️ ดึงข้อมูลสุขภาพจากแท็บ 2026
+// 🛠️ ดึงข้อมูลสุขภาพจากแท็บของปีปัจจุบัน (ขึ้นปีใหม่เปลี่ยนเอง: ม.ค. 2570 → แท็บ "2027")
 // ==========================================================
 function getHealthFromSeparateSheets() {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheetCurr = ss.getSheetByName("2026") || ss.getSheetByName("2569");
-    if (!sheetCurr) return null;
-
-    const dataCurr = sheetCurr.getDataRange().getValues();
+    // ขึ้นปีใหม่: ใช้แท็บของปีปัจจุบัน (ค.ศ.) เมื่อมีอย่างน้อย 2 สัปดาห์ (สัปดาห์ล่าสุดยังไม่นิ่งจะถูกตัดทิ้งด้านล่าง)
+    // ต้นปีที่ปีใหม่ยังมีไม่ถึง 2 สัปดาห์ → ใช้แท็บของปีก่อนหน้าไปก่อน แล้วรายงานเลขปีตามแท็บที่ใช้จริง
+    const cy = parseInt(Utilities.formatDate(new Date(), "GMT+7", "yyyy"), 10);
+    const readYear = (y) => {
+      const sh = ss.getSheetByName(String(y)) || ss.getSheetByName(String(y + 543));
+      if (!sh) return null;
+      const data = sh.getDataRange().getValues(), ws = [];
+      for (let i = 1; i < data.length; i++) {
+        let wk = parseInt(data[i][0]);
+        if (isNaN(wk)) continue;
+        if (data[i][1] === null || String(data[i][1]) === "") continue;
+        ws.push({ wk: wk, vals: [0, 1, 2, 3].map(c => parseFloat(data[i][c + 1]) || 0) });
+      }
+      return { sh: sh, ws: ws, y: y };
+    };
+    const cands = [readYear(cy), readYear(cy - 1)].filter(r => r && r.ws.length > 0);
+    const pick = cands.find(r => r.ws.length >= 2) || cands[0];
+    if (!pick) return null;
+    const sheetCurr = pick.sh, useYear = pick.y;
 
     // เก็บทุกสัปดาห์ที่มีข้อมูลไว้ก่อน ยังไม่รวมยอด
-    let weeks = [];
-    for (let i = 1; i < dataCurr.length; i++) {
-      let wk = parseInt(dataCurr[i][0]);
-      if (isNaN(wk)) continue;
-      if (dataCurr[i][1] === null || String(dataCurr[i][1]) === "") continue;
-      weeks.push({
-        wk: wk,
-        vals: [0, 1, 2, 3].map(c => parseFloat(dataCurr[i][c + 1]) || 0)
-      });
-    }
-    if (weeks.length === 0) return null;
+    let weeks = pick.ws;
 
     // ── ตัดสัปดาห์ล่าสุดทิ้ง ──────────────────────────────────────────
     // HDC เพิ่งเริ่มรายงานสัปดาห์ล่าสุด ยัง query ไม่ครบ (เช่น wk34 มี 3 ราย
@@ -637,7 +642,7 @@ function getHealthFromSeparateSheets() {
     }
 
     return {
-      year: 2569,
+      year: useYear + 543,
       wk: maxWeek || "-",
       curr: currentSum,
       dateStr: finalDateStr,

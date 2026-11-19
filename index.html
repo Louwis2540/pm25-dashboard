@@ -2958,6 +2958,12 @@ const dzName = d => DZ_NAME[d.key] || d.label;
 const PM25T = "PM" + "2.5";                       // ใช้ในข้อความ tooltip (กันตัวแทนที่ชื่อสารมลพิษ → HTML ตอน build)
 // ปี + สัปดาห์ระบาดวิทยาล่าสุดที่นิ่งแล้วของกราฟย้อนหลัง: เซิร์ฟเวอร์ส่งมาใน meta (dataYear / dataWk) เพื่อให้เลื่อนข้ามปีเอง
 // ไม่มี meta (เซิร์ฟเวอร์เก่า/เดโม่) → ใช้ปี 2569 กับสัปดาห์ล่าสุดของหน้า (wkMax)
+// ขึ้นปีใหม่ (พ.ศ. 2570 ฯลฯ) ทุกจุดอ่านปีจากข้อมูลเอง ไม่ผูกตายตัว:
+//   DY() = ปีของข้อมูลระดับเขต (meta.dataYear) · PY() = ปีของข้อมูลรายจังหวัด (DZPV.yearBe ตาม config.json population.year_be) · ต้นปีที่ปีใหม่ยังไม่มีสัปดาห์ที่นิ่ง ปีจะเป็นปีก่อน
+//   PWK(wk) = สัปดาห์ล่าสุดของข้อมูลรายจังหวัด: ปีเดียวกับระดับเขตใช้ wk เดิม · คนละปี (config ประชากรยังไม่อัปเดต) ใช้สัปดาห์สูงสุดที่มีของปีรายจังหวัด
+const DY = () => Number(S.dz?.meta?.dataYear) || 2026, DYB = () => DY() + 543;
+const PY = () => (window.DZPV?.yearBe ? Number(DZPV.yearBe) - 543 : DY()), PYB = () => PY() + 543;
+const PWK = wk => PY() === DY() ? wk : Math.max(0, ...(window.DZPV?.rows || []).map(r => +r.wk || 0));
 function dzCbEnd(dz, wkMax) {
   const y = Number(dz.meta?.dataYear) || 2026, w = Number(dz.meta?.dataWk);
   return { y, w: w > 0 ? w : wkMax };
@@ -3046,11 +3052,11 @@ function dzMonthAll(dz, wkMax) {
 // E2–E5 · การ์ดรายจังหวัด: แถบค่าฝุ่นเฉลี่ยรายสัปดาห์ + อัตราผู้ป่วยต่อแสนประชากร 4 กลุ่มโรค (แกนเวลาเดียวกัน)
 // หลักการ: ไม่ใช้กราฟ 2 แกน · อัตราต่อแสน (เทียบข้ามจังหวัดได้) · สเกลเดียวกันทุกจังหวัดต่อกลุ่มโรค
 //          เส้นเฉลี่ยเคลื่อนที่ 4 สัปดาห์ (ลดการแกว่งจากจำนวนน้อย) หยุดก่อนช่วงข้อมูลเบื้องต้น · ระบุวันหยุดยาวบนแกนเวลา
-const HOLI26 = [{ wk: 1, t: "ปีใหม่" }, { wk: epiWeekOf(new Date(2026, 3, 13)), t: "สงกรานต์" }];   // สัปดาห์ระบาดวิทยาที่มีวันหยุด
-const wkStart = wk => epiStart(2026, wk);
+const HOLI26 = () => [{ wk: 1, t: "ปีใหม่" }, { wk: epiWeekOf(new Date(PY(), 3, 13)), t: "สงกรานต์" }];   // สัปดาห์ระบาดวิทยาที่มีวันหยุด
+const wkStart = wk => epiStart(PY(), wk);
 const dmy = d => `${d.getDate()} ${TH_M[d.getMonth()]}`;
 function pvWeekPM(pv, wk) {
-  const all = S.pm?.allData || {}, s = wkStart(wk), nd = Math.round((epiEnd(2026, wk) - s) / 864e5) + 1, v = [];
+  const all = S.pm?.allData || {}, s = wkStart(wk), nd = Math.round((epiEnd(PY(), wk) - s) / 864e5) + 1, v = [];
   for (let i = 0; i < nd; i++) {
     const d = new Date(s.getTime() + i * 864e5), iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const x = all[iso]?.[pv]; if (x != null && x > 0) v.push(x);
@@ -3080,14 +3086,14 @@ function dzPvAll(wkMax) {
       <li><b>เส้นและจุดสีเทาเข้ม</b> = ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ของจังหวัด (แกนขวา คงที่ 0–100 µg/m³ ทุกจังหวัด) · 1 จุด = 1 สัปดาห์ ตรงกับแท่งด้านล่าง</li>
       <li>ชี้หรือแตะที่สัปดาห์ใดก็ได้ จะเห็นค่าฝุ่นและอัตราป่วยทั้ง 4 กลุ่มของสัปดาห์นั้นพร้อมกัน</li>
       <li><b>ผู้ป่วย (ตัวตั้ง)</b> = ผู้ป่วยนอกและผู้ป่วยในที่<b>อยู่อาศัยจริงในจังหวัด</b> (Type area 1 และ 3) นับเป็นรายคน ตัดซ้ำในแต่ละสัปดาห์ · รหัสโรคตามประกาศกระทรวงสาธารณสุขฯ (HDC รายงาน PM<sub>2.5</sub> รายสัปดาห์ ชุดที่ 2)</li>
-      <li><b>ประชากร (ตัวหาร)</b> = ประชากร Type area 1+3 (อยู่จริงในพื้นที่ ตัดซ้ำแล้ว) จาก HDC ประมาณ ณ 1 ก.ค. 2569 จากยอดสิ้นปีงบประมาณ 2568 และ 2569 · ตัวตั้งและตัวหารเป็นประชากรกลุ่มเดียวกัน</li>
+      <li><b>ประชากร (ตัวหาร)</b> = ประชากร Type area 1+3 (อยู่จริงในพื้นที่ ตัดซ้ำแล้ว) จาก HDC ประมาณ ณ 1 ก.ค. ${PYB()} จากยอดสิ้นปีงบประมาณ 2568 และ 2569 · ตัวตั้งและตัวหารเป็นประชากรกลุ่มเดียวกัน</li>
       <li>ยอดผู้ป่วยรายจังหวัดในแผงนี้จึง<b>น้อยกว่า</b>ยอดรวมเขตด้านบน ซึ่งนับผู้ป่วยทุกคนที่มารับบริการ (รวมผู้ที่อยู่นอกพื้นที่)</li></ul>
     <p class="pg-w"><b>ข้อควรระวัง</b> กราฟนี้ใช้ดูว่าค่าฝุ่นกับผู้ป่วยขึ้นลงในช่วงเดียวกันหรือไม่ <u>ไม่ได้แสดงว่าฝุ่นเป็นสาเหตุ</u> จำนวนผู้ป่วยยังขึ้นกับฤดูกาล วันหยุดยาว (ปีใหม่ สงกรานต์ ทำให้ตัวเลขลดลง) และความครบถ้วนของการรายงาน · อัตรานี้ใช้ตัวหารคนละชุดกับรายงานกรมควบคุมโรค (ประชากรกลางปีกระทรวงมหาดไทย) จึงเทียบตัวเลขกันตรงๆ ไม่ได้</p></div>`;
   const lg = `<div class="lg pv-lg"><span><i style="background:#8a96a8"></i>แท่ง = ผู้ป่วยต่อแสน/สัปดาห์ (แกนซ้าย)</span><span><i class="ma" style="background:${PM_INK}"></i>ค่าฝุ่นรายสัปดาห์ µg/m³ (แกนขวา 0–100)</span><span><i class="dot"></i>สัปดาห์ที่ฝุ่นเกิน 37.5</span><span><i class="pt"></i>สัปดาห์ที่ ${lastOk + 1}–${n} ข้อมูลเบื้องต้น</span><span><i class="hd"></i>วันหยุดยาว</span></div>`;
   return `<section class="pv-block" aria-labelledby="pvH">
     <div class="pv-bh"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-map"/></svg></div>
       <div><h3 id="pvH">ค่าฝุ่นกับผู้ป่วยรายสัปดาห์ แยกรายจังหวัด${window.DZPV?.mock ? ` <span class="mock-b">ข้อมูลจำลอง</span>` : ""}</h3>
-      <div class="icd">อัตราผู้ป่วยต่อแสนประชากร Type area 1+3 (HDC กลางปี 2569) 4 กลุ่มโรค เทียบค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ของจังหวัด · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${n} (${epiRange(2026, 1, n)})</div></div></div>
+      <div class="icd">อัตราผู้ป่วยต่อแสนประชากร Type area 1+3 (HDC กลางปี ${PYB()}) 4 กลุ่มโรค เทียบค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ของจังหวัด · ปี ${PYB()} สัปดาห์ระบาดวิทยาที่ 1–${n} (${epiRange(PY(), 1, n)})</div></div></div>
     ${lg}
     <div class="pv-grid">${data.map((o, pi) => dzPvCard(o, n, lastOk, mx, pi, "b")).join("")}</div>
     ${guide}</section>`;
@@ -3110,7 +3116,7 @@ function dzPvSvg(o, n, lastOk, mx, pi, W, v) {
   const dz0 = B_ ? 0 : LH + PMP + GAP + 4;
   const H = dz0 + DZ.length * (LH + PH + ML + GAP) - GAP + B, yAx = H - B;
   const pid = `pvPart${pi}_${W}_${v}`;
-  const wkT = i => { const w0 = wkStart(i + 1), w1 = epiEnd(2026, i + 1); return `สัปดาห์ที่ ${i + 1} (${dmy(w0)}–${dmy(w1)})`; };
+  const wkT = i => { const w0 = wkStart(i + 1), w1 = epiEnd(PY(), i + 1); return `สัปดาห์ที่ ${i + 1} (${dmy(w0)}–${dmy(w1)})`; };
   let g = `<defs><pattern id="${pid}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="#fff" stroke-width="2" opacity=".8"/></pattern></defs>`;
   g += `<rect x="${X(lastOk)}" y="${dz0}" width="${(n - lastOk) * slot}" height="${yAx - dz0}" fill="#eef1f5"/>`;
   if (!B_) {
@@ -3124,7 +3130,7 @@ function dzPvSvg(o, n, lastOk, mx, pi, W, v) {
     o.pm.forEach((x, i) => { g += `<rect class="hb" x="${X(i)}" y="${top}" width="${slot}" height="${PMP}" fill="transparent" data-t="${wkT(i)}: ${x == null ? "ไม่มีข้อมูลค่าฝุ่น" : `ค่าฝุ่นเฉลี่ย ${f1(x)} µg/m³ · ${LV[lvOf(x)].name}`}"/>`; });
     g += `<path d="${pmPath(o.pm, X, slot, Y)}" fill="none" stroke="${PM_INK}" stroke-width="2.2" stroke-linejoin="round" pointer-events="none"/>`;
   }
-  HOLI26.filter(h => h.wk <= n).forEach(h => { const x = X(h.wk - 1) + slot / 2; g += `<line x1="${x}" x2="${x}" y1="${B_ ? 0 : LH}" y2="${yAx}" stroke="#8a96a8" stroke-dasharray="2 3"/>`; });
+  HOLI26().filter(h => h.wk <= n).forEach(h => { const x = X(h.wk - 1) + slot / 2; g += `<line x1="${x}" x2="${x}" y1="${B_ ? 0 : LH}" y2="${yAx}" stroke="#8a96a8" stroke-dasharray="2 3"/>`; });
   o.ser.forEach((s, k) => {
     const top = dz0 + k * (LH + PH + ML + GAP), base = top + LH + PH, Y = x => base - x / mx[k] * PH, YP = x => base - Math.min(x, PM_AX) / PM_AX * PH;
     g += `<circle cx="${L + 4.5}" cy="${top + 7}" r="4.5" fill="${s.d.c}"/><text x="${L + 13}" y="${top + 11}" font-size="${fs}" font-weight="700" fill="#1f2a3d">${s.d.label}</text>`;
@@ -3153,7 +3159,7 @@ function dzPvSvg(o, n, lastOk, mx, pi, W, v) {
     }
   });
   if (B_) for (let i = 0; i < n; i++) {
-    const part = i + 1 > lastOk, h = HOLI26.find(x => x.wk === i + 1);
+    const part = i + 1 > lastOk, h = HOLI26().find(x => x.wk === i + 1);
     const t = `${wkT(i)}${h ? ` · ช่วง${h.t}` : ""}${part ? " · ข้อมูลเบื้องต้น" : ""}&#10;ค่าฝุ่นเฉลี่ย: ${o.pm[i] == null ? "ไม่มีข้อมูล" : `${f1(o.pm[i])} µg/m³ (${LV[lvOf(o.pm[i])].name})`}`
       + o.ser.map(s => `&#10;${s.d.label}: ${s.rate[i] == null ? "–" : `${f1(s.rate[i])} ต่อแสน (${fmt(s.c[i])} ราย)`}`).join("");
     g += `<rect class="hb wkcol" x="${X(i)}" y="0" width="${slot}" height="${yAx}" data-t="${t}"/>`;
@@ -3161,9 +3167,9 @@ function dzPvSvg(o, n, lastOk, mx, pi, W, v) {
   // ชื่อเดือนใต้ทุกแถวโรค (ที่สัปดาห์แรกของแต่ละเดือน)
   for (let k = 0; k < DZ.length; k++) {
     const base = dz0 + k * (LH + PH + ML + GAP) + LH + PH; let lm = -1;
-    for (let i = 0; i < n; i++) { const m = epiMonth(2026, i + 1); if (m !== lm) { g += `<text x="${X(i) + 4}" y="${base + fs}" font-size="${fs - 1.5}" fill="#5f6c80">${TH_M[m]}</text>`; lm = m; } }
+    for (let i = 0; i < n; i++) { const m = epiMonth(PY(), i + 1); if (m !== lm) { g += `<text x="${X(i) + 4}" y="${base + fs}" font-size="${fs - 1.5}" fill="#5f6c80">${TH_M[m]}</text>`; lm = m; } }
   }
-  HOLI26.filter(h => h.wk <= n).forEach(h => { g += `<text x="${X(h.wk - 1) + slot / 2 + 3}" y="${yAx + fs + 1}" font-size="${fs - 1.5}" fill="#6b7689">${h.t}</text>`; });
+  HOLI26().filter(h => h.wk <= n).forEach(h => { g += `<text x="${X(h.wk - 1) + slot / 2 + 3}" y="${yAx + fs + 1}" font-size="${fs - 1.5}" fill="#6b7689">${h.t}</text>`; });
   return `<svg class="bars ${W < 500 ? "pv-n" : "pv-w"}" viewBox="0 0 ${W} ${H}" role="img" aria-label="ค่าฝุ่นรายสัปดาห์และอัตราผู้ป่วย 4 กลุ่มโรค จังหวัด${o.p.name}">${g}</svg>`;
 }
 function dzPvCard(o, n, lastOk, mx, pi, v) {
@@ -3188,10 +3194,10 @@ window._e2xView = window._e2xView || "x";        // "x" = เทียบแน�
 window._e2xMode = "dual";   // เลือกแบบแกนคู่อย่างเดียว (Louis 16 ต.ค. 2569)
 window._e2xK = window._e2xK || DZ[0].key;
 const E2X_PMAX = 100;
-const e2xDays = wk => Math.round((epiEnd(2026, wk) - epiStart(2026, wk)) / 864e5) + 1;   // จำนวนวันในสัปดาห์ระบาดวิทยา (สัปดาห์ที่ 1 อาจไม่ครบ 7)
+const e2xDays = wk => Math.round((epiEnd(PY(), wk) - epiStart(PY(), wk)) / 864e5) + 1;   // จำนวนวันในสัปดาห์ระบาดวิทยา (สัปดาห์ที่ 1 อาจไม่ครบ 7)
 function e2xNice(v) { const p = 10 ** Math.floor(Math.log10(v)), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
 function e2xPmWeek(PMD, pv, wk) {   // ค่าเฉลี่ยและ SD ของค่าฝุ่นรายวันในสัปดาห์ (ต้องมีค่าอย่างน้อย 4 วัน)
-  const s = epiStart(2026, wk), nd = Math.round((epiEnd(2026, wk) - s) / 864e5) + 1, v = [];
+  const s = epiStart(PY(), wk), nd = Math.round((epiEnd(PY(), wk) - s) / 864e5) + 1, v = [];
   for (let i = 0; i < nd; i++) { const d = new Date(s.getTime() + i * 864e5), iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const x = PMD[iso]?.[pv]; if (x != null && x > 0) v.push(x); }
   if (v.length < Math.min(4, nd)) return null;
   const m = v.reduce((a, b) => a + b, 0) / v.length, sd = v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1)) : 0;
@@ -3215,7 +3221,7 @@ function e2xSvg(o, s, n, lastOk, W, mode, RMAX) {
   const yAx = P2.top + P2.h, H = yAx + fs * 3.2;
   const YP = v => P1.top + P1.h - Math.min(v, E2X_PMAX) / E2X_PMAX * P1.h;
   const YR = v => P2.top + P2.h - Math.min(v, RMAX) / RMAX * P2.h;
-  const wkT = i => { const a = epiStart(2026, i + 1), b = epiEnd(2026, i + 1), d = e2xDays(i + 1); return `สัปดาห์ที่ ${i + 1} (${dmy(a)}–${dmy(b)})${d < 7 ? ` · สัปดาห์ไม่เต็ม มี ${d} วัน อัตราจึงต่ำกว่าสัปดาห์ปกติ` : ""}`; };
+  const wkT = i => { const a = epiStart(PY(), i + 1), b = epiEnd(PY(), i + 1), d = e2xDays(i + 1); return `สัปดาห์ที่ ${i + 1} (${dmy(a)}–${dmy(b)})${d < 7 ? ` · สัปดาห์ไม่เต็ม มี ${d} วัน อัตราจึงต่ำกว่าสัปดาห์ปกติ` : ""}`; };
   const short = i => e2xDays(i + 1) < 7;
   const pmC = PM_INK, rC = s.d.c;
   let g = "";
@@ -3236,7 +3242,7 @@ function e2xSvg(o, s, n, lastOk, W, mode, RMAX) {
     g += `<text x="${L - 5}" y="${P1.top - 7}" text-anchor="end" font-size="${fs - 1.5}" font-weight="700" fill="${pmC}">µg/m³</text>`
       + `<text x="${W - R + 5}" y="${P1.top - 7}" font-size="${fs - 1.5}" font-weight="700" fill="${rC}">ต่อแสน</text>`;
   }
-  HOLI26.filter(h => h.wk <= n).forEach(h => { g += `<line x1="${X(h.wk - 1)}" x2="${X(h.wk - 1)}" y1="${P1.top}" y2="${yAx}" stroke="#8a96a8" stroke-dasharray="2 3"/><text x="${X(h.wk - 1) + 3}" y="${yAx + fs * 2.3}" font-size="${fs - 1.5}" fill="#6b7689">${h.t}</text>`; });
+  HOLI26().filter(h => h.wk <= n).forEach(h => { g += `<line x1="${X(h.wk - 1)}" x2="${X(h.wk - 1)}" y1="${P1.top}" y2="${yAx}" stroke="#8a96a8" stroke-dasharray="2 3"/><text x="${X(h.wk - 1) + 3}" y="${yAx + fs * 2.3}" font-size="${fs - 1.5}" fill="#6b7689">${h.t}</text>`; });
   // แถบ ± SD ค่าฝุ่น (เป็นช่วงต่อเนื่องเฉพาะสัปดาห์ที่มีค่า)
   let band = "", seg = [];
   const flush = () => { if (seg.length > 1) band += `<path d="M${seg.map(([i, q]) => `${X(i).toFixed(1)} ${YP(q.m + q.sd).toFixed(1)}`).join("L")}L${seg.slice().reverse().map(([i, q]) => `${X(i).toFixed(1)} ${YP(Math.max(0, q.m - q.sd)).toFixed(1)}`).join("L")}Z" fill="${pmC}" opacity=".13"/>`; seg = []; };
@@ -3255,7 +3261,7 @@ function e2xSvg(o, s, n, lastOk, W, mode, RMAX) {
   s.rate.forEach((v, i) => { if (v != null) g += short(i)
     ? `<circle cx="${X(i)}" cy="${YR(v)}" r="3" fill="#fff" stroke="${rC}" stroke-width="1.6" opacity=".7"/><text x="${X(i) + 5}" y="${YR(v) + 3.5}" font-size="${fs - 2}" font-weight="700" fill="${rC}" opacity=".85">${e2xDays(i + 1)} วัน</text>`
     : `<circle cx="${X(i)}" cy="${YR(v)}" r="2.2" fill="${rC}"${i + 1 > lastOk ? ` opacity=".45"` : ""}/>`; });
-  let lm = -1; for (let i = 0; i < n; i++) { const m = epiMonth(2026, i + 1); if (m !== lm) { g += `<text x="${L + i * slot + 3}" y="${yAx + fs + 1}" font-size="${fs - 1.5}" fill="#5f6c80">${TH_M[m]}</text>`; lm = m; } }
+  let lm = -1; for (let i = 0; i < n; i++) { const m = epiMonth(PY(), i + 1); if (m !== lm) { g += `<text x="${L + i * slot + 3}" y="${yAx + fs + 1}" font-size="${fs - 1.5}" fill="#5f6c80">${TH_M[m]}</text>`; lm = m; } }
   for (let i = 0; i < n; i++) {
     const q = o.pm[i], v = s.rate[i];
     const t = `${wkT(i)}${i + 1 > lastOk ? " · ข้อมูลเบื้องต้น" : ""}&#10;ค่าฝุ่นเฉลี่ย: ${q ? `${f1(q.m)} ± ${f1(q.sd)} µg/m³ (SD จาก ${q.n} วัน · ต่ำสุด ${f1(q.lo)} สูงสุด ${f1(q.hi)})` : "ไม่มีข้อมูลค่าฝุ่น"}&#10;${s.d.label}: ${v == null ? "–" : `${f1(v)} ต่อแสน (${fmt(s.c[i])} ราย)`}`;
@@ -3280,19 +3286,20 @@ function e2xCard(o, s, n, lastOk, mode, RMAX) {
     <div class="tip"></div></article>`;
 }
 function e2xAll(wkMax) {
+  wkMax = PWK(wkMax);   // ข้อมูลรายจังหวัดคนละปีกับระดับเขต (ต้นปีใหม่ ก่อนอัปเดต config ประชากร) → ใช้สัปดาห์ของปีรายจังหวัด
   const src = window.DZPV; if (!src) return "";
   const n = wkMax, lastOk = wkMax - DZ_PROV_WK, data = e2xData(wkMax), k = DZ.findIndex(d => d.key === window._e2xK), mode = window._e2xMode;
   const RMAX = e2xNice(Math.max(...data.flatMap(o => o.ser[k].rate.filter(v => v != null))) * 1.05);   // สเกลเดียวกันทุกจังหวัด (ต่อกลุ่มโรค)
   const tabs = DZ.map((d, i) => `<button type="button" data-k="${d.key}" aria-pressed="${i === k}" style="--c:${d.c}"><i></i>${d.label}</button>`).join("");
-  const firstPm = (() => { const PMD = window.PMREAL || S.pm?.allData || {}; const ds = Object.keys(PMD).filter(d => d >= "2026-01-01").sort(); if (!ds.length) return ""; const d = new Date(ds[0] + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; })();
+  const firstPm = (() => { const PMD = window.PMREAL || S.pm?.allData || {}; const ds = Object.keys(PMD).filter(d => d >= `${PY()}-01-01`).sort(); if (!ds.length) return ""; const d = new Date(ds[0] + "T00:00:00"); return `${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear() + 543}`; })();
   const guide = `<details class="pv-guide pg-fold">
     <summary class="pg-h"><svg class="ico"><use href="#i-chart"/></svg><b>วิธีอ่านกราฟ</b><span class="pg-more">กดเพื่อเปิด/ปิด</span></summary>
-    <ul><li><b>ช่วงข้อมูล</b> ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${n} (${epiRange(2026, 1, n)}) · ผู้ป่วยนับเฉพาะผู้อยู่อาศัยจริงในจังหวัด (Type area 1+3) · ค่าฝุ่นจากสถานีตรวจวัด Air4Thai</li>
+    <ul><li><b>ช่วงข้อมูล</b> ปี ${PYB()} สัปดาห์ระบาดวิทยาที่ 1–${n} (${epiRange(PY(), 1, n)}) · ผู้ป่วยนับเฉพาะผู้อยู่อาศัยจริงในจังหวัด (Type area 1+3) · ค่าฝุ่นจากสถานีตรวจวัด Air4Thai</li>
       <li><b>แกนซ้าย · เส้นประเทาเข้ม</b> = ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ 0–100 µg/m³ (เฉลี่ยค่ารายวัน 24 ชม. ในสัปดาห์ระบาดวิทยา ต้องมีอย่างน้อย 4 วัน) · <b>แถบเทาจาง</b> = ± 1 SD ของค่ารายวันในสัปดาห์นั้น (กว้าง = ฝุ่นแกว่งมากระหว่างวัน) · <b>จุดส้ม</b> = สัปดาห์ที่ค่าเฉลี่ยเกิน 37.5 µg/m³ (เส้นประส้ม = เกณฑ์ค่ามาตรฐาน 24 ชม.)</li>
       <li><b>แกนขวา · เส้นทึบสีตามกลุ่มโรค</b> = อัตราผู้ป่วยต่อแสนประชากร Type area 1+3 รายสัปดาห์ · สเกลเดียวกันทั้ง 4 จังหวัด (เปลี่ยนตามกลุ่มโรคที่เลือก) · ${DZ_PROV_WK} สัปดาห์ล่าสุดเป็นเส้นประจาง = ข้อมูลเบื้องต้น</li>
       <li>ทั้งสองแกนล็อกสเกลคงที่และเริ่มที่ 0 · <u>ระยะห่างหรือการตัดกันของสองเส้นขึ้นกับการตั้งสเกล ไม่ได้บอกความสัมพันธ์</u> ให้ดูที่<b>จังหวะขึ้นลง</b>ว่าตรงกันหรือเหลื่อมกันกี่สัปดาห์</li>
       <li><b>กล่องตัวเลขใต้กราฟ</b> = ค่าเฉลี่ย ± SD ระหว่างสัปดาห์ของทั้งสองตัวแปร คำนวณจาก<b>สัปดาห์ชุดเดียวกัน</b> (มีค่าฝุ่นและอัตราป่วยครบ เป็นสัปดาห์เต็ม 7 วัน และพ้นช่วงข้อมูลเบื้องต้น) เพื่อให้เทียบกันได้ในช่วงเวลาเดียวกัน</li>
-      <li><b>จุดกลวงต้นปี</b> = สัปดาห์ที่ 1 มีไม่ครบ 7 วัน (1–3 ม.ค. 2569 มี 3 วัน) อัตราผู้ป่วยจึงต่ำกว่าสัปดาห์ปกติ แสดงไว้เพื่อความครบถ้วน แต่ไม่นำมาคิดค่าเฉลี่ย</li>
+      <li><b>จุดกลวงต้นปี</b> = สัปดาห์ที่ 1 มีไม่ครบ 7 วัน (${dmy(epiStart(PY(), 1))}–${dmy(epiEnd(PY(), 1))} ${PYB()} มี ${e2xDays(1)} วัน) อัตราผู้ป่วยจึงต่ำกว่าสัปดาห์ปกติ แสดงไว้เพื่อความครบถ้วน แต่ไม่นำมาคิดค่าเฉลี่ย</li>
       <li>เลือกกลุ่มโรคจากแถบด้านบน · ชี้หรือแตะที่สัปดาห์ใดก็ได้เพื่อดูค่าฝุ่น (เฉลี่ย ± SD, ต่ำสุด–สูงสุด) และอัตราป่วยของสัปดาห์นั้น</li>
       <li>ค่าฝุ่นสถานีมีตั้งแต่ <b>${firstPm || "–"}</b> · เส้นฝุ่นขาดช่วง = สัปดาห์ที่มีค่าไม่ถึง 4 วัน</li></ul>
     <p class="pg-ref">อ้างอิง: Bhaskaran K et al. Time series regression studies in environmental epidemiology. <i>Int J Epidemiol</i> 2013;42:1187–95 · Isenberg P et al. A study on dual-scale data charts. <i>IEEE TVCG</i> 2011;17:2469–78</p></details>
@@ -3301,7 +3308,7 @@ function e2xAll(wkMax) {
   return `<section class="pv-block e2x" aria-labelledby="pvH">
     <div class="pv-bh"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-map"/></svg></div>
       <div><h3 id="pvH">ค่าฝุ่นกับผู้ป่วยรายสัปดาห์ แยกรายจังหวัด</h3>
-      <div class="icd">ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ (µg/m³) · อัตราผู้ป่วยต่อแสนประชากร · ปี 2569</div></div>
+      <div class="icd">ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ (µg/m³) · อัตราผู้ป่วยต่อแสนประชากร · ปี ${PYB()}</div></div>
 </div>
     <div class="x-bar"><div class="x-tabs" role="group" aria-label="เลือกกลุ่มโรค">${tabs}</div></div>
     ${lg}
@@ -3476,7 +3483,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     }
     return out;
   }
-  const wkMax = () => S.wkMax || 39;
+  const wkMax = () => PWK(S.wkMax || 39);   // รายจังหวัดคนละปีกับระดับเขต → ใช้สัปดาห์ของปีรายจังหวัด
   const prelimFrom = () => wkMax() - (typeof DZ_PROV_WK === "number" ? DZ_PROV_WK : 4) + 1;
   function pmRange() { const ds = Object.keys(S.pm?.allData || {}).sort(); return [ds[0], ds.at(-1)]; }
 
@@ -3517,8 +3524,8 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
         const rows = [];
         for (const p of PROV.filter(p => f.pv.includes(p.name))) for (let w = f.w0; w <= f.w1; w++) for (const g of f.groups) {
           const c = C[p.name + "|" + w]; if (!c) continue;
-          const r = { year_be: 2569, hdc_table: f.table === "s2" ? "s_pm25_2_in_week" : "s_pm25_1_in_week", pv_code: p.code, pv_name: p.name, epi_week: w,
-            week_start: iso(epiStart(2026, w)), week_end: iso(epiEnd(2026, w)), month: epiMonth(2026, w) + 1, group: GKEY[g], cases: c[g] };
+          const r = { year_be: PYB(), hdc_table: f.table === "s2" ? "s_pm25_2_in_week" : "s_pm25_1_in_week", pv_code: p.code, pv_name: p.name, epi_week: w,
+            week_start: iso(epiStart(PY(), w)), week_end: iso(epiEnd(PY(), w)), month: epiMonth(PY(), w) + 1, group: GKEY[g], cases: c[g] };
           if (f.table === "s2") { r.population = pop[p.name]; r.rate_per_100k = r2(c[g] / pop[p.name] * 1e5); }
           r.preliminary = w >= prelimFrom() ? 1 : 0; r.date_com = D().dateCom; rows.push(r);
         }
@@ -3550,10 +3557,10 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
       build(f) {
         const C = cases("s2"), pop = D().pop || {}, all = S.pm?.allData || {}, rows = [];
         for (const p of PROV.filter(p => f.pv.includes(p.name))) for (let w = f.w0; w <= f.w1; w++) {
-          const s = epiStart(2026, w), e = epiEnd(2026, w), v = [];
+          const s = epiStart(PY(), w), e = epiEnd(PY(), w), v = [];
           for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) { const x = all[iso(d)]?.[p.name]; if (x != null && x > 0) v.push(x); }
           const c = C[p.name + "|" + w] || {};
-          const r = { year_be: 2569, pv_code: p.code, pv_name: p.name, epi_week: w, week_start: iso(s), week_end: iso(e), month: epiMonth(2026, w) + 1,
+          const r = { year_be: PYB(), pv_code: p.code, pv_name: p.name, epi_week: w, week_start: iso(s), week_end: iso(e), month: epiMonth(PY(), w) + 1,
             pm25_mean: v.length ? r1(v.reduce((a, b) => a + b, 0) / v.length) : null, pm25_max: v.length ? r1(Math.max(...v)) : null,
             days_over_37_5: v.filter(x => x > 37.5).length, pm25_days: v.length, population: pop[p.name] };
           { let n = 0; for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) if (satDay(iso(d), p.name) && all[iso(d)]?.[p.name] > 0) n++; r.satellite_days = n; }
@@ -3607,7 +3614,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
   const st = { ds: "analysis", fmt: "csv", f: {} };
   function defaults(ds) {
     const r07 = Object.keys(S.pm07 || {}).sort(), [a, b] = ds === "hotspot" ? [HSB.min || iso(new Date()), HSB.max || iso(new Date())] : ds === "pm07" && r07.length ? [r07[0], r07.at(-1)] : pmRange();
-    return { pv: PROV.map(p => p.name), w0: 1, w1: wkMax(), groups: [...GK], table: "s2", d0: a || "2026-01-01", d1: b || iso(new Date()) };
+    return { pv: PROV.map(p => p.name), w0: 1, w1: wkMax(), groups: [...GK], table: "s2", d0: a || `${PY()}-01-01`, d1: b || iso(new Date()) };
   }
   function pick(id, over) { st.ds = id; st.f = { ...defaults(id), ...(over || {}) }; render(); if (id === "hotspot") hsbLoad(); }
 
@@ -3616,19 +3623,19 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
   const toCsv = (cols, rows) => "﻿" + [cols.join(","), ...rows.map(r => cols.map(c => cell(r[c])).join(","))].join("\r\n");
   function meta(ds, f, n) {
     const today = iso(new Date());
-    const scope = ds.filters.includes("weeks") ? `สัปดาห์ระบาดวิทยาที่ ${f.w0}–${f.w1} ปี 2569 (${epiRange(2026, f.w0, f.w1)})` : ds.filters.includes("dates") ? `${thD(f.d0)} – ${thD(f.d1)}` : "ปีงบประมาณ 2568–2569";
+    const scope = ds.filters.includes("weeks") ? `สัปดาห์ระบาดวิทยาที่ ${f.w0}–${f.w1} ปี ${PYB()} (${epiRange(PY(), f.w0, f.w1)})` : ds.filters.includes("dates") ? `${thD(f.d0)} – ${thD(f.d1)}` : "ปีงบประมาณ 2568–2569";
     return [
       ["ชุดข้อมูล", ds.title], ["พื้นที่", "เขตสุขภาพที่ 7: " + f.pv.join(", ")], ["ช่วงเวลา", scope], ["จำนวนแถว", n],
       ["แหล่งข้อมูล", ds.src], ["วันที่ประมวลผลต้นทาง", ds.id === "pm_daily" || ds.id === "pop" || ds.id === "hotspot" ? "-" : D().dateCom], ["วันที่ดาวน์โหลด", today],
       ["หมายเหตุ", ds.note(f)],
       ["นิยามสัปดาห์", "สัปดาห์ระบาดวิทยา กรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค."],
       ["รหัสโรค (ICD-10)", "ทางเดินหายใจ J44 (ยกเว้น J44.2), J45, J44.2 · หัวใจ I21, I22, I24 · ตา H10 · ผิวหนัง L30.9, L50 (ประกาศกระทรวงสาธารณสุข พ.ศ. 2565)"],
-      ["การอ้างอิง", `สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${ds.title} [ชุดข้อมูล]. แดชบอร์ด PM2\u002E5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(today)}.`],
+      ["การอ้างอิง", `สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (${PYB()}). ${ds.title} [ชุดข้อมูล]. แดชบอร์ด PM2\u002E5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(today)}.`],
       ["ข้อควรระวัง", "ข้อมูลระดับจังหวัดเป็นข้อมูลรวม ไม่มีข้อมูลรายบุคคล · ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยง"],
     ].filter(r => !(ds.id === "hotspot" && r[0] === "รหัสโรค (ICD-10)"));
   }
   const dict = cols => cols.map(c => [c, COL[c]?.[0] || "", COL[c]?.[1] || ""]);
-  const fname = (ds, f, ext) => `pm25_r7_${ds.id}_${ds.filters.includes("weeks") ? `wk${f.w0}-${f.w1}` : ds.filters.includes("dates") ? `${f.d0}_${f.d1}` : "2569"}.${ext}`;
+  const fname = (ds, f, ext) => `pm25_r7_${ds.id}_${ds.filters.includes("weeks") ? `wk${f.w0}-${f.w1}` : ds.filters.includes("dates") ? `${f.d0}_${f.d1}` : PYB()}.${ext}`;
 
   async function save(filename, data) {
     // ใน claude.ai artifact ต้องผ่าน capability downloads · บนเว็บจริงใช้ลิงก์ดาวน์โหลดปกติ
@@ -3668,10 +3675,10 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
   // ── หน้าจอ ────────────────────────────────────────────────────────
   const ico = id => `<svg class="ico"><use href="#${id}"/></svg>`;
   function filtersHtml(ds) {
-    const f = st.f, wkOpt = sel => Array.from({ length: wkMax() }, (_, i) => `<option value="${i + 1}"${i + 1 === sel ? " selected" : ""}>สัปดาห์ที่ ${i + 1} (${epiRange(2026, i + 1)})</option>`).join(""), [a, b] = (ds.range || pmRange)();
+    const f = st.f, wkOpt = sel => Array.from({ length: wkMax() }, (_, i) => `<option value="${i + 1}"${i + 1 === sel ? " selected" : ""}>สัปดาห์ที่ ${i + 1} (${epiRange(PY(), i + 1)})</option>`).join(""), [a, b] = (ds.range || pmRange)();
     const h = [];
     if (ds.filters.includes("pv")) h.push(`<fieldset class="ds-f"><legend>พื้นที่</legend><div class="ds-chips">${PROV.map(p => `<label class="ds-chip"><input type="checkbox" data-k="pv" value="${p.name}"${f.pv.includes(p.name) ? " checked" : ""}><span>${p.name}</span></label>`).join("")}</div></fieldset>`);
-    if (ds.filters.includes("weeks")) h.push(`<fieldset class="ds-f"><legend>ช่วงสัปดาห์ระบาดวิทยา ปี 2569</legend><div class="ds-row"><label>ตั้งแต่<select data-k="w0">${wkOpt(f.w0)}</select></label><label>ถึง<select data-k="w1">${wkOpt(f.w1)}</select></label></div><p class="ds-hint">สัปดาห์ที่ ${prelimFrom()}–${wkMax()} เป็นข้อมูลเบื้องต้น (คอลัมน์ preliminary = 1)</p></fieldset>`);
+    if (ds.filters.includes("weeks")) h.push(`<fieldset class="ds-f"><legend>ช่วงสัปดาห์ระบาดวิทยา ปี ${PYB()}</legend><div class="ds-row"><label>ตั้งแต่<select data-k="w0">${wkOpt(f.w0)}</select></label><label>ถึง<select data-k="w1">${wkOpt(f.w1)}</select></label></div><p class="ds-hint">สัปดาห์ที่ ${prelimFrom()}–${wkMax()} เป็นข้อมูลเบื้องต้น (คอลัมน์ preliminary = 1)</p></fieldset>`);
     if (ds.filters.includes("dates")) h.push(`<fieldset class="ds-f"><legend>ช่วงวันที่</legend><div class="ds-row"><label>ตั้งแต่<input type="date" data-k="d0" value="${f.d0}"${a ? ` min="${a}"` : ""}${b ? ` max="${b}"` : ""}></label><label>ถึง<input type="date" data-k="d1" value="${f.d1}"${a ? ` min="${a}"` : ""}${b ? ` max="${b}"` : ""}></label></div><p class="ds-hint">มีข้อมูล ${a ? thD(a) : "-"} – ${b ? thD(b) : "-"}</p></fieldset>`);
     if (ds.filters.includes("groups")) h.push(`<fieldset class="ds-f"><legend>กลุ่มโรค</legend><div class="ds-chips">${GK.map(k => `<label class="ds-chip"><input type="checkbox" data-k="groups" value="${k}"${f.groups.includes(k) ? " checked" : ""}><span>${GLABEL[k]}</span></label>`).join("")}</div></fieldset>`);
     if (ds.filters.includes("table")) h.push(`<fieldset class="ds-f"><legend>นับผู้ป่วยแบบไหน</legend><div class="ds-seg">
@@ -3709,7 +3716,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
         <button type="button" class="ds-dl" id="dsGo">${ico("i-down")}ดาวน์โหลด ${st.fmt === "csv" ? "CSV" : "Excel"}</button>
         ${st.fmt === "csv" ? `<button type="button" class="ds-sub" id="dsDict">คำอธิบายตัวแปร (CSV)</button>` : ""}<p id="dsMsg" class="ds-msg" aria-live="polite"></p>
         <details class="ds-cite"><summary>วิธีอ้างอิงและลิงก์ถาวร</summary>
-          <p><b>อ้างอิง:</b> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${esc(ds.title)} [ชุดข้อมูล]. แดชบอร์ด PM2.5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(iso(new Date()))}.</p>
+          <p><b>อ้างอิง:</b> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (${PYB()}). ${esc(ds.title)} [ชุดข้อมูล]. แดชบอร์ด PM2.5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(iso(new Date()))}.</p>
           ${ds.id === "hotspot" ? `<p><b>ลิงก์ข้อมูลดิบ (Power Query/R):</b> <code>/api/hotspot-backup</code> (JSON ทุกจุดที่บันทึกไว้)</p>` : `<p><b>ลิงก์ถาวร (Power Query/R):</b> <code>/api/dataset/${ds.id}.csv?pv=${f.pv.map(n => PROV.find(p => p.name === n).code).join(",")}${ds.filters.includes("weeks") ? `&wk=${f.w0}-${f.w1}` : ""}${ds.filters.includes("dates") ? `&from=${f.d0}&to=${f.d1}` : ""}</code> <em>(เปิดใช้เมื่อขึ้นเว็บจริง)</em></p>`}</details>`
         : `<p class="ds-empty">${ds.soon ? "ยังไม่เปิดให้ดาวน์โหลด" : ds.ready && !ds.ready() ? ds.wait() : "เลือกอย่างน้อย 1 จังหวัด 1 กลุ่มโรค และช่วงเวลาที่ถูกต้อง"}</p>`}</section>`;
   }
@@ -3748,13 +3755,13 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
 renderDisease = (f => function () { f.apply(this, arguments); window.dsInit && dsInit(); })(renderDisease);
 function renderDisease() {
   const dz = S.dz; if (!dz) { document.getElementById("dz").innerHTML = `<p class="muted">ดึงข้อมูลโรคไม่ได้</p>`; return; }
-  const wkMax = dz.meta?.reportWeek || Math.max(...(dz[2026] || []).map(r => +r.wk)) - 1;
+  const wkMax = Number(dz.meta?.dataWk) || dz.meta?.reportWeek || Math.max(...(dz[DY()] || []).map(r => +r.wk)) - 1;
   S.wkMax = wkMax;
-  document.getElementById("dzSub").textContent = `ผู้ป่วย 4 กลุ่มโรค · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)}) · ทั้งเขตสุขภาพที่ 7 · ข้อมูล HDC${(() => { const p = String(dz.meta?.dataDate || '').split('/'); return p.length === 3 ? ` ณ ${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ''; })()}`;
+  document.getElementById("dzSub").textContent = `ผู้ป่วย 4 กลุ่มโรค · ปี ${DYB()} สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(DY(), 1, wkMax)}) · ทั้งเขตสุขภาพที่ 7 · ข้อมูล HDC${(() => { const p = String(dz.meta?.dataDate || '').split('/'); return p.length === 3 ? ` ณ ${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ''; })()}`;
   S.dzTot = []; S.dzData = [];
   document.getElementById("dz").innerHTML = DZ.map((d, di) => {
-    const a = monthly(dz[2025], d.key, 53, 2025), b = monthly(dz[2026], d.key, wkMax, 2026);
-    const t26 = b.reduce((s, x) => s + (x || 0), 0), t25 = monthly(dz[2025], d.key, wkMax, 2025).reduce((s, x) => s + (x || 0), 0);
+    const a = monthly(dz[DY() - 1], d.key, 53, DY() - 1), b = monthly(dz[DY()], d.key, wkMax, DY());
+    const t26 = b.reduce((s, x) => s + (x || 0), 0), t25 = monthly(dz[DY() - 1], d.key, wkMax, DY() - 1).reduce((s, x) => s + (x || 0), 0);
     const pct = t25 ? (t26 - t25) / t25 * 100 : 0; S.dzTot.push({ ...d, t26, pct }); S.dzData.push({ d, a, b, t26, t25, pct });
     if (di === 0) return dzMonthAll(dz, wkMax) + (window.DZPV?.ok ? e2xBlock(wkMax) : pvWait());
     if (di > 0) return "";
@@ -4071,7 +4078,7 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
 function igComboSec(H) {
   const months = igCbMonths(); if (!months.length) return "";
   const end = dzCbEnd(S.dz, S.wkMax), cy = end.y;
-  const pv = S.igPv, src = y => pv ? (y === 2026 ? igDzRows() : igDzRowsPv(y)) : (S.dz?.[y] || []);   // รายจังหวัด: ปีก่อนหน้าจาก DZPV.rowsPrev
+  const pv = S.igPv, src = y => pv ? (y === PY() ? igDzRows() : igDzRowsPv(y)) : (S.dz?.[y] || []);   // รายจังหวัด: ปีก่อนหน้าจาก DZPV.rowsPrev
   const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(src(y), d.key, y === cy ? end.w : 99, y)]));
   const pm = igPmMonthly(months, pv), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(v => v != null), 0) / 10) * 10);
   const ser = DZ.map(d => ({ d, bars: months.map(({ y, m }) => byY[y]?.[d.key]?.[m] || null) }));
@@ -4080,7 +4087,7 @@ function igComboSec(H) {
   return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">จำนวนผู้ป่วย 4 กลุ่มโรคเทียบกับค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ${pv ? `จ.${pv}` : "ทั้งเขตสุขภาพที่ 7"}</small></div>
     <div class="cbk"><span><i class="bar"></i><em>จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
     <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H, months)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? `* ${months.filter((_, i) => ser[0].bars[i]?.prov).map(o => TH_M[o.m]).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}${pv && !window.DZPV?.rowsPrev?.length ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
+    <div class="dzl">${prov ? `* ${months.filter((_, i) => ser[0].bars[i]?.prov).map(o => TH_M[o.m]).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}${pv && !window.DZPV?.rowsPrev?.length ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. ${PYB()} · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 const IG_NAME = "R7_PM" + "2.5_dashboard";   // ชื่อที่แสดงท้ายหน้า (QR ยังชี้ไปที่ IG_URL) · แยกสตริงกันตัวแทนที่ชื่อสารมลพิษตอน build
@@ -4116,12 +4123,15 @@ function igForecast(F, big) {
   const rows = (F.region ? items : [...items.filter(o => o.p.name === S.igPv), ...items.filter(o => o.p.name !== S.igPv)]);
   return `<table class="fc3 num"><tr><th>จังหวัด</th>${hd}</tr>${rows.map(({ p, it }) => `<tr class="${!F.region && p.name === S.igPv ? "me" : ""}"><td>${p.name}</td>${it.pred.slice(0, 3).map(x => x == null ? `<td>–</td>` : `<td style="background:${LV[lvOf(x)].c};color:${textOn(LV[lvOf(x)].c)}">${f1(x)}</td>`).join("")}</tr>`).join("")}</table>`;
 }
+// ปี/สัปดาห์ล่าสุดของชุดผู้ป่วยที่อินโฟกราฟิกใช้: ระดับเขต = DY() · รายจังหวัด = PY() (ปีเปลี่ยนเองตามข้อมูล · ดู e1_monthly.js)
+const igY = () => S.igPv ? PY() : DY();
+const igWk = () => S.igPv ? PWK(S.wkMax || 0) : (S.wkMax || 0);
 function igDzRows() {
   if (S.igPv && window.DZPV) {   // รายจังหวัด: ผู้ป่วยที่อยู่จริงในจังหวัดนั้น (Type area 1+3 · HDC s_pm25_2_in_week)
     const K = Object.fromEntries(Object.entries(DZPV_COL).map(([k, v]) => [v, k]));
     return window.DZPV.rows.filter(r => r.pv === S.igPv).map(r => ({ wk: r.wk, ...Object.fromEntries(Object.entries(K).map(([c, k]) => [k, r[c]])) }));
   }
-  return S.dz?.[2026] || [];
+  return S.dz?.[DY()] || [];
 }
 // ผู้ป่วยรายจังหวัดของปีก่อนหน้า (/api/disease-pv → rowsPrev · Type 1+3) ในรูปแบบเดียวกับ igDzRows
 function igDzRowsPv(y) {
@@ -4248,11 +4258,11 @@ function igPvTrend(pv, F) {
 // ตัดคาดการณ์ออก (เดิมซ้ำ 2 ที่) · ใช้รูปแบบเดียวกับโพสต์รายจังหวัด/A4
 function igSocialRg(ig, head, foot, maxBar, adviceBox, riskNote, act, dense) {
   const d = Math.min(dense, 6); ig.dataset.sp = d;
-  const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
+  const wkMax = igWk(), rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, igY()) }));
   const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
   const CH = [104, 96, 90, 84, 78, 70, 60][d] + Math.round(IG_GROW * .48);
   const prov = last >= 0 && ser[0].m.some(o => o?.prov);
-  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · ทั้งเขตสุขภาพที่ 7</em><small style="margin-left:auto">ราย/เดือน</small></div>
+  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี ${igY() + 543} · ทั้งเขตสุขภาพที่ 7</em><small style="margin-left:auto">ราย/เดือน</small></div>
     <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 17)}</div>`).join("")}</div>
     <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   ig.innerHTML = head + `<div class="ig-body sp sprg">${maxBar}${igTiles()}${igFc4()}${adviceBox}${act}${dz}${riskNote}</div>` + foot;
@@ -4267,11 +4277,11 @@ function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
       <span class="sp-src">ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai (กรมควบคุมมลพิษ)</span></div></div>`;
   const top = `<div class="sp-top">${big}${igPvSide()}</div>`;
   const trend = igPvTrend(pv, F);
-  const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
+  const wkMax = igWk(), rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, igY()) }));
   const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
   const CH = [116, 106, 98, 90, 82, 70, 56][d] + Math.round(IG_GROW * .48);   // กราฟผู้ป่วย: ฐานเล็ก แล้วแจกพื้นที่ว่างที่เหลือให้ (2 แถว)
   const prov = last >= 0 && ser[0].m.some(o => o?.prov);
-  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · จ.${pv}</em><small style="margin-left:auto">ราย/เดือน</small></div>
+  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี ${igY() + 543} · จ.${pv}</em><small style="margin-left:auto">ราย/เดือน</small></div>
     <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 18)}</div>`).join("")}</div>
     <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   ig.innerHTML = head + `<div class="ig-body sp">${top}${adviceBox}${act}${dz}${riskNote}</div>` + foot;   // ฝุ่น (วันนี้ + 30 วัน) → 7 วัน/คาดการณ์ → คำแนะนำ → ผู้ป่วย
@@ -4352,8 +4362,8 @@ function buildInfographic(size = "a4", dense = 0) {
   // ===== A4 หน้าเดียว (ฉบับ 3) · หน้าตาแบบเดิม เรียงเรื่องฝุ่นให้จบก่อน แล้วจึงตามด้วยผู้ป่วย =====
   // 1 ค่าฝุ่นวันนี้ (+ที่มา) → 2 ย้อนหลัง 7 วัน / คาดการณ์ (ย่อ) → 3 คำแนะนำ + เกณฑ์ระดับ (ย่อ)
   // → 4 ผู้ป่วย 4 กลุ่มโรค รายเดือน ปี 2569 → 5 ผู้ป่วยย้อนหลัง ม.ค. 2568 – พ.ค. 2569 เทียบค่าฝุ่นรายเดือน
-  const wkMax = S.wkMax || 0, rows = igDzRows();
-  const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, 2026) }));
+  const wkMax = igWk(), rows = igDzRows();
+  const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, igY()) }));
   const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
   // ระดับเขต: ฐานกราฟเล็กแล้วขยายด้วยพื้นที่ว่างที่เหลือ (IG_GROW) → ไม่ต้องย่อส่วนอื่น · รายจังหวัด: ฐานใหญ่ตามเดิม
   const CH = (F.region ? [96, 92, 88, 84, 80, 76, 70, 64] : [136, 128, 120, 112, 104, 94, 84, 76])[dense] + Math.round(IG_GROW * .2),
@@ -4366,7 +4376,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const sec3 = adviceBox + `<div class="lvleg">${LV.map((l, i) => `<span class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><i style="background:${l.c}"></i><b>${l.name}</b> ${l.range}</span>`).join("")}</div>`
     + `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสายด่วน ${HOT_DDC}</b>${F.lv >= 3 ? ` · <b style="color:#9a3412">ร่วมงดเผาในที่โล่ง</b> พบการเผาแจ้ง ${HOT_PCD}` : ""}</div>`;
   const provM = last < 0 ? [] : ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean);
-  const sec4 = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569${F.region ? "" : ` · จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}</em><small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)</small></div>
+  const sec4 = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี ${igY() + 543}${F.region ? "" : ` · จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}</em><small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)</small></div>
     <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${igDzName(s.d)}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, F.region ? 16.5 : 17)}</div>`).join("")}</div>
     <div class="dzl">${provM.length ? `* ${provM.join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   const sec5 = igComboSec(CBH);
