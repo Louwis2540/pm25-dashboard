@@ -66,8 +66,7 @@ CSS = """
 .e1p-gh b i{width:10px;height:10px;border-radius:50%;flex:none}
 .e1p-gh b small{font-size:11.5px;font-weight:600;color:#6b7689}
 .e1p-gh strong{color:#1f2a3d}
-.e1lg .e1p-mk{display:inline-grid;place-items:center;width:16px;height:16px;font-size:13px;color:#8a5a00}
-.e1lg .e1p-mk.e1p-low{border-radius:50%;background:#fff4e5;border:1.5px solid #b45309;color:#b45309;font-size:11px;font-weight:800}
+.e1lg .e1p-mk{display:inline-block;flex:none;padding:0 6px;font-size:11.5px;font-weight:700;line-height:18px;color:#8a5a00;background:#fff6dd;border:1px solid #e3c47a;border-radius:6px}
 .e1lg .e1p-swipe{display:none;color:var(--ink-3)}
 @media (min-width:900px){.e1p-n{display:none}}
 @media (max-width:899px){.e1lg .e1p-swipe{display:inline-flex}}
