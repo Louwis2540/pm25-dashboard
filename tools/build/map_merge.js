@@ -100,9 +100,18 @@ const MM_BASES = {
   st: { label: "แผนที่ถนน", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attr: "© OpenStreetMap",
     fill: .3, pv: { color: "#fff", weight: 2, opacity: 1 }, sel: { color: "#0e2a47", weight: 4, opacity: 1 }, ap: { color: "#5b7089", weight: .9, opacity: .8, dashArray: "3 3" }, hov: { color: "#0e2a47", weight: 2, opacity: 1, dashArray: null, fillColor: "#0e2a47", fillOpacity: .14 } },
 };
+function mmNote(t) {   // ข้อความเล็กกลางแผนที่
+  if (!MAP) return; let n = MM.noteEl;
+  if (!n) { n = MM.noteEl = document.createElement("div"); n.className = "mm-note"; n.setAttribute("role", "status"); MAP.getContainer().appendChild(n); }
+  n.textContent = t; n.hidden = !t;
+}
+function mmTileFail(k) {
+  if (k === "sat" && !MM.tiles.st._ok && MM.tiles.st._err < 4) { mmSetBase("st"); mmNote("โหลดภาพดาวเทียมไม่ได้ จึงสลับเป็นแผนที่ถนน"); MM.noteKeep = true; setTimeout(() => { MM.noteKeep = false; mmNote(""); }, 7000); }
+  else mmNote("โหลดภาพแผนที่ไม่ได้ (เครือข่ายอาจบล็อกเว็บแผนที่) ยังดูค่าฝุ่นและจุดความร้อนได้ตามปกติ");
+}
 function mmSetBase(k, save) {
   if (!MM_BASES[k] || !MAP) return; const T = MM_BASES[k]; MM.base = k;
-  Object.entries(MM.tiles).forEach(([n, l]) => { if (n !== k) l.remove(); }); MM.tiles[k].addTo(MAP).bringToBack();
+  Object.entries(MM.tiles).forEach(([n, l]) => { if (n !== k) l.remove(); }); if (!MM.noteKeep) mmNote(""); MM.tiles[k].addTo(MAP).bringToBack();
   Object.assign(MM_PV_STYLE, T.pv); Object.assign(MM_PV_SEL, T.sel); Object.assign(MM_AP_STYLE, T.ap, { fillOpacity: 0 }); Object.assign(MM_AP_HOV, T.hov);
   Object.values(MM.shapes).forEach(ly => ly.setStyle({ fillOpacity: T.fill })); mmSelect(S.sel);
   MM.distG?.eachLayer(ly => ly.setStyle(MM_AP_STYLE));
@@ -116,7 +125,11 @@ function mmSelect(pv) {   // ไฮไลต์จังหวัดที่เ
 }
 function mmBase() {
   MAP = L.map("map", { attributionControl: true, scrollWheelZoom: false, zoomSnap: .25 }).setView([16.2, 103.4], 8);
-  MM.tiles = {}; for (const [k, T] of Object.entries(MM_BASES)) MM.tiles[k] = L.tileLayer(T.url, { maxZoom: 18, crossOrigin: true, attribution: T.attr });
+  MM.tiles = {}; for (const [k, T] of Object.entries(MM_BASES)) {
+    const l = MM.tiles[k] = L.tileLayer(T.url, { maxZoom: 18, crossOrigin: true, attribution: T.attr }); l._err = 0;
+    l.on("tileload", () => { l._ok = true; if (!MM.noteKeep) mmNote(""); });
+    l.on("tileerror", () => { if (!l._ok && ++l._err === 4 && MM.base === k) mmTileFail(k); });   // ภาพแผนที่ไม่ขึ้น (เครือข่ายบล็อกเว็บแผนที่) → แจ้ง/สลับ
+  }
   MM.pmG = L.layerGroup(); MM.labG = L.layerGroup(); MM.hsG = L.layerGroup(); MM.shapes = {};
   if (S.geo?.features?.length) {
     const g = L.geoJSON(S.geo, {
