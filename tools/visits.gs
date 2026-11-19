@@ -11,6 +11,7 @@
  *   4) Render → Environment: VISIT_HOOK_URL = URL ข้อ 3 · VISIT_TOKEN = ค่าเดียวกับข้อ 2
  *
  * อัปเดต 19 พ.ย. 2569: เพิ่ม action hs_add — server ส่งจุดความร้อนใหม่ (ทุก 15 นาที) มาเก็บในแท็บ _hotspots ตัดซ้ำด้วยคอลัมน์ key
+ *   ทุกครั้งที่รับข้อมูลจะบันทึกลงแท็บ log.hotspot (เวลา · รับ/เพิ่ม/ซ้ำ กี่แถว · รวมในชีต · ใช้เวลา) ไว้ตรวจว่าสำรองต่อเนื่องไหม
  *   ไม่ต้องตั้งค่าใน Render เพิ่ม · ใช้ VISIT_HOOK_URL / VISIT_TOKEN เดิม · แต่ต้อง "วางโค้ดไฟล์นี้ใหม่ทั้งไฟล์ แล้ว Deploy → Manage deployments → Edit → New version" (URL เดิมใช้ต่อได้)
  *   ถ้ายังไม่ Deploy เวอร์ชันใหม่ server จะแจ้งเตือนใน log และดาวน์โหลดได้เฉพาะข้อมูลในเครื่อง (หายเมื่อรีสตาร์ต)
  *
@@ -25,7 +26,17 @@ function doPost(e) {
     const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     const want = PropertiesService.getScriptProperties().getProperty('VISIT_TOKEN');
     if (!want || body.token !== want) return out_({ ok: false, error: 'unauthorized' });
-    if (body.action === 'hs_add') return out_({ ok: true, hs: true, added: hsAdd_(body.rows) });
+    if (body.action === 'hs_add') {
+      const t0 = Date.now(), n = Array.isArray(body.rows) ? body.rows.length : 0;
+      try {
+        const r = hsAdd_(body.rows);
+        hsLog_({ status: 'ok', received: r.received, added: r.added, duplicates: r.received - r.added, total: r.total, newest: r.newest, ms: Date.now() - t0, note: n > 500 ? 'รับเกิน 500 แถว ตัดเหลือ 500' : '' });
+        return out_({ ok: true, hs: true, added: r.added, received: r.received, total: r.total });
+      } catch (err) {
+        hsLog_({ status: 'error', received: n, added: 0, duplicates: 0, total: '', newest: '', ms: Date.now() - t0, note: String(err && err.message || err) });
+        throw err;   // ให้ catch ด้านนอกตอบ ok:false (server จะเก็บแถวไว้ส่งใหม่)
+      }
+    }
     const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '') ? body.date : Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd');
     const sh = sheet_();
     if (body.action === 'add') {
@@ -75,14 +86,31 @@ function hsAdd_(rows) {
   try {
     const sh = hsSheet_(), last = sh.getLastRow();
     const have = new Set(last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues().map(r => String(r[0])) : []);
-    const add = [];
-    (rows || []).slice(0, 500).forEach(r => {
-      const k = String((r && r.key) || ''); if (!k || have.has(k)) return;
+    const add = [], got = (rows || []).slice(0, 500);
+    let newest = '';
+    got.forEach(r => {
+      const k = String((r && r.key) || ''); if (!k) return;
+      const t = String(r.acq_date || '') + ' ' + String(r.th_time || ''); if (t > newest) newest = t;
+      if (have.has(k)) return;
       have.add(k); add.push(HS_HEAD.map(h => r[h] == null ? '' : r[h]));
     });
     if (add.length) sh.getRange(last + 1, 1, add.length, HS_HEAD.length).setValues(add);
-    return add.length;
+    return { added: add.length, received: got.length, total: Math.max(0, last - 1) + add.length, newest: newest.trim() };
   } finally { lock.releaseLock(); }
+}
+
+// ── บันทึกการทำงาน: แท็บ log.hotspot — 1 แถว = 1 ครั้งที่ server ส่งจุดความร้อนมา (เวลาไทย · รับกี่แถว · เพิ่มใหม่กี่แถว · ซ้ำกี่แถว · รวมในชีต · เวลาตรวจพบล่าสุด · ใช้เวลากี่ ms) ──
+// ใช้ไล่ดูว่าการสำรองข้อมูลทำงานต่อเนื่องไหม (ไม่มีแถวใหม่นาน ๆ = ไม่มีจุดใหม่ หรือ server ส่งไม่ถึง) · เก็บล่าสุดราว 4,000 แถว เกิน 5,000 ลบเก่าสุด 1,000
+const HS_LOG_TAB = 'log.hotspot';
+const HS_LOG_HEAD = ['time_bkk', 'status', 'received', 'added', 'duplicates', 'total_rows', 'newest_detection', 'ms', 'note'];
+function hsLog_(o) {
+  try {
+    const ss = SpreadsheetApp.openById(VISIT_SHEET_ID);
+    let sh = ss.getSheetByName(HS_LOG_TAB);
+    if (!sh) { sh = ss.insertSheet(HS_LOG_TAB); sh.appendRow(HS_LOG_HEAD); sh.setFrozenRows(1); sh.getRange('A:A').setNumberFormat('@'); sh.getRange('G:G').setNumberFormat('@'); }
+    sh.appendRow([Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd HH:mm:ss'), o.status, o.received, o.added, o.duplicates, o.total, o.newest || '', o.ms, o.note || '']);
+    if (sh.getLastRow() > 5000) sh.deleteRows(2, 1000);
+  } catch (err) { /* บันทึกล้มเหลวต้องไม่ทำให้การสำรองข้อมูลล้มตาม */ }
 }
 
 function sheet_() {
@@ -103,7 +131,9 @@ function testVisits() {
   console.log(JSON.stringify(stats_(sh, Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd'))));
 }
 
-/** ทดสอบในตัวแก้ไข: รันแล้วแท็บ _hotspots ถูกสร้าง (ไม่เพิ่มแถวทดสอบ) · log = จำนวนแถวรวมหัวตาราง */
+/** ทดสอบในตัวแก้ไข: รันแล้วแท็บ _hotspots และ log.hotspot ถูกสร้าง (ไม่เพิ่มแถวจุดความร้อน มีแถว log 1 แถวสถานะ test) */
 function testHotspots() {
-  console.log('แท็บ _hotspots พร้อมใช้ · แถวทั้งหมด', hsSheet_().getLastRow());
+  const t0 = Date.now(), n = hsSheet_().getLastRow();
+  hsLog_({ status: 'test', received: 0, added: 0, duplicates: 0, total: Math.max(0, n - 1), newest: '', ms: Date.now() - t0, note: 'รันทดสอบจากตัวแก้ไข' });
+  console.log('แท็บ _hotspots พร้อมใช้ · แถวจุดความร้อน', Math.max(0, n - 1), '· ดูบันทึกที่แท็บ log.hotspot');
 }
