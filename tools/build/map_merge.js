@@ -92,13 +92,31 @@ function mmDistTip(f) {
 
 // ---- แผนที่ ----
 const MM_PV_STYLE = { color: "#fff", weight: 2 }, MM_PV_SEL = { color: "#0e2a47", weight: 4 }, MM_AP_STYLE = { color: "#5b7089", weight: .9, opacity: .8, dashArray: "3 3", fill: true, fillColor: "#0e2a47", fillOpacity: 0 };
+const MM_AP_HOV = { color: "#0e2a47", weight: 2, opacity: 1, dashArray: null, fillOpacity: .14 };
+// แผนที่ฐาน 2 แบบ: ดาวเทียม (ค่าเริ่มต้น) / ถนน · เส้นเขตและพื้นจังหวัดปรับให้อ่านชัดบนแต่ละแบบ
+const MM_BASES = {
+  sat: { label: "ดาวเทียม", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: "Tiles © Esri — Esri, Maxar, Earthstar Geographics",
+    fill: 0, pv: { color: "#fff", weight: 1.6, opacity: .85 }, sel: { color: "#fff", weight: 4, opacity: 1 }, ap: { color: "#fff", weight: .9, opacity: .55, dashArray: "3 3" }, hov: { color: "#fff", weight: 2.4, opacity: 1, dashArray: null, fillColor: "#fff", fillOpacity: .2 } },
+  st: { label: "แผนที่ถนน", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attr: "© OpenStreetMap",
+    fill: .3, pv: { color: "#fff", weight: 2, opacity: 1 }, sel: { color: "#0e2a47", weight: 4, opacity: 1 }, ap: { color: "#5b7089", weight: .9, opacity: .8, dashArray: "3 3" }, hov: { color: "#0e2a47", weight: 2, opacity: 1, dashArray: null, fillColor: "#0e2a47", fillOpacity: .14 } },
+};
+function mmSetBase(k, save) {
+  if (!MM_BASES[k] || !MAP) return; const T = MM_BASES[k]; MM.base = k;
+  Object.entries(MM.tiles).forEach(([n, l]) => { if (n !== k) l.remove(); }); MM.tiles[k].addTo(MAP).bringToBack();
+  Object.assign(MM_PV_STYLE, T.pv); Object.assign(MM_PV_SEL, T.sel); Object.assign(MM_AP_STYLE, T.ap, { fillOpacity: 0 }); Object.assign(MM_AP_HOV, T.hov);
+  Object.values(MM.shapes).forEach(ly => ly.setStyle({ fillOpacity: T.fill })); mmSelect(S.sel);
+  MM.distG?.eachLayer(ly => ly.setStyle(MM_AP_STYLE));
+  MAP.getContainer().classList.toggle("mm-sat", k === "sat");
+  document.querySelectorAll(".mm-bases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.b === k)));
+  if (save) try { localStorage.setItem("mmBase", k); } catch (_) {}
+}
 function mmSelect(pv) {   // ไฮไลต์จังหวัดที่เลือกอยู่ (ตรงกับแผงเจาะลึก)
   for (const [n, ly] of Object.entries(MM.shapes)) ly.setStyle(n === pv ? MM_PV_SEL : MM_PV_STYLE);
   MM.shapes[pv]?.bringToFront(); mmOrder();
 }
 function mmBase() {
   MAP = L.map("map", { attributionControl: true, scrollWheelZoom: false, zoomSnap: .25 }).setView([16.2, 103.4], 8);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, crossOrigin: true, attribution: "© OpenStreetMap" }).addTo(MAP);
+  MM.tiles = {}; for (const [k, T] of Object.entries(MM_BASES)) MM.tiles[k] = L.tileLayer(T.url, { maxZoom: 18, crossOrigin: true, attribution: T.attr });
   MM.pmG = L.layerGroup(); MM.labG = L.layerGroup(); MM.hsG = L.layerGroup(); MM.shapes = {};
   if (S.geo?.features?.length) {
     const g = L.geoJSON(S.geo, {
@@ -115,6 +133,13 @@ function mmBase() {
   MM.badge = L.control({ position: "topright" });
   MM.badge.onAdd = () => { const d = L.DomUtil.create("div", "mm-badge"); L.DomEvent.disableClickPropagation(d); MM.badgeEl = d; return d; };
   MM.badge.addTo(MAP);
+  const bc = L.control({ position: "topleft" });   // ปุ่มสลับแผนที่ฐาน (ใต้ปุ่มซูม)
+  bc.onAdd = () => { const d = L.DomUtil.create("div", "mm-bases"); d.setAttribute("role", "group"); d.setAttribute("aria-label", "แผนที่ฐาน"); L.DomEvent.disableClickPropagation(d);
+    d.innerHTML = Object.entries(MM_BASES).map(([k, T]) => `<button type="button" data-b="${k}" aria-pressed="false">${T.label}</button>`).join("");
+    d.querySelectorAll("button").forEach(b => b.addEventListener("click", () => mmSetBase(b.dataset.b, true))); return d; };
+  bc.addTo(MAP);
+  let k0 = "sat"; try { const v = localStorage.getItem("mmBase"); if (MM_BASES[v]) k0 = v; } catch (_) {}
+  mmSetBase(k0);
   mmDistricts();
 }
 // เส้นเขตอำเภอ (พื้นหลังที่วาดเอง) + ชี้ดูค่าอำเภอ + ชื่ออำเภอเมื่อซูมเข้า
@@ -126,7 +151,7 @@ async function mmDistricts() {
     style: MM_AP_STYLE,
     onEachFeature: (f, ly) => {
       const pvn = f.properties.pv_name;
-      ly.on("mouseover", () => { if (!MM.on.pm) return; ly.setStyle({ color: "#0e2a47", weight: 2, opacity: 1, dashArray: null, fillOpacity: .14 });   // ไม่ใช้ bringToFront ตรงนี้ — ย้าย DOM ใต้เคอร์เซอร์ทำให้ mouseover/mouseout เด้งซ้ำ
+      ly.on("mouseover", () => { if (!MM.on.pm) return; ly.setStyle(MM_AP_HOV);   // ไม่ใช้ bringToFront ตรงนี้ — ย้าย DOM ใต้เคอร์เซอร์ทำให้ mouseover/mouseout เด้งซ้ำ
         mmDistLoad(String(f.properties.pv)).then(() => { if (ly.isTooltipOpen()) ly.setTooltipContent(mmDistTip(f)); }); });
       ly.on("mouseout", () => ly.setStyle(MM_AP_STYLE));
       ly.on("click", () => { renderDrill(pvn); if (!touch) document.getElementById("drillPanel")?.scrollIntoView({ behavior: "smooth", block: "center" }); });   // คลิก = เลือกจังหวัดของอำเภอนั้น (มือถือไม่เลื่อนหน้าหนี ให้เห็นค่าอำเภอก่อน)

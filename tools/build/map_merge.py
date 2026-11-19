@@ -43,6 +43,13 @@ CSS = """
 .mm-badge small{display:block;font-weight:500;font-size:11px;color:var(--ink-3)}
 .mm-badge.prev{background:#fff8e6;border-color:#f0c36d;color:#7a5200}.mm-badge.prev small{color:#9a6b00}
 .mm-dl{transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;font:600 11px "IBM Plex Sans Thai",sans-serif;color:#33475f;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff}
+.mm-bases{display:flex;flex-direction:column;gap:0;margin-top:8px;background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;overflow:hidden;box-shadow:none}
+.mm-bases button{appearance:none;border:0;background:#fff;color:var(--ink-2,#33415c);font:600 12.5px "IBM Plex Sans Thai",sans-serif;padding:7px 10px;cursor:pointer;text-align:center;white-space:nowrap;min-height:34px}
+.mm-bases button+button{border-top:1px solid #d5dce6}
+.mm-bases button[aria-pressed="true"]{background:#0e2a47;color:#fff}
+.mm-bases button:focus-visible{outline:3px solid var(--sec,#1c6ed6);outline-offset:-3px}
+.mm-sat .mm-dl{color:#fff;text-shadow:0 0 3px #000,0 0 4px #000,0 0 6px #000}
+.mm-sat .mm-lab b{color:#fff;text-shadow:0 0 3px #000,0 0 5px #000,0 0 7px #000}
 .mm-main .leaflet-control-scale-line{font:600 11px "IBM Plex Sans Thai",sans-serif}
 .mm-main .legend{justify-content:center;margin-top:8px}
 .mm-main .map-note{margin-top:10px}
