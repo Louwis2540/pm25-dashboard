@@ -73,6 +73,10 @@ import dash_apply; dash_apply.apply(sub)   # ข้อความเทีย�
 # หมายเหตุตารางสรุปช่วงที่เลือก (แนวโน้ม): ค่า ณ 07.00 น. จากสถานี + ดาวเทียม
 sub('<div class="tr-note">ค่ารายวันจากสถานีตรวจวัด Air4Thai · ', '<div class="tr-note">ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จากสถานีตรวจวัด Air4Thai ร่วมกับดาวเทียม GISTDA · ')
 sub("</style>", "\n/* ===== รอบ 16 ต.ค. 2569 ===== */\n" + (css_z or zbc_apply.CSS) + pheoc_apply.CSS + (SCR / "ds.css").read_text(encoding="utf-8") + nav_apply.TOC_CSS + "</style>")
+# ---- 5) จัดหน้าใหม่ (ขั้น 1) + แผนที่ค่าฝุ่น/จุดความร้อนรวมกัน (ขั้น 2) + กราฟผู้ป่วยรายเดือน ม.ค. 69–พ.ค. 70 — ชุดเดียวกับเดโม่ ----
+import layout_apply, map_merge
+html = layout_apply.apply(html)
+html = map_merge.apply(html)
 if miss:
     for n, o in miss: print("MISS", n, repr(o))
     raise SystemExit(1)
