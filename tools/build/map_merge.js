@@ -5,8 +5,9 @@
 //      - ระดับอำเภอ: แสดงเมื่อเอาเคอร์เซอร์ชี้ที่อำเภอเท่านั้น · ขอข้อมูลรายอำเภอของจังหวัดนั้นตอนชี้ครั้งแรก (ไม่ดึงล่วงหน้า) · ล้างทิ้งเมื่อได้ค่าจังหวัดรอบใหม่
 //      - ขอค่าใหม่ทุกต้นชั่วโมง + MM.PM_MIN นาที · ดึงไม่ได้ → แสดง "ค่าก่อนหน้า" (เก็บใน localStorage ไม่เกิน 24 ชม.) · ไม่เคยมีค่า → "–" (ไม่ใช้ค่า 07.00 น. แทน)
 //  • พื้นหลังแผนที่: ไทล์ OpenStreetMap (ถ้าโหลดได้) + เส้นเขตอำเภอที่วาดเอง (ใช้ได้แม้ไม่มีไทล์) + ชื่ออำเภอเมื่อซูมเข้า + สเกล + ป้ายบอกค่าบนแผนที่
-//  • ชั้น "จุดความร้อน": GISTDA VIIRS ย้อนหลัง 24 ชม. แบบเดิม (ดึงตอนเปิดหน้า ไม่รีเฟรชอัตโนมัติ) · สีจุด = ความเชื่อมั่นของดาวเทียม (ไม่ใช่ระดับฝุ่น)
-const MM = { on: { pm: true, hs: true }, PM_MIN: 10,
+//  • ชั้น "จุดความร้อน": GISTDA VIIRS ย้อนหลัง 24 ชม. · ขอข้อมูลใหม่ทุก 15 นาที (เซิร์ฟเวอร์เก็บ 15 นาที) · บอกเวลาที่ตรวจพบจุดล่าสุด · ดาวเทียมบินผ่านเป็นรอบ จึงเป็นข้อมูลใกล้เคียงเรียลไทม์ ไม่ใช่เรียลไทม์จริง
+//    (เดิม: ดึงตอนเปิดหน้า ไม่รีเฟรชอัตโนมัติ) · สีจุด = ความเชื่อมั่นของดาวเทียม (ไม่ใช่ระดับฝุ่น)
+const MM = { on: { pm: true, hs: true }, PM_MIN: 10, HS_MS: 15 * 60e3, hsNext: 0, hsAt: 0, hsLatest: null, hsBusy: false, hsErr: false,
   live: null, asOf: null, pmNext: 0, pmBusy: false, pmOk: true, pmStale: false, fromCache: false,
   dist: {}, distP: {}, distFail: {}, sample: false, timer: null, bound: false, shapes: {} };
 const mmPad = n => String(n).padStart(2, "0");
@@ -46,11 +47,30 @@ function mmLive() {
   if (!MM.live) pmRow = `<div class="mm-ln${MM.pmBusy ? "" : " err"}"><span class="mm-dot${MM.pmBusy ? "" : " off"}" aria-hidden="true"></span><b>ค่าเฉลี่ยรายชั่วโมง</b><span>${MM.pmBusy ? "กำลังขอข้อมูล…" : "ยังไม่มีข้อมูล (และไม่มีค่าก่อนหน้า) · ดึงจาก GISTDA ไม่สำเร็จ"}</span>${nx}</div>`;
   else if (mmPrev()) pmRow = `<div class="mm-ln err"><span class="mm-dot off" aria-hidden="true"></span><b>ค่าเฉลี่ยรายชั่วโมง</b><span>แสดงค่าก่อนหน้า ณ ${pt} · ${MM.pmBusy ? "กำลังขอข้อมูลใหม่…" : !MM.pmOk ? "ดึงค่าใหม่ไม่สำเร็จ" : "ค่าจากครั้งก่อน"}</span>${nx}</div>`;
   else pmRow = `<div class="mm-ln"><span class="mm-dot" aria-hidden="true"></span><b>ค่าเฉลี่ยรายชั่วโมง</b><span>ณ ${pt} · GISTDA (ค่าประมาณจากดาวเทียม)${MM.pmStale ? " · <em>ข้อมูลค้าง</em>" : ""}</span>${nx}</div>`;
-  const hsRow = `<div class="mm-ln"><span class="mm-dot off" aria-hidden="true"></span><b>จุดความร้อน</b><span>GISTDA (VIIRS) · ย้อนหลัง 24 ชม.</span></div>`;
+  const lt = MM.hsLatest ? mmAt(MM.hsLatest) : null;
+  const hsRow = `<div class="mm-ln${MM.hsErr ? " err" : ""}"><span class="mm-dot${MM.hsErr ? " off" : ""}" aria-hidden="true"></span><b>จุดความร้อน</b><span>GISTDA (VIIRS) · ย้อนหลัง 24 ชม. · ${MM.hsAt ? (lt ? `ตรวจพบล่าสุด ${lt}` : "ไม่พบจุดใน 24 ชม.") : "กำลังขอข้อมูล…"}${MM.hsAt ? ` · อัปเดตข้อมูล ${mmHM(new Date(MM.hsAt))} น.` : ""}${MM.hsErr ? " · ดึงรอบล่าสุดไม่สำเร็จ แสดงข้อมูลครั้งก่อน" : ""}</span>${MM.hsAt ? `<span class="mm-nx">ขอข้อมูลใหม่ทุก 15 นาที (ครั้งถัดไป ${mmHM(new Date(MM.hsNext))} น. · อีก <b id="mmCdH">${mmLeft(MM.hsNext)}</b>)</span>` : ""}</div>`;
   el.innerHTML = pmRow + hsRow + `<button type="button" class="mm-rf" id="mmRf" ${MM.pmBusy ? "disabled" : ""}>${MM.pmBusy ? "กำลังดึง…" : "รีเฟรชค่าฝุ่น"}</button>`;
   document.getElementById("mmRf")?.addEventListener("click", () => mmPmFetch());
 }
 function mmRepaint() { renderHotspot(S.hsToday, MM.sample); }
+// ---- จุดความร้อน: ขอข้อมูลใหม่ทุก 15 นาที ----
+function mmHsLatest(feats) {   // เวลาที่ตรวจพบล่าสุดจากตัวข้อมูลเอง (เวลาไทย) — ใช้เมื่อเซิร์ฟเวอร์ไม่ส่ง latest
+  let m = ""; for (const f of feats || []) { const p = f.properties || {}, d = String(p.acq_date || "").slice(0, 10), t = String(p.th_time ?? "").padStart(4, "0"), k = d && `${d}T${t.slice(0, 2)}:${t.slice(2)}`; if (d && k > m) m = k; }
+  return m || null;
+}
+async function mmHsFetch() {
+  if (MM.hsBusy) return; MM.hsBusy = true;
+  try {
+    const j = await getJSON("/api/hotspot"), names = new Set(PROV.map(p => p.name));
+    if (j?.ok && Array.isArray(j.geojson?.features)) {
+      S.hsToday = j.geojson.features.filter(f => names.has(f.properties.changwat)); S.hsOk = true;
+      MM.hsAt = Date.now(); MM.hsLatest = mmHsLatest(S.hsToday); MM.hsErr = false;
+    } else MM.hsErr = true;
+  } catch (_) { MM.hsErr = true; }
+  MM.hsBusy = false; MM.hsNext = Date.now() + MM.HS_MS;
+  if (!MM.sample) renderHotspot(S.hsToday, false);   // กำลังดูข้อมูลตัวอย่างย้อนหลังอยู่ → ไม่ทับ
+  mmLive();
+}
 async function mmPmFetch() {
   if (MM.pmBusy) return; MM.pmBusy = true; mmLive();
   try {
@@ -66,10 +86,13 @@ function mmStart() {
   MM.pmNext = mmNextPm();
   mmLoad();       // มีค่าก่อนหน้าจากครั้งที่แล้ว → แสดงไว้ก่อนระหว่างรอค่าใหม่
   mmPmFetch();    // ขอค่าล่าสุดทันทีที่เปิดหน้า
+  MM.hsAt = Date.now(); MM.hsNext = MM.hsAt + MM.HS_MS; MM.hsLatest = mmHsLatest(S.hsToday);   // ตัวโหลดหน้าเพิ่งขอจุดความร้อนมา → รอบถัดไปอีก 15 นาที
   MM.timer = setInterval(() => {
     if (document.visibilityState !== "visible") return;                 // แท็บที่ซ่อนอยู่ไม่ดึง · กลับมาเห็นแล้วเลยเวลาจะดึงทันที
     if (Date.now() >= MM.pmNext) mmPmFetch();
+    if (Date.now() >= MM.hsNext) mmHsFetch();
     const a = document.getElementById("mmCdP"); if (a) a.textContent = mmLeft(MM.pmNext);
+    const h = document.getElementById("mmCdH"); if (h) h.textContent = mmLeft(MM.hsNext);
   }, 1000);
 }
 
@@ -218,7 +241,7 @@ function renderHotspot(feats, isSample) {
   mmLayers(); mmOrder(); mmBadge();
   // --- แผงข้างแผนที่: ค่าฝุ่น + จำนวนจุดความร้อนรายจังหวัด ---
   document.getElementById("hotSide").innerHTML = `
-    <div class="label">${isSample ? "ข้อมูลตัวอย่าง 7 พ.ค. 2569" : "จุดความร้อนรวม 4 จังหวัด · 24 ชม."}</div>
+    <div class="label">${isSample ? "ข้อมูลตัวอย่าง 7 พ.ค. 2569" : "จุดความร้อนรวม 4 จังหวัด · 24 ชม."}${!isSample && MM.hsAt ? `<br><small>${MM.hsLatest ? `ตรวจพบล่าสุด ${esc(mmAt(MM.hsLatest))}` : "ไม่พบจุดใน 24 ชม."} · อัปเดตข้อมูล ${mmHM(new Date(MM.hsAt))} น.</small>` : ""}</div>
     <div class="hot-total num">${feats.length} <span style="font-size:calc(18px*var(--fs,1));color:var(--ink-3)">จุด</span></div>
     <div class="mm-tb"><div class="mm-th"><span>จังหวัด</span><span>${PM25T}<small>${mmPrev() ? "ก่อนหน้า" : "รายชั่วโมง"}</small></span><span>จุดร้อน</span></div>${PROV.map(p => { const v = mmVal(p.name);
       return `<button type="button" class="hot-row mm-row" data-pv="${p.name}"><span>${p.name}</span><span class="mm-pm num">${v != null ? f1(v) : "–"}</span><b>${by[p.name] || 0}</b></button>`; }).join("")}</div>

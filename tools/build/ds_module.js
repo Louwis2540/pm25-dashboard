@@ -43,6 +43,12 @@
     type1c: ["ประชากร Type area 1 (หลังตัดซ้ำ) ณ สิ้นปีงบประมาณ", "คน"], type3c: ["ประชากร Type area 3 (หลังตัดซ้ำ) ณ สิ้นปีงบประมาณ", "คน"],
     pop13_end_fy: ["ประชากร Type 1+3 ณ สิ้นปีงบประมาณ", "คน"], pop13_midyear: ["ประชากรกลางปี = ปีก่อน + 0.75 × (ปีนี้ − ปีก่อน)", "คน"],
   };
+  Object.assign(COL, {
+    acq_date: ["วันที่ดาวเทียมตรวจพบ (ค.ศ. ปปปป-ดด-วว · เวลาไทย)", ""], th_time: ["เวลาที่ตรวจพบ (ชม.:นาที เวลาไทย)", ""],
+    amphoe_en: ["ชื่ออำเภอ (อังกฤษ ตามที่ GISTDA ให้มา)", ""], tambon_en: ["ชื่อตำบล (อังกฤษ ตามที่ GISTDA ให้มา)", ""], land_use: ["ประเภทการใช้ที่ดิน ณ จุดที่ตรวจพบ (GISTDA)", ""],
+    confidence: ["ความมั่นใจของดาวเทียมว่าเป็นไฟจริง (VIIRS): high = สูง · nominal = ปานกลาง · low = ต่ำ", ""], frp_mw: ["ความแรงของไฟ (Fire Radiative Power)", "เมกะวัตต์"],
+    lat: ["ละติจูด (WGS84)", "องศา"], lng: ["ลองจิจูด (WGS84)", "องศา"],
+  });
   for (const k of GK) { COL["cases_" + k] = [`ผู้ป่วย${GLABEL[k]} (Type 1+3)`, "ราย"]; COL["rate_" + k] = [`อัตราป่วย${GLABEL[k]} ต่อแสน`, "ต่อแสน"]; }
 
   // วันที่ใช้ค่าดาวเทียม GISTDA แทนค่าสถานี (backfillGistda 16 ต.ค. 2569 · ดูแท็บ _backfill_log)
@@ -106,22 +112,52 @@
           ...GK.map(k => "cases_" + k), ...GK.map(k => "rate_" + k), "population", "preliminary", "date_com"], rows };
       },
       note: () => "ผู้ป่วย = ผู้อยู่จริงในจังหวัด (Type 1+3) จึงคู่กับประชากรได้ถูกต้อง · ค่าฝุ่นเฉลี่ยคิดเฉพาะวันที่มีข้อมูล ดูจำนวนวันจากคอลัมน์ pm25_days · ใช้ดูความสัมพันธ์ระดับกลุ่มประชากร ไม่ใช่หลักฐานว่าฝุ่นเป็นสาเหตุ (ecological fallacy)" },
+    { id: "hotspot", icon: "i-fire", title: "จุดความร้อนรายวัน (สำรองข้อมูลอัตโนมัติ)", level: "จุดละ 1 แถว · รายวัน", freq: "บันทึกจุดใหม่ทุก 15 นาที · สะสมตั้งแต่เริ่มเก็บ",
+      src: "GISTDA ดาวเทียม VIIRS (Suomi NPP · NOAA-20/21) ผ่าน API GISTDA · ระบบบันทึกเก็บทุกจุดที่ตรวจพบในพื้นที่ 4 จังหวัด ตัดซ้ำ", filters: ["pv", "dates"],
+      desc: "ทุกจุดความร้อนที่ดาวเทียมตรวจพบในเขตสุขภาพที่ 7 ตั้งแต่วันที่เริ่มเก็บ (GISTDA ให้ดูย้อนหลังได้แค่ 24 ชม. ระบบจึงเก็บสำรองไว้ทุกวัน) พร้อมวันเวลา อำเภอ ตำบล ประเภทพื้นที่ ความมั่นใจ ความแรงไฟ และพิกัด ใช้ประกอบรายงานได้",
+      range: () => [HSB.min, HSB.max], ready: () => HSB.state === "ok",
+      wait: () => HSB.state === "err" ? "โหลดข้อมูลสำรองจุดความร้อนไม่สำเร็จ ลองเปิดแผงนี้ใหม่อีกครั้ง" : "กำลังโหลดข้อมูลสำรองจุดความร้อน…",
+      build(f) {
+        const rows = [];
+        for (const r of HSB.rows) {
+          if (r.d < f.d0 || r.d > f.d1 || !f.pv.includes(r.pv)) continue;
+          const dt = new Date(r.d + "T00:00:00"), pv = PROV.find(p => p.name === r.pv), t = String(r.t || "").padStart(4, "0");
+          rows.push({ acq_date: r.d, th_time: t.slice(0, 2) + ":" + t.slice(2), year_be: dt.getFullYear() + 543, epi_week: epiWeekOf(dt), pv_code: pv?.code, pv_name: r.pv,
+            amphoe_en: r.ap, tambon_en: r.tb, land_use: r.lu, confidence: r.cf, frp_mw: r.frp, lat: r.lat, lng: r.lng });
+        }
+        return { cols: ["acq_date", "th_time", "year_be", "epi_week", "pv_code", "pv_name", "amphoe_en", "tambon_en", "land_use", "confidence", "frp_mw", "lat", "lng"], rows };
+      },
+      note: () => `จุดความร้อน = ตำแหน่งที่ดาวเทียมวัดความร้อนผิดปกติ ไม่ใช่จำนวนไฟ (ไฟเดียวอาจเป็นหลายจุด) · วันที่และเวลาเป็นเวลาที่ดาวเทียมตรวจพบ (เวลาไทย) · ข้อมูลเริ่มสะสม${HSB.min ? `ตั้งแต่ ${thD(HSB.min)}` : "ตั้งแต่วันที่ขึ้นระบบ"} วันก่อนหน้านั้นไม่มีข้อมูล · วันที่ไม่มีแถว = ไม่พบจุด หรือเป็นวันก่อนเริ่มเก็บ${HSB.state === "ok" && !HSB.persistent ? " · ⚠ ตอนนี้เก็บไว้ในหน่วยความจำของเซิร์ฟเวอร์ ข้อมูลอาจหายเมื่อระบบรีสตาร์ต (ยังไม่ได้เชื่อมที่เก็บถาวรในชีต)" : ""}` },
     { id: "gistda", icon: "i-sat", title: "ค่าฝุ่นรายวัน รายอำเภอ/ตำบล", level: "อำเภอ · ตำบล · รายวัน", freq: "อัปเดตทุกวัน", soon: true,
       src: "GISTDA ระบบเช็คฝุ่น (ค่าประมาณจากดาวเทียม)", desc: "77 อำเภอ 660 ตำบล ตั้งแต่ 1 ม.ค. 2569 — กำลังเก็บข้อมูลย้อนหลัง เปิดให้ดาวน์โหลดเมื่อเก็บครบ", filters: [] },
   ];
+  // ── ข้อมูลสำรองจุดความร้อน (โหลดจาก /api/hotspot-backup เมื่อเปิดชุดนี้ครั้งแรก) ──
+  const HSB = window.HSB = window.HSB || { state: "idle", rows: [], min: null, max: null, persistent: false };
+  async function hsbLoad() {
+    if (HSB.state === "loading" || HSB.state === "ok") return;
+    HSB.state = "loading"; render();
+    try {
+      const j = await getJSON("/api/hotspot-backup");
+      if (!j?.ok || !Array.isArray(j.rows)) throw new Error("bad");
+      Object.assign(HSB, { rows: j.rows, min: j.min, max: j.max, persistent: !!j.persistent, source: j.source, state: "ok" });
+      if (st.ds === "hotspot" && !st.f.keep) { st.f.d0 = HSB.min || st.f.d0; st.f.d1 = HSB.max || st.f.d1; }
+    } catch (_) { HSB.state = "err"; }
+    render();
+  }
   const PRESETS = [
     { id: "analysis", label: "ชุดวิเคราะห์ ฝุ่น × ผู้ป่วย ทั้งปี", ds: "analysis", f: () => ({ w0: 1, w1: wkMax() }) },
     { id: "weekly", label: "สรุปผู้ป่วย 4 สัปดาห์ล่าสุด (ทำรายงาน)", ds: "cases", f: () => ({ table: "s1", w0: Math.max(1, wkMax() - 3), w1: wkMax() }) },
+    { id: "hotspot7", label: "จุดความร้อน 7 วันล่าสุด (ทำรายงาน)", ds: "hotspot", f: () => { const e = new Date(), s = new Date(); s.setDate(e.getDate() - 6); return { d0: iso(s), d1: iso(e), keep: true }; } },
     { id: "season", label: "ค่าฝุ่นรายวัน ฤดูฝุ่นล่าสุด", ds: "pm_daily", f: () => { const t = pmRange()[1] || iso(new Date()), y = +t.slice(0, 4), m = +t.slice(5, 7); const sy = m >= 11 ? y : y - 1; return { d0: `${sy}-11-01`, d1: m >= 6 && m <= 10 ? `${y}-05-31` : t }; } },
   ];
 
   // ── สถานะ ─────────────────────────────────────────────────────────
   const st = { ds: "analysis", fmt: "csv", f: {} };
   function defaults(ds) {
-    const r07 = Object.keys(S.pm07 || {}).sort(), [a, b] = ds === "pm07" && r07.length ? [r07[0], r07.at(-1)] : pmRange();
+    const r07 = Object.keys(S.pm07 || {}).sort(), [a, b] = ds === "hotspot" ? [HSB.min || iso(new Date()), HSB.max || iso(new Date())] : ds === "pm07" && r07.length ? [r07[0], r07.at(-1)] : pmRange();
     return { pv: PROV.map(p => p.name), w0: 1, w1: wkMax(), groups: [...GK], table: "s2", d0: a || "2026-01-01", d1: b || iso(new Date()) };
   }
-  function pick(id, over) { st.ds = id; st.f = { ...defaults(id), ...(over || {}) }; render(); }
+  function pick(id, over) { st.ds = id; st.f = { ...defaults(id), ...(over || {}) }; render(); if (id === "hotspot") hsbLoad(); }
 
   // ── ไฟล์ ──────────────────────────────────────────────────────────
   const cell = v => { if (v == null) return ""; const s = String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -131,13 +167,13 @@
     const scope = ds.filters.includes("weeks") ? `สัปดาห์ระบาดวิทยาที่ ${f.w0}–${f.w1} ปี 2569 (${epiRange(2026, f.w0, f.w1)})` : ds.filters.includes("dates") ? `${thD(f.d0)} – ${thD(f.d1)}` : "ปีงบประมาณ 2568–2569";
     return [
       ["ชุดข้อมูล", ds.title], ["พื้นที่", "เขตสุขภาพที่ 7: " + f.pv.join(", ")], ["ช่วงเวลา", scope], ["จำนวนแถว", n],
-      ["แหล่งข้อมูล", ds.src], ["วันที่ประมวลผลต้นทาง", ds.id === "pm_daily" || ds.id === "pop" ? "-" : D().dateCom], ["วันที่ดาวน์โหลด", today],
+      ["แหล่งข้อมูล", ds.src], ["วันที่ประมวลผลต้นทาง", ds.id === "pm_daily" || ds.id === "pop" || ds.id === "hotspot" ? "-" : D().dateCom], ["วันที่ดาวน์โหลด", today],
       ["หมายเหตุ", ds.note(f)],
       ["นิยามสัปดาห์", "สัปดาห์ระบาดวิทยา กรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค."],
       ["รหัสโรค (ICD-10)", "ทางเดินหายใจ J44 (ยกเว้น J44.2), J45, J44.2 · หัวใจ I21, I22, I24 · ตา H10 · ผิวหนัง L30.9, L50 (ประกาศกระทรวงสาธารณสุข พ.ศ. 2565)"],
       ["การอ้างอิง", `สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${ds.title} [ชุดข้อมูล]. แดชบอร์ด PM2\u002E5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(today)}.`],
       ["ข้อควรระวัง", "ข้อมูลระดับจังหวัดเป็นข้อมูลรวม ไม่มีข้อมูลรายบุคคล · ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยง"],
-    ];
+    ].filter(r => !(ds.id === "hotspot" && r[0] === "รหัสโรค (ICD-10)"));
   }
   const dict = cols => cols.map(c => [c, COL[c]?.[0] || "", COL[c]?.[1] || ""]);
   const fname = (ds, f, ext) => `pm25_r7_${ds.id}_${ds.filters.includes("weeks") ? `wk${f.w0}-${f.w1}` : ds.filters.includes("dates") ? `${f.d0}_${f.d1}` : "2569"}.${ext}`;
@@ -180,11 +216,11 @@
   // ── หน้าจอ ────────────────────────────────────────────────────────
   const ico = id => `<svg class="ico"><use href="#${id}"/></svg>`;
   function filtersHtml(ds) {
-    const f = st.f, wkOpt = sel => Array.from({ length: wkMax() }, (_, i) => `<option value="${i + 1}"${i + 1 === sel ? " selected" : ""}>สัปดาห์ที่ ${i + 1} (${epiRange(2026, i + 1)})</option>`).join(""), [a, b] = pmRange();
+    const f = st.f, wkOpt = sel => Array.from({ length: wkMax() }, (_, i) => `<option value="${i + 1}"${i + 1 === sel ? " selected" : ""}>สัปดาห์ที่ ${i + 1} (${epiRange(2026, i + 1)})</option>`).join(""), [a, b] = (ds.range || pmRange)();
     const h = [];
     if (ds.filters.includes("pv")) h.push(`<fieldset class="ds-f"><legend>พื้นที่</legend><div class="ds-chips">${PROV.map(p => `<label class="ds-chip"><input type="checkbox" data-k="pv" value="${p.name}"${f.pv.includes(p.name) ? " checked" : ""}><span>${p.name}</span></label>`).join("")}</div></fieldset>`);
     if (ds.filters.includes("weeks")) h.push(`<fieldset class="ds-f"><legend>ช่วงสัปดาห์ระบาดวิทยา ปี 2569</legend><div class="ds-row"><label>ตั้งแต่<select data-k="w0">${wkOpt(f.w0)}</select></label><label>ถึง<select data-k="w1">${wkOpt(f.w1)}</select></label></div><p class="ds-hint">สัปดาห์ที่ ${prelimFrom()}–${wkMax()} เป็นข้อมูลเบื้องต้น (คอลัมน์ preliminary = 1)</p></fieldset>`);
-    if (ds.filters.includes("dates")) h.push(`<fieldset class="ds-f"><legend>ช่วงวันที่</legend><div class="ds-row"><label>ตั้งแต่<input type="date" data-k="d0" value="${f.d0}" min="${a}" max="${b}"></label><label>ถึง<input type="date" data-k="d1" value="${f.d1}" min="${a}" max="${b}"></label></div><p class="ds-hint">มีข้อมูล ${a ? thD(a) : "-"} – ${b ? thD(b) : "-"}</p></fieldset>`);
+    if (ds.filters.includes("dates")) h.push(`<fieldset class="ds-f"><legend>ช่วงวันที่</legend><div class="ds-row"><label>ตั้งแต่<input type="date" data-k="d0" value="${f.d0}"${a ? ` min="${a}"` : ""}${b ? ` max="${b}"` : ""}></label><label>ถึง<input type="date" data-k="d1" value="${f.d1}"${a ? ` min="${a}"` : ""}${b ? ` max="${b}"` : ""}></label></div><p class="ds-hint">มีข้อมูล ${a ? thD(a) : "-"} – ${b ? thD(b) : "-"}</p></fieldset>`);
     if (ds.filters.includes("groups")) h.push(`<fieldset class="ds-f"><legend>กลุ่มโรค</legend><div class="ds-chips">${GK.map(k => `<label class="ds-chip"><input type="checkbox" data-k="groups" value="${k}"${f.groups.includes(k) ? " checked" : ""}><span>${GLABEL[k]}</span></label>`).join("")}</div></fieldset>`);
     if (ds.filters.includes("table")) h.push(`<fieldset class="ds-f"><legend>นับผู้ป่วยแบบไหน</legend><div class="ds-seg">
       <label><input type="radio" name="dsTb" data-k="table" value="s2"${f.table === "s2" ? " checked" : ""}><span><b>ผู้อยู่จริงในจังหวัด</b><small>Type area 1+3 · มีอัตราต่อแสน</small></span></label>
@@ -194,7 +230,7 @@
   function render() {
     const el = document.getElementById("dsBody"); if (!el) return;
     const ds = DS.find(d => d.id === st.ds), f = st.f;
-    const ok = !ds.soon && f.pv?.length && (!ds.filters.includes("groups") || f.groups.length) && (!ds.filters.includes("weeks") || f.w0 <= f.w1) && (!ds.filters.includes("dates") || f.d0 <= f.d1);
+    const ok = !ds.soon && (!ds.ready || ds.ready()) && f.pv?.length && (!ds.filters.includes("groups") || f.groups.length) && (!ds.filters.includes("weeks") || f.w0 <= f.w1) && (!ds.filters.includes("dates") || f.d0 <= f.d1);
     const out = ok ? ds.build(f) : { cols: [], rows: [] }, csv = ok ? toCsv(out.cols, out.rows) : "";
     const kb = new Blob([csv]).size / 1024;
     // ไล่หัวข้อเป็นขั้น 1 → 2 → 3 ในแนวตั้ง (stepper) · รายการที่เลือกเป็นแบบพื้นทึบ (filled)
@@ -222,8 +258,8 @@
         ${st.fmt === "csv" ? `<button type="button" class="ds-sub" id="dsDict">คำอธิบายตัวแปร (CSV)</button>` : ""}<p id="dsMsg" class="ds-msg" aria-live="polite"></p>
         <details class="ds-cite"><summary>วิธีอ้างอิงและลิงก์ถาวร</summary>
           <p><b>อ้างอิง:</b> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${esc(ds.title)} [ชุดข้อมูล]. แดชบอร์ด PM2.5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(iso(new Date()))}.</p>
-          <p><b>ลิงก์ถาวร (Power Query/R):</b> <code>/api/dataset/${ds.id}.csv?pv=${f.pv.map(n => PROV.find(p => p.name === n).code).join(",")}${ds.filters.includes("weeks") ? `&wk=${f.w0}-${f.w1}` : ""}${ds.filters.includes("dates") ? `&from=${f.d0}&to=${f.d1}` : ""}</code> <em>(เปิดใช้เมื่อขึ้นเว็บจริง)</em></p></details>`
-        : `<p class="ds-empty">${ds.soon ? "ยังไม่เปิดให้ดาวน์โหลด" : "เลือกอย่างน้อย 1 จังหวัด 1 กลุ่มโรค และช่วงเวลาที่ถูกต้อง"}</p>`}</section>`;
+          ${ds.id === "hotspot" ? `<p><b>ลิงก์ข้อมูลดิบ (Power Query/R):</b> <code>/api/hotspot-backup</code> (JSON ทุกจุดที่บันทึกไว้)</p>` : `<p><b>ลิงก์ถาวร (Power Query/R):</b> <code>/api/dataset/${ds.id}.csv?pv=${f.pv.map(n => PROV.find(p => p.name === n).code).join(",")}${ds.filters.includes("weeks") ? `&wk=${f.w0}-${f.w1}` : ""}${ds.filters.includes("dates") ? `&from=${f.d0}&to=${f.d1}` : ""}</code> <em>(เปิดใช้เมื่อขึ้นเว็บจริง)</em></p>`}</details>`
+        : `<p class="ds-empty">${ds.soon ? "ยังไม่เปิดให้ดาวน์โหลด" : ds.ready && !ds.ready() ? ds.wait() : "เลือกอย่างน้อย 1 จังหวัด 1 กลุ่มโรค และช่วงเวลาที่ถูกต้อง"}</p>`}</section>`;
   }
   function onChange(e) {
     const t = e.target, k = t.dataset.k, f = st.f;
