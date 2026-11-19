@@ -140,31 +140,123 @@ app.get('/api/data-status', (req, res) => {
   });
 });
 
+/* ── จุดความร้อน: ขอ GISTDA VIIRS (24 ชม. ล่าสุด) ทุก 15 นาที · เก็บทุกจุดที่ตรวจพบแบบตัดซ้ำ · สำรองลงชีตทุกวัน ──
+   ดาวเทียมบินผ่านวันละหลายรอบ ข้อมูลจึงเข้าเป็นระลอก (ไม่ใช่เรียลไทม์จริง) — เก็บ 15 นาทีเพื่อให้เห็นจุดใหม่ไม่ช้าเกินไป
+   จุดละ 1 แถว คีย์ = วันที่|เวลา|ละติจูด|ลองจิจูด · ตาราง hotspot_pts ในเครื่อง (หายเมื่อ Render รีสตาร์ต) + ชีตแท็บ _hotspots (ถาวร)
+   สำรองลงชีตผ่าน Apps Script ตัวเดียวกับสถิติการเข้าชม (tools/visits.gs · action hs_add) — ตั้ง VISIT_HOOK_URL + VISIT_TOKEN แล้วใช้ได้เลย */
+const HS_TTL_MS = Math.max(5, +process.env.HS_TTL_MIN || 15) * 60 * 1000;
+db.exec(`
+  CREATE TABLE IF NOT EXISTS hotspot_pts (
+    key TEXT PRIMARY KEY, acq_date TEXT, th_time TEXT, province TEXT, ap_en TEXT, tb_en TEXT,
+    lu_name TEXT, confidence TEXT, frp REAL, lat REAL, lng REAL, saved_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_pts_date ON hotspot_pts(acq_date);
+`);
+const HS_COLS = ['key', 'acq_date', 'th_time', 'province', 'ap_en', 'tb_en', 'lu_name', 'confidence', 'frp', 'lat', 'lng', 'saved_at'];
+const _hsIns = db.prepare(`INSERT OR IGNORE INTO hotspot_pts (${HS_COLS.join(',')}) VALUES (${HS_COLS.map(c => '@' + c).join(',')})`);
+const HS_QUEUE = new Map();   // key → แถวที่ยังไม่ได้ส่งเข้าชีต
+const HS_SENT = new Set();    // key ที่ชีตรับแล้ว (รีสตาร์ต → ว่าง → ส่งชุด 24 ชม. ซ้ำได้ ชีตตัดซ้ำเอง)
+function hsRow(f) {
+  const p = f.properties || {}, [lng, lat] = f.geometry.coordinates;
+  const d = String(p.acq_date || '').slice(0, 10), t = String(p.th_time ?? '').padStart(4, '0');
+  return { key: `${d}|${t}|${(+lat).toFixed(4)}|${(+lng).toFixed(4)}`, acq_date: d, th_time: t, province: p.changwat || p.pv_en || '',
+    ap_en: p.ap_en || '', tb_en: p.tb_en || '', lu_name: p.lu_hp_name || p.lu_name || '', confidence: p.confidence || '',
+    frp: p.frp ?? null, lat: +(+lat).toFixed(5), lng: +(+lng).toFixed(5), saved_at: new Date().toISOString() };
+}
+const hsLatest = feats => { let m = ''; for (const f of feats) { const r = hsRow(f); if (!r.acq_date) continue; const k = `${r.acq_date}T${r.th_time.slice(0, 2)}:${r.th_time.slice(2)}`; if (k > m) m = k; } return m || null; };
+const _hsTx = db.transaction(rows => { for (const r of rows) _hsIns.run(r); });
+function hsRecord(features) {
+  const rows = features.filter(f => f?.geometry?.coordinates && f.properties?.acq_date).map(hsRow);
+  _hsTx(rows);
+  if (VISIT_PERSIST()) for (const r of rows) if (!HS_SENT.has(r.key)) HS_QUEUE.set(r.key, r);
+  return rows.length;
+}
+let hsFlushing = null;
+function hsFlush() {
+  if (!VISIT_PERSIST() || !HS_QUEUE.size) return Promise.resolve();
+  if (hsFlushing) return hsFlushing;
+  hsFlushing = (async () => {
+    const all = [...HS_QUEUE.values()];
+    for (let i = 0; i < all.length; i += 300) {
+      const part = all.slice(i, i + 300);
+      try {
+        const j = await visitHook({ action: 'hs_add', rows: part });
+        if (j.added == null) throw new Error('Apps Script ยังเป็นเวอร์ชันเก่า (ไม่รู้จัก hs_add) — วาง tools/visits.gs ใหม่แล้ว Deploy เวอร์ชันใหม่');
+        for (const r of part) { HS_QUEUE.delete(r.key); HS_SENT.add(r.key); }
+      } catch (e) { console.warn('สำรองจุดความร้อนลงชีตไม่สำเร็จ:', e.message); break; }
+    }
+    if (HS_SENT.size > 50000) HS_SENT.clear();
+  })().finally(() => { hsFlushing = null; });
+  return hsFlushing;
+}
+setInterval(() => hsFlush().catch(() => {}), 10 * 60 * 1000).unref();
+
 app.get('/api/hotspot', async (req, res) => {
   const cached = getCached('hotspot');
   if (cached) return res.json(cached);
-
-  const { api, provinces } = readConfig();
-  const BASE = 'https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day';
   try {
-    const results  = await Promise.all(
-      provinces.map(p =>
-        fetch(`${BASE}?api_key=${api.gistda_key}&pv_idn=${p.pv_idn}&limit=500&offset=0`)
-          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      )
-    );
-    const features = results.flatMap(r => r.features || []);
-    const data = { ok: true, count: features.length, source: 'GISTDA VIIRS',
-                   geojson: { type: 'FeatureCollection', features } };
-    setCached('hotspot', data, 60 * 60 * 1000); // 60 นาที
-
-    // บันทึกลง SQLite
-    try { _saveSnapshot(features, new Date().toISOString()); } catch (_) {}
-
+    const data = await singleFlight('hotspot-fetch', async () => {
+      const { api, provinces } = readConfig();
+      const BASE = 'https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day';
+      const results = await Promise.all(
+        provinces.map(p =>
+          fetch(`${BASE}?api_key=${api.gistda_key}&pv_idn=${p.pv_idn}&limit=500&offset=0`)
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        )
+      );
+      const features = results.flatMap(r => r.features || []);
+      const d = { ok: true, count: features.length, source: 'GISTDA VIIRS', fetchedAt: new Date().toISOString(), latest: hsLatest(features),
+                  geojson: { type: 'FeatureCollection', features } };
+      setCached('hotspot', d, HS_TTL_MS);
+      try { hsRecord(features); hsFlush().catch(() => {}); } catch (e) { console.warn('เก็บจุดความร้อนไม่สำเร็จ:', e.message); }
+      return d;
+    });
     res.json(data);
   } catch (e) {
+    const stale = _lastGood.get('hotspot');   // ดึง GISTDA ไม่ได้ชั่วคราว → ตอบชุดล่าสุดที่เคยได้ (ระบุ stale)
+    if (stale) return res.json({ ...stale, stale: true });
     res.status(502).json({ ok: false, message: 'GISTDA API error: ' + e.message });
   }
+});
+
+/* ข้อมูลสำรองจุดความร้อนทุกจุดที่บันทึกไว้ (สำหรับเมนูดาวน์โหลด) — อ่านจากชีตแท็บ _hotspots (ถาวร) รวมกับตารางในเครื่อง ตัดซ้ำด้วย key */
+function parseCsv(t) {
+  const rows = []; let r = [], c = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { c += '"'; i++; } else q = false; } else c += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ',') { r.push(c); c = ''; }
+    else if (ch === '\n') { r.push(c); rows.push(r); r = []; c = ''; }
+    else if (ch !== '\r') c += ch;
+  }
+  if (c !== '' || r.length) { r.push(c); rows.push(r); }
+  return rows;
+}
+async function hsSheetRows() {
+  const { api } = readConfig(); if (!api.sheet_id) return null;
+  const csv = await fetchCSV([`https://docs.google.com/spreadsheets/d/${api.sheet_id}/gviz/tq?tqx=out:csv&sheet=_hotspots`]);
+  if (!csv) return null;
+  const [head, ...body] = parseCsv(csv);
+  if (!head || head[0] !== 'key') return null;   // ยังไม่มีแท็บ _hotspots (gviz จะตอบแท็บแรกแทน)
+  return body.filter(b => b[0]).map(b => { const o = {}; head.forEach((h, i) => { o[h] = b[i]; });
+    o.th_time = String(o.th_time || '').padStart(4, '0'); o.frp = o.frp === '' || o.frp == null ? null : +o.frp; o.lat = +o.lat; o.lng = +o.lng; return o; });
+}
+app.get('/api/hotspot-backup', async (req, res) => {
+  try {
+    const data = getCached('hs-backup') || await singleFlight('hs-backup', async () => {
+      const sheet = await hsSheetRows().catch(() => null), map = new Map();
+      if (sheet) for (const r of sheet) map.set(r.key, r);
+      try { for (const r of db.prepare('SELECT * FROM hotspot_pts').all()) if (!map.has(r.key)) map.set(r.key, r); } catch (_) {}
+      const rows = [...map.values()].sort((a, b) => (a.acq_date + a.th_time).localeCompare(b.acq_date + b.th_time));
+      const d = { ok: true, source: sheet ? 'sheet' : 'local', persistent: VISIT_PERSIST() && !!sheet, count: rows.length,
+        min: rows[0]?.acq_date || null, max: rows.at(-1)?.acq_date || null,
+        rows: rows.map(r => ({ d: r.acq_date, t: r.th_time, pv: r.province, ap: r.ap_en, tb: r.tb_en, lu: r.lu_name, cf: r.confidence, frp: r.frp, lat: r.lat, lng: r.lng })) };
+      setCached('hs-backup', d, 10 * 60 * 1000);
+      return d;
+    });
+    res.json(data);
+  } catch (e) { res.status(500).json({ ok: false, message: e.message }); }
 });
 
 /* ── PM2.5 รายจังหวัด/อำเภอ/ตำบล + คาดการณ์ 3 วัน จาก GISTDA ──────────
@@ -493,17 +585,17 @@ app.post('/api/pm25/near', express.json({ limit: '1kb' }), async (req, res) => {
   }
 });
 
-// ดูสถิติ hotspot รายวันจาก DB
+// ดูสถิติ hotspot รายวัน (วันที่ดาวเทียมตรวจพบ) จาก DB — ตารางใหม่ตัดซ้ำแล้ว
 app.get('/api/hotspot-history', (req, res) => {
   try {
     const rows = db.prepare(`
-      SELECT snapshot_date, COUNT(*) AS total,
+      SELECT acq_date AS snapshot_date, COUNT(*) AS total,
         SUM(CASE WHEN confidence='high'    THEN 1 ELSE 0 END) AS high,
         SUM(CASE WHEN confidence='nominal' THEN 1 ELSE 0 END) AS nominal,
         SUM(CASE WHEN confidence='low'     THEN 1 ELSE 0 END) AS low
-      FROM hotspot_log
-      GROUP BY snapshot_date
-      ORDER BY snapshot_date DESC
+      FROM hotspot_pts
+      GROUP BY acq_date
+      ORDER BY acq_date DESC
       LIMIT 90
     `).all();
     res.json({ ok: true, rows });
@@ -1013,7 +1105,7 @@ function visitFlush() {
 setInterval(visitFlush, 5 * 60 * 1000).unref();
 // Render ส่ง SIGTERM ก่อนปิดเครื่อง (deploy / restart / spin-down) → ส่งยอดค้างเข้าชีตก่อนดับ ไม่งั้นหายสูงสุด 5 นาทีทุกครั้ง
 process.once('SIGTERM', async () => {
-  try { await Promise.race([visitFlush(), sleep(8000)]); } catch {}
+  try { await Promise.race([Promise.all([visitFlush(), hsFlush()]), sleep(8000)]); } catch {}
   process.exit(0);
 });
 if (!VISIT_PERSIST()) console.warn('⚠️ ไม่ได้ตั้ง VISIT_HOOK_URL — สถิติการเข้าชมนับในหน่วยความจำอย่างเดียว จะรีเซ็ตทุกครั้งที่ server restart/deploy');

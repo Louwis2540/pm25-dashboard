@@ -48,6 +48,8 @@ CSS = """
 .mm-bases button+button{border-top:1px solid #d5dce6}
 .mm-bases button[aria-pressed="true"]{background:#0e2a47;color:#fff}
 .mm-bases button:focus-visible{outline:3px solid var(--sec,#1c6ed6);outline-offset:-3px}
+#map .leaflet-interactive,#map path,#map svg,#map.leaflet-container,#map .leaflet-container{outline:none!important;-webkit-tap-highlight-color:transparent}   /* ไม่ให้เบราว์เซอร์วาดกรอบสี่เหลี่ยมรอบอำเภอ/จังหวัดตอนชี้หรือคลิก */
+.hot-side .label small{display:block;font-weight:500;font-size:calc(11.5px*var(--fs,1));color:var(--ink-3);text-transform:none;letter-spacing:0;margin-top:2px}
 .mm-note{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:800;max-width:min(92%,460px);padding:6px 12px;border-radius:10px;background:#fff8e6;border:1px solid #f0c36d;color:#7a5200;font:600 12.5px "IBM Plex Sans Thai",sans-serif;text-align:center;box-shadow:0 2px 8px rgba(15,27,45,.2);pointer-events:none}
 .mm-note[hidden]{display:none}
 .mm-sat .mm-dl{color:#fff;text-shadow:0 0 3px #000,0 0 4px #000,0 0 6px #000}

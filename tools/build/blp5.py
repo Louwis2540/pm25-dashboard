@@ -103,7 +103,7 @@ _ROWS1 = [dict(zip(("wk", "resp", "heart", "eye", "skin"), map(int, t.split(",")
 shim = f"""<script>
 /* PREVIEW — ผู้ป่วย = ข้อมูลจริง HDC · ค่าฝุ่น/แผนที่/จุดความร้อน = ค่าจำลอง */
 (function(){{
-  const MOCK = {{ "/api/sheet-pm25": {json.dumps(pm, ensure_ascii=False)}, "/api/sheet-disease": {json.dumps(dz, ensure_ascii=False)}, "/api/hotspot": {json.dumps(hs, ensure_ascii=False)}, "/hotspot-sample-2026-05-07.json": {json.dumps(_hs, ensure_ascii=False)}, "/api/provinces-geojson": {json.dumps(geo, ensure_ascii=False)}, "/api/pm25/provinces": {json.dumps(gpv, ensure_ascii=False)}, "/districts-r7.geojson": {json.dumps(dgeo, ensure_ascii=False)} }};
+  const MOCK = {{ "/api/sheet-pm25": {json.dumps(pm, ensure_ascii=False)}, "/api/sheet-disease": {json.dumps(dz, ensure_ascii=False)}, "/api/hotspot": {json.dumps(hs, ensure_ascii=False)}, "/api/hotspot-backup": {json.dumps(__import__('hsb_mock').make(_hs), ensure_ascii=False)}, "/hotspot-sample-2026-05-07.json": {json.dumps(_hs, ensure_ascii=False)}, "/api/provinces-geojson": {json.dumps(geo, ensure_ascii=False)}, "/api/pm25/provinces": {json.dumps(gpv, ensure_ascii=False)}, "/districts-r7.geojson": {json.dumps(dgeo, ensure_ascii=False)} }};
   const DIST = {json.dumps(dist, ensure_ascii=False)};
   const SUBD = amp => ({{ ok: true, days: {json.dumps(pdays)}, season: {json.dumps(SEASON)}, items: Array.from({{ length: 8 }}, (_, i) => {{ const a = Math.round((14 + ((amp * 7 + i * 13) % 30)) * 10) / 10; return {{ code: amp + String(i + 1).padStart(2, "0"), name: "ตำบลตัวอย่าง " + (i + 1), avg24: a, past: [a - 2.1, a + 1.4, a - 0.6].map(x => Math.round(x * 10) / 10), max: {{ v: 72 + i * 2.3, date: "2026-03-14" }} }}; }}) }});
   const real = window.fetch.bind(window);
