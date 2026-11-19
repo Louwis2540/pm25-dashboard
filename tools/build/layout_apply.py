@@ -53,6 +53,23 @@ CSS = """
 .wk-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:stretch}
 .wk-grid .fc{position:static}
 .trend.tr-one,.drill.dr-one{grid-template-columns:minmax(0,1fr)}
+/* คำอธิบายสั้น 3 ข้อของกราฟผู้ป่วยรายเดือน (อ่านง่ายสำหรับคนทั่วไป) */
+.e1p-read{list-style:none;margin:10px 0 12px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.e1p-read li{background:#f5f8fc;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.e1p-read li b{display:block;color:var(--ink-1);font-weight:700;margin-bottom:2px}
+@media (max-width:900px){.e1p-read{grid-template-columns:minmax(0,1fr)}}
+/* กราฟผู้ป่วยรายเดือน ม.ค. 69 – พ.ค. 70: จอแคบเลื่อนซ้าย-ขวาในกรอบของตัวเอง (หน้าไม่เลื่อนแนวนอน) */
+.e1p-sc{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px}
+.e1p-sc svg.bars{width:640px;max-width:none;height:auto;display:block}
+.e1p-gh{display:flex;flex-direction:column;gap:2px;margin:12px 0 2px;font-size:12px;color:#5f6c80;line-height:1.45}
+.e1p-gh b{display:flex;align-items:center;gap:6px;font-size:13.5px;color:#1f2a3d}
+.e1p-gh b i{width:10px;height:10px;border-radius:50%;flex:none}
+.e1p-gh b small{font-size:11.5px;font-weight:600;color:#6b7689}
+.e1p-gh strong{color:#1f2a3d}
+.e1lg .e1p-mk{display:inline-block;flex:none;padding:0 6px;font-size:11.5px;font-weight:700;line-height:18px;color:#8a5a00;background:#fff6dd;border:1px solid #e3c47a;border-radius:6px}
+.e1lg .e1p-swipe{display:none;color:var(--ink-3)}
+@media (min-width:900px){.e1p-n{display:none}}
+@media (max-width:899px){.e1lg .e1p-swipe{display:inline-flex}}
 @media (max-width:1100px){.pv-top.ws-side .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.wk-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:680px){.pv-top .facts-box .facts{grid-template-columns:minmax(0,1fr)}}
 
