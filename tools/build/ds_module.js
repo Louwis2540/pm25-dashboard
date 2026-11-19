@@ -24,7 +24,7 @@
     }
     return out;
   }
-  const wkMax = () => S.wkMax || 39;
+  const wkMax = () => PWK(S.wkMax || 39);   // รายจังหวัดคนละปีกับระดับเขต → ใช้สัปดาห์ของปีรายจังหวัด
   const prelimFrom = () => wkMax() - (typeof DZ_PROV_WK === "number" ? DZ_PROV_WK : 4) + 1;
   function pmRange() { const ds = Object.keys(S.pm?.allData || {}).sort(); return [ds[0], ds.at(-1)]; }
 
@@ -65,8 +65,8 @@
         const rows = [];
         for (const p of PROV.filter(p => f.pv.includes(p.name))) for (let w = f.w0; w <= f.w1; w++) for (const g of f.groups) {
           const c = C[p.name + "|" + w]; if (!c) continue;
-          const r = { year_be: 2569, hdc_table: f.table === "s2" ? "s_pm25_2_in_week" : "s_pm25_1_in_week", pv_code: p.code, pv_name: p.name, epi_week: w,
-            week_start: iso(epiStart(2026, w)), week_end: iso(epiEnd(2026, w)), month: epiMonth(2026, w) + 1, group: GKEY[g], cases: c[g] };
+          const r = { year_be: PYB(), hdc_table: f.table === "s2" ? "s_pm25_2_in_week" : "s_pm25_1_in_week", pv_code: p.code, pv_name: p.name, epi_week: w,
+            week_start: iso(epiStart(PY(), w)), week_end: iso(epiEnd(PY(), w)), month: epiMonth(PY(), w) + 1, group: GKEY[g], cases: c[g] };
           if (f.table === "s2") { r.population = pop[p.name]; r.rate_per_100k = r2(c[g] / pop[p.name] * 1e5); }
           r.preliminary = w >= prelimFrom() ? 1 : 0; r.date_com = D().dateCom; rows.push(r);
         }
@@ -98,10 +98,10 @@
       build(f) {
         const C = cases("s2"), pop = D().pop || {}, all = S.pm?.allData || {}, rows = [];
         for (const p of PROV.filter(p => f.pv.includes(p.name))) for (let w = f.w0; w <= f.w1; w++) {
-          const s = epiStart(2026, w), e = epiEnd(2026, w), v = [];
+          const s = epiStart(PY(), w), e = epiEnd(PY(), w), v = [];
           for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) { const x = all[iso(d)]?.[p.name]; if (x != null && x > 0) v.push(x); }
           const c = C[p.name + "|" + w] || {};
-          const r = { year_be: 2569, pv_code: p.code, pv_name: p.name, epi_week: w, week_start: iso(s), week_end: iso(e), month: epiMonth(2026, w) + 1,
+          const r = { year_be: PYB(), pv_code: p.code, pv_name: p.name, epi_week: w, week_start: iso(s), week_end: iso(e), month: epiMonth(PY(), w) + 1,
             pm25_mean: v.length ? r1(v.reduce((a, b) => a + b, 0) / v.length) : null, pm25_max: v.length ? r1(Math.max(...v)) : null,
             days_over_37_5: v.filter(x => x > 37.5).length, pm25_days: v.length, population: pop[p.name] };
           { let n = 0; for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) if (satDay(iso(d), p.name) && all[iso(d)]?.[p.name] > 0) n++; r.satellite_days = n; }
@@ -155,7 +155,7 @@
   const st = { ds: "analysis", fmt: "csv", f: {} };
   function defaults(ds) {
     const r07 = Object.keys(S.pm07 || {}).sort(), [a, b] = ds === "hotspot" ? [HSB.min || iso(new Date()), HSB.max || iso(new Date())] : ds === "pm07" && r07.length ? [r07[0], r07.at(-1)] : pmRange();
-    return { pv: PROV.map(p => p.name), w0: 1, w1: wkMax(), groups: [...GK], table: "s2", d0: a || "2026-01-01", d1: b || iso(new Date()) };
+    return { pv: PROV.map(p => p.name), w0: 1, w1: wkMax(), groups: [...GK], table: "s2", d0: a || `${PY()}-01-01`, d1: b || iso(new Date()) };
   }
   function pick(id, over) { st.ds = id; st.f = { ...defaults(id), ...(over || {}) }; render(); if (id === "hotspot") hsbLoad(); }
 
@@ -164,19 +164,19 @@
   const toCsv = (cols, rows) => "﻿" + [cols.join(","), ...rows.map(r => cols.map(c => cell(r[c])).join(","))].join("\r\n");
   function meta(ds, f, n) {
     const today = iso(new Date());
-    const scope = ds.filters.includes("weeks") ? `สัปดาห์ระบาดวิทยาที่ ${f.w0}–${f.w1} ปี 2569 (${epiRange(2026, f.w0, f.w1)})` : ds.filters.includes("dates") ? `${thD(f.d0)} – ${thD(f.d1)}` : "ปีงบประมาณ 2568–2569";
+    const scope = ds.filters.includes("weeks") ? `สัปดาห์ระบาดวิทยาที่ ${f.w0}–${f.w1} ปี ${PYB()} (${epiRange(PY(), f.w0, f.w1)})` : ds.filters.includes("dates") ? `${thD(f.d0)} – ${thD(f.d1)}` : "ปีงบประมาณ 2568–2569";
     return [
       ["ชุดข้อมูล", ds.title], ["พื้นที่", "เขตสุขภาพที่ 7: " + f.pv.join(", ")], ["ช่วงเวลา", scope], ["จำนวนแถว", n],
       ["แหล่งข้อมูล", ds.src], ["วันที่ประมวลผลต้นทาง", ds.id === "pm_daily" || ds.id === "pop" || ds.id === "hotspot" ? "-" : D().dateCom], ["วันที่ดาวน์โหลด", today],
       ["หมายเหตุ", ds.note(f)],
       ["นิยามสัปดาห์", "สัปดาห์ระบาดวิทยา กรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค."],
       ["รหัสโรค (ICD-10)", "ทางเดินหายใจ J44 (ยกเว้น J44.2), J45, J44.2 · หัวใจ I21, I22, I24 · ตา H10 · ผิวหนัง L30.9, L50 (ประกาศกระทรวงสาธารณสุข พ.ศ. 2565)"],
-      ["การอ้างอิง", `สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${ds.title} [ชุดข้อมูล]. แดชบอร์ด PM2\u002E5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(today)}.`],
+      ["การอ้างอิง", `สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (${PYB()}). ${ds.title} [ชุดข้อมูล]. แดชบอร์ด PM2\u002E5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(today)}.`],
       ["ข้อควรระวัง", "ข้อมูลระดับจังหวัดเป็นข้อมูลรวม ไม่มีข้อมูลรายบุคคล · ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยง"],
     ].filter(r => !(ds.id === "hotspot" && r[0] === "รหัสโรค (ICD-10)"));
   }
   const dict = cols => cols.map(c => [c, COL[c]?.[0] || "", COL[c]?.[1] || ""]);
-  const fname = (ds, f, ext) => `pm25_r7_${ds.id}_${ds.filters.includes("weeks") ? `wk${f.w0}-${f.w1}` : ds.filters.includes("dates") ? `${f.d0}_${f.d1}` : "2569"}.${ext}`;
+  const fname = (ds, f, ext) => `pm25_r7_${ds.id}_${ds.filters.includes("weeks") ? `wk${f.w0}-${f.w1}` : ds.filters.includes("dates") ? `${f.d0}_${f.d1}` : PYB()}.${ext}`;
 
   async function save(filename, data) {
     // ใน claude.ai artifact ต้องผ่าน capability downloads · บนเว็บจริงใช้ลิงก์ดาวน์โหลดปกติ
@@ -216,10 +216,10 @@
   // ── หน้าจอ ────────────────────────────────────────────────────────
   const ico = id => `<svg class="ico"><use href="#${id}"/></svg>`;
   function filtersHtml(ds) {
-    const f = st.f, wkOpt = sel => Array.from({ length: wkMax() }, (_, i) => `<option value="${i + 1}"${i + 1 === sel ? " selected" : ""}>สัปดาห์ที่ ${i + 1} (${epiRange(2026, i + 1)})</option>`).join(""), [a, b] = (ds.range || pmRange)();
+    const f = st.f, wkOpt = sel => Array.from({ length: wkMax() }, (_, i) => `<option value="${i + 1}"${i + 1 === sel ? " selected" : ""}>สัปดาห์ที่ ${i + 1} (${epiRange(PY(), i + 1)})</option>`).join(""), [a, b] = (ds.range || pmRange)();
     const h = [];
     if (ds.filters.includes("pv")) h.push(`<fieldset class="ds-f"><legend>พื้นที่</legend><div class="ds-chips">${PROV.map(p => `<label class="ds-chip"><input type="checkbox" data-k="pv" value="${p.name}"${f.pv.includes(p.name) ? " checked" : ""}><span>${p.name}</span></label>`).join("")}</div></fieldset>`);
-    if (ds.filters.includes("weeks")) h.push(`<fieldset class="ds-f"><legend>ช่วงสัปดาห์ระบาดวิทยา ปี 2569</legend><div class="ds-row"><label>ตั้งแต่<select data-k="w0">${wkOpt(f.w0)}</select></label><label>ถึง<select data-k="w1">${wkOpt(f.w1)}</select></label></div><p class="ds-hint">สัปดาห์ที่ ${prelimFrom()}–${wkMax()} เป็นข้อมูลเบื้องต้น (คอลัมน์ preliminary = 1)</p></fieldset>`);
+    if (ds.filters.includes("weeks")) h.push(`<fieldset class="ds-f"><legend>ช่วงสัปดาห์ระบาดวิทยา ปี ${PYB()}</legend><div class="ds-row"><label>ตั้งแต่<select data-k="w0">${wkOpt(f.w0)}</select></label><label>ถึง<select data-k="w1">${wkOpt(f.w1)}</select></label></div><p class="ds-hint">สัปดาห์ที่ ${prelimFrom()}–${wkMax()} เป็นข้อมูลเบื้องต้น (คอลัมน์ preliminary = 1)</p></fieldset>`);
     if (ds.filters.includes("dates")) h.push(`<fieldset class="ds-f"><legend>ช่วงวันที่</legend><div class="ds-row"><label>ตั้งแต่<input type="date" data-k="d0" value="${f.d0}"${a ? ` min="${a}"` : ""}${b ? ` max="${b}"` : ""}></label><label>ถึง<input type="date" data-k="d1" value="${f.d1}"${a ? ` min="${a}"` : ""}${b ? ` max="${b}"` : ""}></label></div><p class="ds-hint">มีข้อมูล ${a ? thD(a) : "-"} – ${b ? thD(b) : "-"}</p></fieldset>`);
     if (ds.filters.includes("groups")) h.push(`<fieldset class="ds-f"><legend>กลุ่มโรค</legend><div class="ds-chips">${GK.map(k => `<label class="ds-chip"><input type="checkbox" data-k="groups" value="${k}"${f.groups.includes(k) ? " checked" : ""}><span>${GLABEL[k]}</span></label>`).join("")}</div></fieldset>`);
     if (ds.filters.includes("table")) h.push(`<fieldset class="ds-f"><legend>นับผู้ป่วยแบบไหน</legend><div class="ds-seg">
@@ -257,7 +257,7 @@
         <button type="button" class="ds-dl" id="dsGo">${ico("i-down")}ดาวน์โหลด ${st.fmt === "csv" ? "CSV" : "Excel"}</button>
         ${st.fmt === "csv" ? `<button type="button" class="ds-sub" id="dsDict">คำอธิบายตัวแปร (CSV)</button>` : ""}<p id="dsMsg" class="ds-msg" aria-live="polite"></p>
         <details class="ds-cite"><summary>วิธีอ้างอิงและลิงก์ถาวร</summary>
-          <p><b>อ้างอิง:</b> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (2569). ${esc(ds.title)} [ชุดข้อมูล]. แดชบอร์ด PM2.5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(iso(new Date()))}.</p>
+          <p><b>อ้างอิง:</b> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (${PYB()}). ${esc(ds.title)} [ชุดข้อมูล]. แดชบอร์ด PM2.5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(iso(new Date()))}.</p>
           ${ds.id === "hotspot" ? `<p><b>ลิงก์ข้อมูลดิบ (Power Query/R):</b> <code>/api/hotspot-backup</code> (JSON ทุกจุดที่บันทึกไว้)</p>` : `<p><b>ลิงก์ถาวร (Power Query/R):</b> <code>/api/dataset/${ds.id}.csv?pv=${f.pv.map(n => PROV.find(p => p.name === n).code).join(",")}${ds.filters.includes("weeks") ? `&wk=${f.w0}-${f.w1}` : ""}${ds.filters.includes("dates") ? `&from=${f.d0}&to=${f.d1}` : ""}</code> <em>(เปิดใช้เมื่อขึ้นเว็บจริง)</em></p>`}</details>`
         : `<p class="ds-empty">${ds.soon ? "ยังไม่เปิดให้ดาวน์โหลด" : ds.ready && !ds.ready() ? ds.wait() : "เลือกอย่างน้อย 1 จังหวัด 1 กลุ่มโรค และช่วงเวลาที่ถูกต้อง"}</p>`}</section>`;
   }

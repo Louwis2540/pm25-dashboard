@@ -161,4 +161,15 @@ def apply(html):
     # ---------- 8) CSS ----------
     body = html.index('<body id="top"'); k = html.rindex("</style>", 0, body)   # <style> ก้อนสุดท้ายก่อน <body> (ชนะ CSS เดิม)
     html = html[:k] + CSS + html[k:]
+
+    # ---------- 9) ขึ้นปีใหม่ (พ.ศ. 2570 ฯลฯ): ส่วนเดิมของ renderDisease อ่านปีจากข้อมูล ไม่ผูก 2026/2569 ----------
+    #   DY() = meta.dataYear (ปีของข้อมูลระดับเขต) · สัปดาห์ล่าสุด = meta.dataWk (เซิร์ฟเวอร์คำนวณ: นิ่งแล้ว/ตัดสัปดาห์ล่าสุด) · เดโม่ไม่มี meta → ถอยไปสูตรเดิม
+    html = _sub(html, "const wkMax = dz.meta?.reportWeek || Math.max(...(dz[2026] || []).map(r => +r.wk)) - 1;",
+                "const wkMax = Number(dz.meta?.dataWk) || dz.meta?.reportWeek || Math.max(...(dz[DY()] || []).map(r => +r.wk)) - 1;")
+    html = _sub(html, "ผู้ป่วย 4 กลุ่มโรค · ปี 2569 สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(2026, 1, wkMax)})",
+                "ผู้ป่วย 4 กลุ่มโรค · ปี ${DYB()} สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(DY(), 1, wkMax)})")
+    html = _sub(html, "const a = monthly(dz[2025], d.key, 53, 2025), b = monthly(dz[2026], d.key, wkMax, 2026);",
+                "const a = monthly(dz[DY() - 1], d.key, 53, DY() - 1), b = monthly(dz[DY()], d.key, wkMax, DY());")
+    html = _sub(html, "t25 = monthly(dz[2025], d.key, wkMax, 2025).reduce(",
+                "t25 = monthly(dz[DY() - 1], d.key, wkMax, DY() - 1).reduce(")
     return html

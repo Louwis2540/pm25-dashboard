@@ -161,11 +161,20 @@ function sendLineBroadcast(messagesArray) {
 // ==========================================================
 // 🎨 Text Message
 // ==========================================================
+// จังหวัดที่มีค่าฝุ่นสูงสุดในเขต (ค่าเท่ากันที่ทศนิยม 1 ตำแหน่ง → แสดงทุกจังหวัดที่เท่ากัน) · ไม่มีข้อมูลเลย → null
+// (19 พ.ย. 2569: เดิมรายงาน "ภาพรวม 4 จังหวัด" จากค่าเฉลี่ย ซึ่งไม่ใช่ค่าที่ใช้ตัดสินใจ → เปลี่ยนเป็นค่าสูงสุดของวันนั้น)
+function topProvince_(airData) {
+  const ok = airData.filter(p => p.pm25 !== null && p.pm25 >= 0);
+  if (!ok.length) return null;
+  const mx = Math.max.apply(null, ok.map(p => p.pm25)), top = ok.filter(p => p.pm25.toFixed(1) === mx.toFixed(1));
+  return { names: top.map(p => p.name), pm25: mx };
+}
+
 function buildTextMessage(airData, healthData, pheocStatus, avgPM, fullDate, timeStr, roundText) {
-  let overallLevel = getPMLevelInfoForText(avgPM);
-  let overallStatusText = avgPM !== null
-    ? `${overallLevel.icon} สภาพอากาศภาพรวม 4 จังหวัด: ${overallLevel.text} (ค่าเฉลี่ย ${avgPM.toFixed(1)} ไมโครกรัม/ลูกบาศก์เมตร)\n(ระดับค่าฝุ่นตามเกณฑ์มาตรฐาน ไม่เกิน 37.5 ไมโครกรัม/ลูกบาศก์เมตร)`
-    : "🤔 สภาพอากาศภาพรวม 4 จังหวัด: ระบบขัดข้อง/ไม่มีข้อมูล";
+  const top = topProvince_(airData);
+  let overallStatusText = top
+    ? `📍 จังหวัดที่มีค่าฝุ่นสูงที่สุดในเขต: จังหวัด${top.names.join(', ')} ${top.pm25.toFixed(1)} ไมโครกรัม/ลูกบาศก์เมตร (${getPMLevelInfoForText(top.pm25).text})`
+    : "🤔 จังหวัดที่มีค่าฝุ่นสูงที่สุดในเขต: ระบบขัดข้อง/ไม่มีข้อมูล";
 
   let pmListText = airData.map(p => {
     if (p.pm25 !== null && p.pm25 >= 0) {
@@ -214,11 +223,13 @@ function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, 
   let overallStatusFlexText = "ระบบขัดข้อง/ไม่มีข้อมูล";
   let avgText = "-";
 
-  if (avgPM !== null) {
-    avgText = avgPM.toFixed(1);
-    let levelInfo = getPMLevelInfoForFlex(avgPM);
+  // กล่องสรุปบนหัวการ์ด = จังหวัดที่ค่าฝุ่นสูงที่สุดของวัน (ไม่ใช้ค่าเฉลี่ยทั้งเขต) · สีหัวการ์ดตามระดับของค่าสูงสุด
+  const top = topProvince_(airData);
+  if (top) {
+    avgText = top.pm25.toFixed(1);
+    let levelInfo = getPMLevelInfoForFlex(top.pm25);
     headerColor = levelInfo.color;
-    overallStatusFlexText = `${levelInfo.text} (เฉลี่ย ${avgText} มคก./ลบ.ม.)`;
+    overallStatusFlexText = `จังหวัด${top.names.join(', ')} ${avgText} มคก./ลบ.ม. (${levelInfo.text})`;
   }
 
   // สร้าง List รายจังหวัด
@@ -297,7 +308,7 @@ function buildFlexMessage(airData, healthData, pheocStatus, avgPM, currentHour, 
           { "type": "text", "text": "สำนักงานป้องกันควบคุมโรคที่ 7 จ.ขอนแก่น", "size": "sm", "color": "#EEEEEE" },
           { "type": "box", "layout": "vertical", "margin": "lg", "backgroundColor": "#FFFFFF4D", "paddingAll": "md", "cornerRadius": "md",
             "contents": [
-              { "type": "text", "text": "สภาพอากาศภาพรวม", "color": "#EEEEEE", "size": "xs" },
+              { "type": "text", "text": "ค่าฝุ่นสูงที่สุดในเขต", "color": "#EEEEEE", "size": "xs" },
               { "type": "text", "text": overallStatusFlexText, "size": "md", "color": "#FFFFFF", "weight": "bold", "wrap": true }
             ]
           }
@@ -414,7 +425,9 @@ function testReportDryRun() {
 
   Logger.log('── ค่าฝุ่นที่ดึงได้ ──');
   airData.forEach(p => Logger.log('  ' + p.name + ' : ' + (p.pm25 === null ? '(ไม่มีข้อมูล)' : p.pm25) + '  เวลา ' + p.time));
-  Logger.log('  เฉลี่ย 4 จังหวัด : ' + (avgPM === null ? '(คำนวณไม่ได้)' : avgPM.toFixed(1)));
+  const topP = topProvince_(airData);
+  Logger.log('  สูงสุดในเขต (ใช้รายงาน) : ' + (topP ? 'จังหวัด' + topP.names.join(', ') + ' ' + topP.pm25.toFixed(1) : '(คำนวณไม่ได้)'));
+  Logger.log('  เฉลี่ย 4 จังหวัด (ไม่ได้ใช้รายงานแล้ว) : ' + (avgPM === null ? '(คำนวณไม่ได้)' : avgPM.toFixed(1)));
   const dec = shouldBroadcast_(airData, new Date().getHours());
   Logger.log('  ตอนนี้ main() จะ ' + (dec.send ? 'ส่ง' : 'ข้ามการส่ง') + ' — ' + dec.reason);
 
@@ -577,28 +590,33 @@ function getAirDataStrict() {
 }
 
 // ==========================================================
-// 🛠️ ดึงข้อมูลสุขภาพจากแท็บ 2026
+// 🛠️ ดึงข้อมูลสุขภาพจากแท็บของปีปัจจุบัน (ขึ้นปีใหม่เปลี่ยนเอง: ม.ค. 2570 → แท็บ "2027")
 // ==========================================================
 function getHealthFromSeparateSheets() {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheetCurr = ss.getSheetByName("2026") || ss.getSheetByName("2569");
-    if (!sheetCurr) return null;
-
-    const dataCurr = sheetCurr.getDataRange().getValues();
+    // ขึ้นปีใหม่: ใช้แท็บของปีปัจจุบัน (ค.ศ.) เมื่อมีอย่างน้อย 2 สัปดาห์ (สัปดาห์ล่าสุดยังไม่นิ่งจะถูกตัดทิ้งด้านล่าง)
+    // ต้นปีที่ปีใหม่ยังมีไม่ถึง 2 สัปดาห์ → ใช้แท็บของปีก่อนหน้าไปก่อน แล้วรายงานเลขปีตามแท็บที่ใช้จริง
+    const cy = parseInt(Utilities.formatDate(new Date(), "GMT+7", "yyyy"), 10);
+    const readYear = (y) => {
+      const sh = ss.getSheetByName(String(y)) || ss.getSheetByName(String(y + 543));
+      if (!sh) return null;
+      const data = sh.getDataRange().getValues(), ws = [];
+      for (let i = 1; i < data.length; i++) {
+        let wk = parseInt(data[i][0]);
+        if (isNaN(wk)) continue;
+        if (data[i][1] === null || String(data[i][1]) === "") continue;
+        ws.push({ wk: wk, vals: [0, 1, 2, 3].map(c => parseFloat(data[i][c + 1]) || 0) });
+      }
+      return { sh: sh, ws: ws, y: y };
+    };
+    const cands = [readYear(cy), readYear(cy - 1)].filter(r => r && r.ws.length > 0);
+    const pick = cands.find(r => r.ws.length >= 2) || cands[0];
+    if (!pick) return null;
+    const sheetCurr = pick.sh, useYear = pick.y;
 
     // เก็บทุกสัปดาห์ที่มีข้อมูลไว้ก่อน ยังไม่รวมยอด
-    let weeks = [];
-    for (let i = 1; i < dataCurr.length; i++) {
-      let wk = parseInt(dataCurr[i][0]);
-      if (isNaN(wk)) continue;
-      if (dataCurr[i][1] === null || String(dataCurr[i][1]) === "") continue;
-      weeks.push({
-        wk: wk,
-        vals: [0, 1, 2, 3].map(c => parseFloat(dataCurr[i][c + 1]) || 0)
-      });
-    }
-    if (weeks.length === 0) return null;
+    let weeks = pick.ws;
 
     // ── ตัดสัปดาห์ล่าสุดทิ้ง ──────────────────────────────────────────
     // HDC เพิ่งเริ่มรายงานสัปดาห์ล่าสุด ยัง query ไม่ครบ (เช่น wk34 มี 3 ราย
@@ -637,7 +655,7 @@ function getHealthFromSeparateSheets() {
     }
 
     return {
-      year: 2569,
+      year: useYear + 543,
       wk: maxWeek || "-",
       curr: currentSum,
       dateStr: finalDateStr,

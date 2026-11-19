@@ -236,7 +236,7 @@ function igCombo(d, bars, pm, pmMax, W, H, months) {
 function igComboSec(H) {
   const months = igCbMonths(); if (!months.length) return "";
   const end = dzCbEnd(S.dz, S.wkMax), cy = end.y;
-  const pv = S.igPv, src = y => pv ? (y === 2026 ? igDzRows() : igDzRowsPv(y)) : (S.dz?.[y] || []);   // รายจังหวัด: ปีก่อนหน้าจาก DZPV.rowsPrev
+  const pv = S.igPv, src = y => pv ? (y === PY() ? igDzRows() : igDzRowsPv(y)) : (S.dz?.[y] || []);   // รายจังหวัด: ปีก่อนหน้าจาก DZPV.rowsPrev
   const byY = {}; for (const y of new Set(months.map(o => o.y))) byY[y] = Object.fromEntries(DZ.map(d => [d.key, monthlyWk(src(y), d.key, y === cy ? end.w : 99, y)]));
   const pm = igPmMonthly(months, pv), pmMax = Math.max(50, Math.ceil(Math.max(...pm.filter(v => v != null), 0) / 10) * 10);
   const ser = DZ.map(d => ({ d, bars: months.map(({ y, m }) => byY[y]?.[d.key]?.[m] || null) }));
@@ -245,7 +245,7 @@ function igComboSec(H) {
   return `<div class="ig-sec"><span>${inl("i-chart", 20)}</span><em class="tt">จำนวนผู้ป่วย 4 กลุ่มโรคเทียบกับค่าฝุ่น PM<sub>2.5</sub></em><small style="margin-left:auto">${rng} · ${pv ? `จ.${pv}` : "ทั้งเขตสุขภาพที่ 7"}</small></div>
     <div class="cbk"><span><i class="bar"></i><em>จำนวนผู้ป่วย (ราย)</em></span><span><i class="ln"></i><em>ค่าฝุ่นเฉลี่ยรายเดือน (µg/m³)</em></span><span><i class="dsh"></i><em>37.5 ค่ามาตรฐาน</em></span><span><i class="ssn"></i><em>ช่วงฤดูฝุ่น พ.ย.–พ.ค.</em></span></div>
     <div class="cbg">${ser.map(s => `<div><div class="cbh" style="color:${s.d.c}">${inl(s.d.icon, 16)}${igDzName(s.d)}</div>${igCombo(s.d, s.bars, pm, pmMax, 240, H, months)}</div>`).join("")}</div>
-    <div class="dzl">${prov ? `* ${months.filter((_, i) => ser[0].bars[i]?.prov).map(o => TH_M[o.m]).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}${pv && !window.DZPV?.rowsPrev?.length ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. 2569 · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
+    <div class="dzl">${prov ? `* ${months.filter((_, i) => ser[0].bars[i]?.prov).map(o => TH_M[o.m]).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}${pv && !window.DZPV?.rowsPrev?.length ? `ผู้ป่วยรายจังหวัดมีข้อมูลตั้งแต่ ม.ค. ${PYB()} · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข · ค่าฝุ่น: Air4Thai (กรมควบคุมมลพิษ)</div>`;
 }
 const IG_URL = "https://pm25-dashboard-ex8l.onrender.com";
 const IG_NAME = "R7_PM" + "2.5_dashboard";   // ชื่อที่แสดงท้ายหน้า (QR ยังชี้ไปที่ IG_URL) · แยกสตริงกันตัวแทนที่ชื่อสารมลพิษตอน build
@@ -281,12 +281,15 @@ function igForecast(F, big) {
   const rows = (F.region ? items : [...items.filter(o => o.p.name === S.igPv), ...items.filter(o => o.p.name !== S.igPv)]);
   return `<table class="fc3 num"><tr><th>จังหวัด</th>${hd}</tr>${rows.map(({ p, it }) => `<tr class="${!F.region && p.name === S.igPv ? "me" : ""}"><td>${p.name}</td>${it.pred.slice(0, 3).map(x => x == null ? `<td>–</td>` : `<td style="background:${LV[lvOf(x)].c};color:${textOn(LV[lvOf(x)].c)}">${f1(x)}</td>`).join("")}</tr>`).join("")}</table>`;
 }
+// ปี/สัปดาห์ล่าสุดของชุดผู้ป่วยที่อินโฟกราฟิกใช้: ระดับเขต = DY() · รายจังหวัด = PY() (ปีเปลี่ยนเองตามข้อมูล · ดู e1_monthly.js)
+const igY = () => S.igPv ? PY() : DY();
+const igWk = () => S.igPv ? PWK(S.wkMax || 0) : (S.wkMax || 0);
 function igDzRows() {
   if (S.igPv && window.DZPV) {   // รายจังหวัด: ผู้ป่วยที่อยู่จริงในจังหวัดนั้น (Type area 1+3 · HDC s_pm25_2_in_week)
     const K = Object.fromEntries(Object.entries(DZPV_COL).map(([k, v]) => [v, k]));
     return window.DZPV.rows.filter(r => r.pv === S.igPv).map(r => ({ wk: r.wk, ...Object.fromEntries(Object.entries(K).map(([c, k]) => [k, r[c]])) }));
   }
-  return S.dz?.[2026] || [];
+  return S.dz?.[DY()] || [];
 }
 // ผู้ป่วยรายจังหวัดของปีก่อนหน้า (/api/disease-pv → rowsPrev · Type 1+3) ในรูปแบบเดียวกับ igDzRows
 function igDzRowsPv(y) {
@@ -413,11 +416,11 @@ function igPvTrend(pv, F) {
 // ตัดคาดการณ์ออก (เดิมซ้ำ 2 ที่) · ใช้รูปแบบเดียวกับโพสต์รายจังหวัด/A4
 function igSocialRg(ig, head, foot, maxBar, adviceBox, riskNote, act, dense) {
   const d = Math.min(dense, 6); ig.dataset.sp = d;
-  const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
+  const wkMax = igWk(), rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, igY()) }));
   const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
   const CH = [104, 96, 90, 84, 78, 70, 60][d] + Math.round(IG_GROW * .48);
   const prov = last >= 0 && ser[0].m.some(o => o?.prov);
-  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · ทั้งเขตสุขภาพที่ 7</em><small style="margin-left:auto">ราย/เดือน</small></div>
+  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี ${igY() + 543} · ทั้งเขตสุขภาพที่ 7</em><small style="margin-left:auto">ราย/เดือน</small></div>
     <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 17)}</div>`).join("")}</div>
     <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   ig.innerHTML = head + `<div class="ig-body sp sprg">${maxBar}${igTiles()}${igFc4()}${adviceBox}${act}${dz}${riskNote}</div>` + foot;
@@ -432,11 +435,11 @@ function igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense) {
       <span class="sp-src">ค่าเฉลี่ย 24 ชม. ณ ${REPORT_TIME}<br>ที่มา: Air4Thai (กรมควบคุมมลพิษ)</span></div></div>`;
   const top = `<div class="sp-top">${big}${igPvSide()}</div>`;
   const trend = igPvTrend(pv, F);
-  const wkMax = S.wkMax || 0, rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, 2026) }));
+  const wkMax = igWk(), rows = igDzRows(), ser = DZ.map(dd => ({ d: dd, m: monthlyWk(rows, dd.key, wkMax, igY()) }));
   const last = Math.max(...ser.flatMap(x => x.m.map((o, i) => o != null ? i : -1)));
   const CH = [116, 106, 98, 90, 82, 70, 56][d] + Math.round(IG_GROW * .48);   // กราฟผู้ป่วย: ฐานเล็ก แล้วแจกพื้นที่ว่างที่เหลือให้ (2 แถว)
   const prov = last >= 0 && ser[0].m.some(o => o?.prov);
-  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569 · จ.${pv}</em><small style="margin-left:auto">ราย/เดือน</small></div>
+  const dz = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี ${igY() + 543} · จ.${pv}</em><small style="margin-left:auto">ราย/เดือน</small></div>
     <div class="dzg2">${ser.map(x => `<div style="--dzs:${x.d.soft};background:linear-gradient(165deg,#fff 15%,${x.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${x.d.c}">${inl(x.d.icon, 20)}</span><span class="nm">${igDzName(x.d)}</span></div>${igDzPanel(x.d, x.m, last, 470, CH, 18)}</div>`).join("")}</div>
     <div class="dzl">${prov ? `* ${ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean).join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   ig.innerHTML = head + `<div class="ig-body sp">${top}${adviceBox}${act}${dz}${riskNote}</div>` + foot;   // ฝุ่น (วันนี้ + 30 วัน) → 7 วัน/คาดการณ์ → คำแนะนำ → ผู้ป่วย
@@ -517,8 +520,8 @@ function buildInfographic(size = "a4", dense = 0) {
   // ===== A4 หน้าเดียว (ฉบับ 3) · หน้าตาแบบเดิม เรียงเรื่องฝุ่นให้จบก่อน แล้วจึงตามด้วยผู้ป่วย =====
   // 1 ค่าฝุ่นวันนี้ (+ที่มา) → 2 ย้อนหลัง 7 วัน / คาดการณ์ (ย่อ) → 3 คำแนะนำ + เกณฑ์ระดับ (ย่อ)
   // → 4 ผู้ป่วย 4 กลุ่มโรค รายเดือน ปี 2569 → 5 ผู้ป่วยย้อนหลัง ม.ค. 2568 – พ.ค. 2569 เทียบค่าฝุ่นรายเดือน
-  const wkMax = S.wkMax || 0, rows = igDzRows();
-  const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, 2026) }));
+  const wkMax = igWk(), rows = igDzRows();
+  const ser = DZ.map(d => ({ d, m: monthlyWk(rows, d.key, wkMax, igY()) }));
   const last = Math.max(...ser.flatMap(s => s.m.map((v, i) => v != null ? i : -1)));
   // ระดับเขต: ฐานกราฟเล็กแล้วขยายด้วยพื้นที่ว่างที่เหลือ (IG_GROW) → ไม่ต้องย่อส่วนอื่น · รายจังหวัด: ฐานใหญ่ตามเดิม
   const CH = (F.region ? [96, 92, 88, 84, 80, 76, 70, 64] : [136, 128, 120, 112, 104, 94, 84, 76])[dense] + Math.round(IG_GROW * .2),
@@ -531,7 +534,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const sec3 = adviceBox + `<div class="lvleg">${LV.map((l, i) => `<span class="${i === F.lv ? "cur" : ""}" style="background:${l.soft};color:${l.ink}"><i style="background:${l.c}"></i><b>${l.name}</b> ${l.range}</span>`).join("")}</div>`
     + `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสายด่วน ${HOT_DDC}</b>${F.lv >= 3 ? ` · <b style="color:#9a3412">ร่วมงดเผาในที่โล่ง</b> พบการเผาแจ้ง ${HOT_PCD}` : ""}</div>`;
   const provM = last < 0 ? [] : ser[0].m.map((o, i) => o?.prov ? TH_M[i] : "").filter(Boolean);
-  const sec4 = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี 2569${F.region ? "" : ` · จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}</em><small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)</small></div>
+  const sec4 = last < 0 ? "" : `<div class="ig-sec"><span>${inl("i-steth", 20)}</span><em class="tt">ผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น PM<sub>2.5</sub> · ปี ${igY() + 543}${F.region ? "" : ` · จ.${S.igPv}${window.DZPV?.mock ? " (จำลอง)" : ""}`}</em><small style="margin-left:auto">ผู้ป่วยรวมรายเดือน (ราย)</small></div>
     <div class="dzg2">${ser.map(s => `<div style="--dzs:${s.d.soft};background:linear-gradient(165deg,#fff 15%,${s.d.soft})"><div class="dh"><span class="dz-icon" style="background:#fff;color:${s.d.c}">${inl(s.d.icon, 22)}</span><span class="nm">${igDzName(s.d)}</span></div>${igDzPanel(s.d, s.m, last, 470, CH, F.region ? 16.5 : 17)}</div>`).join("")}</div>
     <div class="dzl">${provM.length ? `* ${provM.join(" ")} = ข้อมูลยังไม่ครบ · ` : ""}ที่มา: HDC กระทรวงสาธารณสุข ณ ${dzAsOf()}</div>`;
   const sec5 = igComboSec(CBH);

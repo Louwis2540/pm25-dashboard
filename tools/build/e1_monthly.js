@@ -34,6 +34,12 @@ const dzName = d => DZ_NAME[d.key] || d.label;
 const PM25T = "PM" + "2.5";                       // ใช้ในข้อความ tooltip (กันตัวแทนที่ชื่อสารมลพิษ → HTML ตอน build)
 // ปี + สัปดาห์ระบาดวิทยาล่าสุดที่นิ่งแล้วของกราฟย้อนหลัง: เซิร์ฟเวอร์ส่งมาใน meta (dataYear / dataWk) เพื่อให้เลื่อนข้ามปีเอง
 // ไม่มี meta (เซิร์ฟเวอร์เก่า/เดโม่) → ใช้ปี 2569 กับสัปดาห์ล่าสุดของหน้า (wkMax)
+// ขึ้นปีใหม่ (พ.ศ. 2570 ฯลฯ) ทุกจุดอ่านปีจากข้อมูลเอง ไม่ผูกตายตัว:
+//   DY() = ปีของข้อมูลระดับเขต (meta.dataYear) · PY() = ปีของข้อมูลรายจังหวัด (DZPV.yearBe ตาม config.json population.year_be) · ต้นปีที่ปีใหม่ยังไม่มีสัปดาห์ที่นิ่ง ปีจะเป็นปีก่อน
+//   PWK(wk) = สัปดาห์ล่าสุดของข้อมูลรายจังหวัด: ปีเดียวกับระดับเขตใช้ wk เดิม · คนละปี (config ประชากรยังไม่อัปเดต) ใช้สัปดาห์สูงสุดที่มีของปีรายจังหวัด
+const DY = () => Number(S.dz?.meta?.dataYear) || 2026, DYB = () => DY() + 543;
+const PY = () => (window.DZPV?.yearBe ? Number(DZPV.yearBe) - 543 : DY()), PYB = () => PY() + 543;
+const PWK = wk => PY() === DY() ? wk : Math.max(0, ...(window.DZPV?.rows || []).map(r => +r.wk || 0));
 function dzCbEnd(dz, wkMax) {
   const y = Number(dz.meta?.dataYear) || 2026, w = Number(dz.meta?.dataWk);
   return { y, w: w > 0 ? w : wkMax };
