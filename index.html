@@ -1223,6 +1223,66 @@ body.dp-open{overflow:hidden}
 @media (max-width:680px){.mm-main #map{height:420px}.mm-badge{max-width:160px;font-size:calc(11px*var(--fs,1));padding:5px 8px}.mm-badge small{font-size:calc(10px*var(--fs,1))}.mm-chip{flex:1 1 100%}.mm-lab b{font-size:calc(11px*var(--fs,1))}.mm-lab span{font-size:calc(13px*var(--fs,1));padding:0 6px}}
 @media (prefers-reduced-motion:reduce){.mm-dot{animation:none}}
 
+/* ===== เรียงโซนใหม่: แถบภาค A/B + กลุ่มในเมนูซ้าย ===== */
+.part{display:flex;align-items:center;gap:12px;margin:2px 0 -10px;font:600 calc(13px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;letter-spacing:.02em}
+.part::before,.part::after{content:"";flex:1;border-top:2px dotted var(--line-strong,#b8c4d3)}
+.part span{padding:3px 16px;border-radius:999px;border:1px solid currentColor;background:#fff}
+.part-a{color:#1c6ed6}.part-b{color:#c2415d}
+.trend-sum{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.trend-sum .sum-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px;padding:4px 6px 0}
+.trend-sum .sum-h h3{margin:0;font:700 calc(19px*var(--fs,1)) "Anuphan","IBM Plex Sans Thai",sans-serif}
+.trend-sum .sum-h p{margin:0;font-size:calc(13px*var(--fs,1));color:var(--ink-3,#6b7689)}
+.sb-c li.sb-grp{list-style:none;margin:12px 4px 2px;font:600 calc(11.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;letter-spacing:.04em;color:#5f6c80;text-transform:none}
+.sb-c li.sb-grp:first-child{margin-top:2px}
+
+/* ===== โซน 6 คำแนะนำ · Liquid Glass (ฟองกระจกแบบ iOS 26) : ภาพ+ค่าฝุ่นซ้าย · กล่องข้อความขวา ===== */
+#zAdvice .ad2-list{display:flex;flex-direction:column;gap:22px}
+.ad2{--rim:rgba(255,255,255,.85);--ink2:#46566a;position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(250px,34%) minmax(0,1fr);border-radius:34px;overflow:hidden;
+  background:linear-gradient(160deg,rgba(255,255,255,.62),rgba(255,255,255,.2) 42%,rgba(255,255,255,.06)),color-mix(in srgb,var(--c) 9%,rgba(255,255,255,.46));
+  -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
+  border:1px solid var(--rim);
+  box-shadow:inset 0 2px 1px rgba(255,255,255,.95),inset 0 -2px 6px color-mix(in srgb,var(--c) 14%,rgba(255,255,255,.3)),inset 0 0 0 .5px rgba(255,255,255,.5),0 2px 4px rgba(15,27,45,.05),0 26px 48px -26px color-mix(in srgb,var(--c) 55%,rgba(15,27,45,.45));
+  transition:transform .45s var(--ios-spring,cubic-bezier(.2,.9,.25,1.15)),box-shadow .35s ease}
+.ad2::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:radial-gradient(110% 60% at 10% -12%,rgba(255,255,255,.8),transparent 58%),radial-gradient(55% 55% at 100% 105%,color-mix(in srgb,var(--c) 30%,transparent),transparent 72%),radial-gradient(40% 40% at 38% 112%,color-mix(in srgb,var(--c) 16%,transparent),transparent 75%)}
+@media (hover:hover){.ad2:hover{transform:translateY(-3px)}}
+.ad2-art{padding:18px 8px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.ad2-art img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;display:block;border-radius:26px;
+  box-shadow:0 0 0 3px rgba(255,255,255,.72),0 0 0 4px color-mix(in srgb,var(--c) 28%,rgba(255,255,255,.4)),0 16px 28px -14px color-mix(in srgb,var(--c) 60%,rgba(15,27,45,.5))}
+.ad2-meter{border-radius:24px;padding:11px 16px 14px;background:linear-gradient(170deg,rgba(255,255,255,.78),rgba(255,255,255,.34));-webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%);
+  border:1px solid var(--rim);box-shadow:inset 0 1.5px 0 #fff,inset 0 -1px 3px color-mix(in srgb,var(--c) 18%,transparent),0 8px 18px -12px color-mix(in srgb,var(--c) 55%,rgba(15,27,45,.4))}
+.ad2-rng{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;color:var(--ink)}
+.ad2-rng span{font:600 15px "IBM Plex Sans Thai",sans-serif;color:var(--ink2)}
+.ad2-rng b{font:700 27px/1.2 "Anuphan","IBM Plex Sans Thai",sans-serif;letter-spacing:-.01em}
+.ad2-rng small{font:500 14px "IBM Plex Sans Thai",sans-serif;color:var(--ink2)}
+.ad2-scale{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:9px}
+.ad2-scale i{height:10px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,0) 60%),var(--k);opacity:.34;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.ad2-scale i.on{opacity:1;height:14px;margin-top:-2px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.9),0 0 0 2px rgba(255,255,255,.95),0 0 0 3.5px var(--k),0 4px 10px -2px var(--k)}
+.ad2-b{padding:22px 26px 24px 20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.ad2-h{display:flex}
+.ad2-n{position:relative;overflow:hidden;font:700 26px/1.3 "Anuphan","IBM Plex Sans Thai",sans-serif;padding:4px 24px;border-radius:999px;color:var(--ink);
+  background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.25) 55%),color-mix(in srgb,var(--c) 30%,rgba(255,255,255,.5));border:1px solid var(--rim);
+  box-shadow:inset 0 2px 1px #fff,inset 0 -3px 6px color-mix(in srgb,var(--c) 30%,transparent),0 8px 18px -8px color-mix(in srgb,var(--c) 70%,rgba(15,27,45,.3))}
+.ad2-s{position:relative;margin:0;padding:2px 0 2px 20px;font:600 22px/1.5 "IBM Plex Sans Thai",sans-serif;color:#14212f}
+.ad2-s::before{content:"";position:absolute;left:0;top:3px;bottom:3px;width:7px;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.7),transparent 70%),var(--c);box-shadow:0 4px 10px -3px var(--c)}
+.ad2-gs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ad2-g{border-radius:26px;overflow:hidden;display:flex;flex-direction:column;padding:8px;
+  background:linear-gradient(165deg,rgba(255,255,255,.7),rgba(255,255,255,.3));-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%);
+  border:1px solid var(--rim);box-shadow:inset 0 1.5px 0 #fff,inset 0 -1px 4px color-mix(in srgb,var(--c) 12%,transparent),0 10px 22px -16px color-mix(in srgb,var(--c) 50%,rgba(15,27,45,.4))}
+.ad2-g h4{margin:0;display:flex;align-items:center;gap:10px;padding:7px 16px 7px 10px;border-radius:999px;align-self:flex-start;
+  background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,.2) 60%),color-mix(in srgb,var(--c) 26%,rgba(255,255,255,.5));border:1px solid var(--rim);
+  box-shadow:inset 0 1.5px 0 #fff,inset 0 -2px 4px color-mix(in srgb,var(--c) 22%,transparent);font:700 18px "Anuphan","IBM Plex Sans Thai",sans-serif;color:var(--ink)}
+.ad2-g ul{list-style:none;margin:0;padding:14px 8px 8px;display:flex;flex-direction:column;gap:13px;flex:1}
+.ad2-g li{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;align-items:center;font:500 18px/1.5 "IBM Plex Sans Thai",sans-serif;color:#14212f}
+.ad2-ic{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.95);
+  background:radial-gradient(circle at 30% 24%,#fff 0 11%,rgba(255,255,255,.55) 32%,color-mix(in srgb,var(--c) 26%,rgba(255,255,255,.4)) 100%);
+  box-shadow:inset 0 -4px 7px color-mix(in srgb,var(--c) 26%,transparent),inset 0 2px 3px #fff,0 6px 12px -6px color-mix(in srgb,var(--c) 70%,rgba(15,27,45,.4))}
+.ad2-ic svg{width:22px;height:22px;display:block}
+#zAdvice .foot-note{font-size:calc(15px*var(--fs,1));line-height:1.55;margin-top:14px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.ad2{background:color-mix(in srgb,var(--c) 10%,#fff)}.ad2-g,.ad2-meter{background:rgba(255,255,255,.92)}}
+@media (max-width:1100px){.ad2-gs{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){.ad2{grid-template-columns:minmax(0,1fr);border-radius:28px}.ad2-art{padding:14px 14px 4px}.ad2-art img{max-width:520px;margin:0 auto;border-radius:22px}.ad2-meter{max-width:520px;width:100%;margin:0 auto}.ad2-b{padding:16px 16px 18px}.ad2-s{font-size:calc(20px*var(--fs,1))}.ad2-n{font-size:calc(24px*var(--fs,1))}}
+
 /* ===== B4 อินโฟกราฟิก (ชุดเดียวกับเดโม่) ===== */
 #ig .pm-tag sub,#ig .pm sub{font-size:.7em;vertical-align:-.25em;line-height:0}
 #ig .pvs .me,#ig .pvrow .me{outline:4px solid var(--lv-ink);outline-offset:-1px}
@@ -1509,7 +1569,7 @@ body.dp-open{overflow:hidden}
 </header>
 
 <main class="wrap">
-
+  <div class="part part-a" id="partA" role="separator" aria-label="ภาค A ฝุ่นและความร้อน"><span>ภาค A · ฝุ่นและความร้อน</span></div>
   <!-- 1) วันนี้ — สไตล์ Weather Station -->
   <section id="zToday" style="--sec:var(--lv-ink)">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-gauge"/></svg></div>
@@ -1521,12 +1581,11 @@ body.dp-open{overflow:hidden}
       </div>
     </div>
   </section>
-
   <!-- 2) แนวโน้ม -->
   <section id="zTrend" style="--sec:#7048e8">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-chart"/></svg></div>
       <div><h2>แนวโน้มค่าฝุ่น</h2><p>ดูรายวัน รายสัปดาห์ หรือรายเดือน · เลือกช่วงเวลา ซูมเข้า-ออกได้</p></div></div>
-    <div class="trend">
+    <div class="trend tr-one">
       <div class="card chart-card chart-main">
         <div class="tr-bar tf-bar" id="trBar">
           <label class="tf">จังหวัด<select id="trPv"><option value="all">ทั้ง 4 จังหวัด</option></select></label>
@@ -1538,9 +1597,17 @@ body.dp-open{overflow:hidden}
         <div class="chart-wrap" id="cw"><svg id="chart" viewBox="0 0 760 400" role="img" aria-label="กราฟเส้นค่าฝุ่น PM2.5 รายวัน 4 จังหวัด"></svg><div class="tip" id="tip"></div></div>
         <div class="tr-hint">💡 <b>ซูม</b> กด Ctrl (Mac: ⌘) ค้างพร้อมหมุนล้อเมาส์ · ถ่าง-หุบสองนิ้วบนทัชแพดหรือจอสัมผัส · <b>เลื่อนช่วง</b> ปัดซ้าย-ขวา (ทัชแพด/นิ้วเดียว) · ลากเมาส์เพื่อเลือกช่วง · ดับเบิลคลิกหรือกด รีเซ็ต เพื่อกลับ</div>
       </div>
+      <div class="trend-sum" id="zSummary"><div class="sum-h"><h3>สรุปช่วงที่แสดง</h3><p>ค่าต่ำสุด · สูงสุด · จำนวนวันที่ค่าฝุ่นเกินเกณฑ์ ตามจังหวัดและช่วงเวลาที่เลือกในกราฟแนวโน้ม</p></div><div class="card chart-card" id="trStats"></div></div>
     </div>
   </section>
-
+  <!-- 4) เจาะลึก จังหวัด → อำเภอ → ตำบล (อำเภอ/ตำบล + คาดการณ์ จาก GISTDA) -->
+  <section id="zDrill" style="--sec:#1c6ed6">
+    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-layers"/></svg></div>
+      <div><h2>เจาะลึกรายพื้นที่</h2><p>จังหวัด → อำเภอ → ตำบล · คลิกการ์ดจังหวัดด้านบน หรือคลิกบนแผนที่ค่าฝุ่นด้านล่าง</p></div></div>
+    <div class="drill dr-one">
+      <div class="card panel" id="drillPanel"></div>
+    </div>
+  </section>
   <!-- 3) ย้อนหลัง 7 วัน + คาดการณ์ 3 วัน -->
   <section id="zWeek" style="--sec:#0b8fa3">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-cal"/></svg></div>
@@ -1550,25 +1617,6 @@ body.dp-open{overflow:hidden}
       <aside class="glass fc" id="forecast" aria-label="การคาดการณ์ค่าฝุ่น PM2.5 ล่วงหน้า 3 วัน"></aside>
     </div>
   </section>
-
-  <!-- 4) เจาะลึก จังหวัด → อำเภอ → ตำบล (อำเภอ/ตำบล + คาดการณ์ จาก GISTDA) -->
-  <section id="zDrill" style="--sec:#1c6ed6">
-    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-layers"/></svg></div>
-      <div><h2>เจาะลึกรายพื้นที่</h2><p>จังหวัด → อำเภอ → ตำบล · คลิกการ์ดจังหวัดด้านบน หรือคลิกบนแผนที่ค่าฝุ่นด้านล่าง</p></div></div>
-    <div class="drill dr-one">
-      <div class="card panel" id="drillPanel"></div>
-    </div>
-  </section>
-
-  <!-- 5) สรุปช่วงที่แสดง -->
-  <section id="zSummary" style="--sec:#7048e8">
-    <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-chart"/></svg></div>
-      <div><h2>สรุปช่วงที่แสดง</h2><p>ค่าต่ำสุด · สูงสุด · จำนวนวันที่ค่าฝุ่นเกินเกณฑ์ ตามจังหวัดและช่วงเวลาที่เลือกในกราฟแนวโน้ม</p></div></div>
-    <div class="trend tr-one">
-      <div class="card chart-card" id="trStats"></div>
-    </div>
-  </section>
-
   <!-- 6) แผนที่รวม ค่าฝุ่น + จุดความร้อน (ขั้น 2) -->
   <section id="zMap" style="--sec:#1c6ed6">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-map"/></svg></div>
@@ -1593,20 +1641,29 @@ body.dp-open{overflow:hidden}
     </div>
   </section>
 
+  <div class="part part-b" id="partB" role="separator" aria-label="ภาค B ผลต่อสุขภาพ"><span>ภาค B · ผลต่อสุขภาพ</span></div>
   <!-- 8) โรค -->
   <section id="zDisease" style="--sec:#c2255c">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-steth"/></svg></div>
       <div><h2>ข้อมูลผู้ป่วยกลุ่มโรคที่เกี่ยวข้องกับฝุ่น <span class="pm25">PM<sub>2.5</sub></span></h2><p id="dzSub">ผู้ป่วย 4 กลุ่มโรค ปี 2569 · ข้อมูล HDC</p></div></div>
     <div class="dz-grid" id="dz"></div>
   </section>
-
   <!-- 9) คำแนะนำ -->
   <section id="zAdvice" style="--sec:var(--lv-ink)">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-shield"/></svg></div>
-      <div><h2>คำแนะนำการปฏิบัติตัว</h2><p>ตามระดับคุณภาพอากาศ 5 ระดับ · ดูระดับของจังหวัดจากการ์ดด้านบน</p></div></div>
-    <div class="adv-row" id="advRow"></div>
+      <div><h2>คำแนะนำการปฏิบัติตัว</h2><p>ตามระดับคุณภาพอากาศ 5 ระดับ · ดูระดับของจังหวัดจากการ์ดในส่วนฝุ่นภาพรวม</p></div></div>
+    <div class="ad2-list" id="advRow"></div>
     <div class="foot-note">* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด</div>
   </section>
+
+
+
+
+
+
+
+
+
 
   <!-- ดาวน์โหลดข้อมูล — ไม่อยู่บนหน้าแดชบอร์ด · เปิดจากเมนู "ดาวน์โหลดข้อมูล" ในแถบนำทางซ้าย -->
   <div class="dp-scrim" id="dpScrim" hidden></div>
@@ -1866,9 +1923,9 @@ function pheocTitle() {
 
 // ---------- แถบนำทางด้านซ้าย (รูปแบบตามตัวอย่าง Figma Make) ----------
 // ชื่อระบบด้านบน · หัวข้อ "Navigation" · เมนูไอคอน+ชื่อ (เลื่อนไปโซน) · เมนูของส่วนที่กำลังดูเป็นแถบเน้น · ปุ่มพับ/กาง
-const SB_MENU = [["zToday", "สถานการณ์วันนี้"], ["zTrend", "แนวโน้มค่าฝุ่น"], ["zWeek", "ย้อนหลัง 7 วัน · คาดการณ์ 3 วัน"],
-  ["zDrill", "เจาะลึกรายพื้นที่"], ["zSummary", "สรุปช่วงที่แสดง"], ["zMap", "แผนที่ค่าฝุ่น · จุดความร้อน"],
-  ["zDisease", "โรคที่ต้องเฝ้าระวัง"], ["zAdvice", "คำแนะนำการปฏิบัติตัว"], ["zData", "ดาวน์โหลดข้อมูล"]];
+const SB_MENU = [["zToday", "ฝุ่นภาพรวม"], ["zDrill", "เจาะลึกรายจังหวัด"], ["zWeek", "ย้อนหลัง 7 วัน · คาดการณ์ 3 วัน"],
+  ["zMap", "ความร้อน · ค่าฝุ่นรายชั่วโมง"], ["zDisease", "ผู้ป่วย"], ["zAdvice", "คำแนะนำการปฏิบัติตัว"], ["zData", "ดาวน์โหลดข้อมูล"]];
+const SB_GRP = { zToday: "ภาค A · ฝุ่นและความร้อน", zDisease: "ภาค B · ผลต่อสุขภาพ" };
 // ไอคอนเวกเตอร์ (SVG วาดเอง · viewBox 24) บนไทล์ไล่สีแบบไอคอน iOS — [สีบน, สีล่าง, path]
 const SB_ICON = {
   zToday: ["#ffb340", "#ff8a00", '<path d="M12 4.5a9.5 9.5 0 0 0-9.5 9.5c0 1.5.35 2.9.97 4.15.2.4.6.65 1.05.65h14.96c.45 0 .86-.25 1.05-.65A9.5 9.5 0 0 0 12 4.5Zm0 2.2a1 1 0 0 1 1 1v.6a1 1 0 1 1-2 0v-.6a1 1 0 0 1 1-1ZM6.4 9.1a1 1 0 0 1 1.4 0l.43.43a1 1 0 1 1-1.41 1.41l-.43-.43a1 1 0 0 1 0-1.41Zm11.2 0a1 1 0 0 1 0 1.41l-3.86 3.87a2.3 2.3 0 1 1-1.41-1.41l3.86-3.87a1 1 0 0 1 1.41 0ZM4.9 14.2h.6a1 1 0 1 1 0 2h-.6a1 1 0 1 1 0-2Zm13.6 0h.6a1 1 0 1 1 0 2h-.6a1 1 0 1 1 0-2Z"/>'],
@@ -1891,7 +1948,7 @@ function buildSidebar() {
   aside.id = "sb"; aside.className = "sb"; aside.setAttribute("aria-label", "แถบนำทาง");
   aside.innerHTML = `<div class="sb-glow" aria-hidden="true"></div><div class="sb-h"><span class="sb-ic sb-logo" style="--a:#5ac8fa;--b:#0a6cff"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M3.5 20.5V10.2c0-.3.13-.58.36-.77l7.5-6.2a1 1 0 0 1 1.28 0l7.5 6.2c.23.19.36.47.36.77v10.3h-6v-5.2a.8.8 0 0 0-.8-.8h-3.4a.8.8 0 0 0-.8.8v5.2h-6Z"/></svg></span>
       <div><b>PM<sub>2.5</sub> เขตสุขภาพที่ 7</b><small>สคร.7 ขอนแก่น</small></div></div>
-    <nav class="sb-c"><p class="sb-l">Navigation</p><ul>${SB_MENU.map(([id, t]) => `<li><a href="#${id}" data-z="${id}" style="--i:${SB_MENU.findIndex(m => m[0] === id)}">${sbTile(id)}<span class="sb-t">${t}</span></a></li>`).join("")}</ul></nav>`;
+    <nav class="sb-c"><p class="sb-l">Navigation</p><ul>${SB_MENU.map(([id, t]) => (SB_GRP[id] ? `<li class="sb-grp">${SB_GRP[id]}</li>` : "") + `<li><a href="#${id}" data-z="${id}" style="--i:${SB_MENU.findIndex(m => m[0] === id)}">${sbTile(id)}<span class="sb-t">${t}</span></a></li>`).join("")}</ul></nav>`;
   document.body.prepend(aside);
   const scrim = document.createElement("div"); scrim.className = "sb-scrim"; document.body.append(scrim);
   const btn = document.createElement("button");
@@ -3810,9 +3867,56 @@ const niceStep = mx => { const raw = mx / 4, p = 10 ** Math.floor(Math.log10(raw
 
 // ---------- คำแนะนำ ----------
 const actIcon = t => /หน้ากาก/.test(t) ? "a-mask" : /แพทย์/.test(t) ? "a-doc" : /ห้องปลอดฝุ่น|อาคาร|ปิดประตู/.test(t) ? "a-home" : /ก่อฝุ่น/.test(t) ? "a-dust" : /เฝ้าระวัง/.test(t) ? "a-eye" : /ออกกำลังกาย|กิจกรรม|ใช้แรง/.test(t) && !/ตามปกติ/.test(t) ? "a-run" : "a-ok";
-function renderAdvice() {
-  document.getElementById("advRow").innerHTML = LV.map((l, i) => `<div class="a"><b><i style="background:${l.c}"></i>${l.name}</b><span class="muted num">${l.range} µg/m³</span><span>${l.summary || l.pub[0]}</span></div>`).join("");
+// ===== โซน 6 · คำแนะนำการปฏิบัติตัว แบบใหม่ (เดโม่ 20 พ.ย. 2569) =====
+// ใหญ่ขึ้น ข้อความชัด · ภาพประกอบคนในบริบทที่ตรงกับเนื้อหาของแต่ละระดับ (ภาพ AI 3 มิติ) · ไอคอนหน้าข้อความตามการกระทำ (หน้ากาก/พบแพทย์/อยู่ในห้อง ฯลฯ)
+// เนื้อหาข้อความทุกบรรทัดมาจาก LV[i] เดิม (summary/pub/risk) ไม่แก้ถ้อยคำ · ประกาศ renderAdvice ซ้ำ ตัวที่อยู่ทีหลังชนะ
+/* ภาพประกอบ 5 ระดับ (สร้างด้วย AI) · ไฟล์จริงอยู่ที่ img/advice/lvN.webp · เดโม่จะแทนด้วย data URI ตอน build */
+const AD_IMG = ["img/advice/lv1.webp", "img/advice/lv2.webp", "img/advice/lv3.webp", "img/advice/lv4.webp", "img/advice/lv5.webp"];
+const AD_ALT = [
+  "ผู้หญิงวิ่งออกกำลังกายอย่างสดใส ผู้สูงอายุนั่งพักบนม้านั่ง ท้องฟ้าแจ่มใส",
+  "ผู้หญิงเดินเร็ว ผู้สูงอายุเดินช้า ๆ ข้างกันในสวนสาธารณะ ท้องฟ้าโปร่ง",
+  "ท้องฟ้ามีหมอกฝุ่นบาง ผู้หญิงเดินช้าลง มีป้ายห้ามวิ่ง ผู้สูงอายุสวมหน้ากากนั่งพัก",
+  "หมอกควันสีส้ม ผู้หญิงและผู้สูงอายุสวมหน้ากาก N95 เดินกลางทุ่ง ไกลออกไปมีควันไฟและโรงงาน",
+  "ในบ้านที่ปิดหน้าต่างสนิท ผู้หญิงและผู้สูงอายุสวมหน้ากากนั่งใกล้เครื่องฟอกอากาศ ผู้หญิงเช็กระดับฝุ่นจากมือถือ ผู้สูงอายุใส่เครื่องวัดออกซิเจนที่นิ้ว มีหน้ากากสำรองแขวนไว้ ข้างนอกมีควันหนาสีแดง"
+];
+const AD_I = {
+  ok: c => `<circle cx="14" cy="14" r="11" fill="none" stroke="${c}" stroke-width="2.6"/><path d="M8.5 14.5l4 4 7-8" fill="none" stroke="${c}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>`,
+  eye: c => `<path d="M3 14q11-14 22 0q-11 14-22 0z" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round"/><circle cx="14" cy="14" r="4" fill="${c}"/>`,
+  clock: c => `<circle cx="14" cy="14" r="11" fill="none" stroke="${c}" stroke-width="2.6"/><path d="M14 7v7l5 3" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round"/>`,
+  noex: c => `<circle cx="14" cy="14" r="11" fill="none" stroke="${c}" stroke-width="2.6"/><path d="M6.5 21.5l15-15" stroke="${c}" stroke-width="2.8" stroke-linecap="round"/><circle cx="15.5" cy="9" r="2" fill="${c}"/><path d="M13 12.5l-3 5m3-5l3.5 3 3-1m-6.5-2l-.5 5.5l-3 2" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`,
+  mask: c => `<path d="M5 9h18v6q0 7-9 9q-9-2-9-9z" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round"/><path d="M5 12l-3 1m21-1l3 1M9 14h10M9 18h10" stroke="${c}" stroke-width="2.2" stroke-linecap="round" fill="none"/>`,
+  doctor: c => `<rect x="3" y="3" width="22" height="22" rx="5" fill="none" stroke="${c}" stroke-width="2.6"/><path d="M14 8v12M8 14h12" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+  home: c => `<path d="M3 14L14 4l11 10M6 12v12h16V12" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 19q4-4 8 0" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>`,
+  dust: c => `<path d="M7 20a5 5 0 0 1 1-9.9a6 6 0 0 1 11.5 1.4A4.3 4.3 0 0 1 19 20z" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round"/><circle cx="10" cy="24" r="1.4" fill="${c}"/><circle cx="15" cy="25" r="1.4" fill="${c}"/><circle cx="20" cy="24" r="1.4" fill="${c}"/>`,
+  sun: c => `<circle cx="14" cy="14" r="5.5" fill="none" stroke="${c}" stroke-width="2.6"/>${[0, 45, 90, 135, 180, 225, 270, 315].map(a => `<line x1="${14 + Math.cos(a * Math.PI / 180) * 9}" y1="${14 + Math.sin(a * Math.PI / 180) * 9}" x2="${14 + Math.cos(a * Math.PI / 180) * 12}" y2="${14 + Math.sin(a * Math.PI / 180) * 12}" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>`).join("")}`,
+};
+function adIcon(text, c) {
+  const k = /หน้ากาก/.test(text) ? "mask" : /พบแพทย์/.test(text) ? "doctor" : /ห้องปลอดฝุ่น|อยู่ในห้อง/.test(text) ? "home" : /ก่อฝุ่น/.test(text) ? "dust" : /เฝ้าระวัง/.test(text) ? "eye" : /ลดระยะเวลา/.test(text) ? "clock"
+    : /(ลด|เลี่ยง|จำกัด|งด).*(ออกกำลัง|แรงมาก|กลางแจ้ง)/.test(text) ? "noex" : "sun";
+  return `<svg viewBox="0 0 28 28" width="28" height="28" aria-hidden="true">${AD_I[k](c)}</svg>`;
 }
+const AD_WHO = {
+  pub: c => `<circle cx="14" cy="9" r="5" fill="${c}"/><path d="M4.5 24q0-9 9.5-9t9.5 9z" fill="${c}"/>`,
+  risk: c => `<path d="M14 25S3 18.5 3 10.8A5.8 5.8 0 0 1 14 8a5.8 5.8 0 0 1 11 2.8C25 18.5 14 25 14 25z" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round"/><path d="M8 14h3l2-3 2.5 6 1.5-3h3" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
+};
+const adWho = (kind, c) => `<svg viewBox="0 0 28 28" width="30" height="30" aria-hidden="true">${AD_WHO[kind](c)}</svg>`;
+function renderAdvice() {
+  const scale = i => `<div class="ad2-scale" aria-hidden="true">${LV.map((x, j) => `<i style="--k:${x.c}"${j === i ? ' class="on"' : ""}></i>`).join("")}</div>`;
+  document.getElementById("advRow").innerHTML = LV.map((l, i) => {
+    const box = (kind, arr) => `<section class="ad2-g ad2-g-${kind}"><h4>${adWho(kind, l.ink)}<span>${kind === "pub" ? "ประชาชนทั่วไป" : "กลุ่มเสี่ยง*"}</span></h4><ul>${arr.map(t => `<li><span class="ad2-ic">${adIcon(t, l.ink)}</span><span>${t}</span></li>`).join("")}</ul></section>`;
+    return `<article class="ad2" style="--c:${l.c};--soft:${l.soft};--tint:${l.tint};--ink:${l.ink}" aria-label="ระดับ${l.name}">
+      <div class="ad2-art">
+        <img src="${AD_IMG[i]}" alt="${AD_ALT[i]}" loading="lazy" decoding="async" width="800" height="597">
+        <div class="ad2-meter"><div class="ad2-rng"><span>PM<sub>2.5</sub></span><b>${l.range}</b><small>µg/m³</small></div>${scale(i)}</div>
+      </div>
+      <div class="ad2-b">
+        <header class="ad2-h"><span class="ad2-n">${l.name}</span></header>
+        <p class="ad2-s">${l.summary || l.pub[0]}</p>
+        <div class="ad2-gs">${box("pub", l.pub)}${box("risk", l.risk)}</div>
+      </div></article>`;
+  }).join("");
+}
+
 
 // ฟอนต์ LINE Seed สำหรับ svg ในอินโฟกราฟิก — โหลดเป็น base64 ครั้งแรกที่กดสร้างรูป
 const LS_FONT = {};
