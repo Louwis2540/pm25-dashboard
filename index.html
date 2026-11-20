@@ -1228,10 +1228,42 @@ body.dp-open{overflow:hidden}
 .part::before,.part::after{content:"";flex:1;border-top:2px dotted var(--line-strong,#b8c4d3)}
 .part span{padding:3px 16px;border-radius:999px;border:1px solid currentColor;background:#fff}
 .part-a{color:#1c6ed6}.part-b{color:#c2415d}
-.trend-sum{margin-top:10px;display:flex;flex-direction:column;gap:8px}
-.trend-sum .sum-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px;padding:4px 6px 0}
+/* สรุปช่วงที่แสดง: คอลัมน์แคบอยู่ฝั่งซ้ายของกราฟเส้น (จอกว้าง) · จอแคบเรียงต่อใต้กราฟ */
+#zTrend{container:trone/inline-size}
+.trend.tr-one{grid-template-columns:minmax(270px,330px) minmax(0,1fr);align-items:start}
+.trend.tr-one .chart-main{grid-column:2;grid-row:1;min-width:0}
+.trend.tr-one .trend-sum{grid-column:1;grid-row:1}
+.trend-sum{display:flex;flex-direction:column;gap:8px;min-width:0}
+.trend-sum .sum-h{display:flex;flex-direction:column;gap:2px;padding:2px 6px 0}
 .trend-sum .sum-h h3{margin:0;font:700 calc(19px*var(--fs,1)) "Anuphan","IBM Plex Sans Thai",sans-serif}
-.trend-sum .sum-h p{margin:0;font-size:calc(13px*var(--fs,1));color:var(--ink-3,#6b7689)}
+.trend-sum .sum-h p{margin:0;font-size:calc(12.5px*var(--fs,1));line-height:1.45;color:var(--ink-3,#6b7689)}
+.trend-sum #trStats{padding:12px 12px 14px!important}
+.trend-sum #trStats .label{font-size:calc(13.5px*var(--fs,1))!important;line-height:1.4}
+.trend-sum .tr-st{display:block;margin-top:8px;border-spacing:0}
+.trend-sum .tr-st thead{display:none}
+.trend-sum .tr-st tbody{display:flex;flex-direction:column;gap:8px}
+.trend-sum .tr-st tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:7px;border-radius:16px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1px 0 #fff}
+.trend-sum .tr-st td{display:block;padding:5px 2px 6px;border-radius:10px;font-size:calc(15px*var(--fs,1));line-height:1.25}
+.trend-sum .tr-st td:first-child{grid-column:1/-1;padding:1px 4px 2px;background:transparent;border-radius:0;font-size:calc(15px*var(--fs,1))}
+.trend-sum .tr-st td.muted{grid-column:1/-1}
+.trend-sum .tr-st td:nth-child(n+2)::before{display:block;margin-bottom:2px;font:600 calc(11px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;color:var(--ink-2,#46566a);opacity:.9}
+.trend-sum .tr-st td:nth-child(2)::before{content:"ต่ำสุด"}
+.trend-sum .tr-st td:nth-child(3)::before{content:"สูงสุด"}
+.trend-sum .tr-st td:nth-child(4)::before{content:"วันเกิน 75"}
+.trend-sum .tr-st td small{font-size:calc(10.5px*var(--fs,1))}
+.trend-sum .tr-st td .ov-btn{padding:3px 6px 2px}
+.trend-sum .tr-st tr.ov-det{display:block;padding:0;background:none;border:0;box-shadow:none}
+.trend-sum .tr-st tr.ov-det[hidden]{display:none}
+.trend-sum .tr-st tr.ov-det td{display:block}
+.trend-sum .tr-st tr.ov-det td::before{content:none!important}
+.trend-sum .ov-box{min-width:0}
+.trend-sum .ov-h{white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+.trend-sum #trStats .tr-note{font-size:calc(11.5px*var(--fs,1));line-height:1.5}
+@container trone (max-width:900px){
+  .trend.tr-one{grid-template-columns:minmax(0,1fr)}
+  .trend.tr-one .chart-main,.trend.tr-one .trend-sum{grid-column:1}
+  .trend.tr-one .trend-sum{grid-row:2}
+}
 .sb-c li.sb-grp{list-style:none;margin:12px 4px 2px;font:600 calc(11.5px*var(--fs,1)) "IBM Plex Sans Thai",sans-serif;letter-spacing:.04em;color:#5f6c80;text-transform:none}
 .sb-c li.sb-grp:first-child{margin-top:2px}
 
@@ -1503,6 +1535,11 @@ body.dp-open{overflow:hidden}
 #ig .ig-body{padding-bottom:130px}
 .cap[hidden]{display:none!important}
 .cap[hidden]{display:none!important}
+
+/* ===== วันที่ไม่มีข้อมูลจุดความร้อน: ซ่อนส่วนจุดความร้อน ===== */
+.hs-none .mm-chip[data-l="hs"],.hs-none #mmLive .mm-hs,.hs-none #hotSide .hot-total,.hs-none #hotSide .conf,.hs-none #hotSide>.label:first-child{display:none!important}
+.hs-none .mm-th,.hs-none .mm-row{grid-template-columns:minmax(0,1fr) 64px}
+.hs-none .mm-th span:nth-child(3),.hs-none .mm-row b{display:none}
 </style>
 <link rel="stylesheet" href="/ui-look.css?v=1">
 </head>
@@ -1569,7 +1606,7 @@ body.dp-open{overflow:hidden}
 </header>
 
 <main class="wrap">
-  <div class="part part-a" id="partA" role="separator" aria-label="ภาค A ฝุ่นและความร้อน"><span>ภาค A · ฝุ่นและความร้อน</span></div>
+  <div class="part part-a" id="partA" role="separator" aria-label="ด้านมลพิษสิ่งแวดล้อม"><span>ด้านมลพิษสิ่งแวดล้อม</span></div>
   <!-- 1) วันนี้ — สไตล์ Weather Station -->
   <section id="zToday" style="--sec:var(--lv-ink)">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-gauge"/></svg></div>
@@ -1641,7 +1678,7 @@ body.dp-open{overflow:hidden}
     </div>
   </section>
 
-  <div class="part part-b" id="partB" role="separator" aria-label="ภาค B ผลต่อสุขภาพ"><span>ภาค B · ผลต่อสุขภาพ</span></div>
+  <div class="part part-b" id="partB" role="separator" aria-label="ด้านผลกระทบสุขภาพ"><span>ด้านผลกระทบสุขภาพ</span></div>
   <!-- 8) โรค -->
   <section id="zDisease" style="--sec:#c2255c">
     <div class="sec-h"><div class="badge"><svg class="ico"><use href="#i-steth"/></svg></div>
@@ -1827,8 +1864,7 @@ const S = {};   // state กลาง
   S.lv = S.avg == null ? 1 : lvOf(S.avg);
   // ---- hotspot: กรองเฉพาะ 4 จังหวัด ----
   const names = new Set(PROV.map(p => p.name));
-  S.hsToday = (hs?.geojson?.features || []).filter(f => names.has(f.properties.changwat));
-  S.hsOk = !!hs?.ok;
+  hsApply((hs?.geojson?.features || []).filter(f => names.has(f.properties.changwat)), !!hs?.ok);
 
   document.getElementById("ftYear").textContent = new Date().getFullYear() + 543;
   applyTheme(); renderHeader(); renderToday(); renderDrill(PROV[0].name); initTrendBar(); renderTrend(); renderTrendStats(); renderT7(); renderHotspot(S.hsToday, false); renderDisease(); renderAdvice();
@@ -1925,7 +1961,7 @@ function pheocTitle() {
 // ชื่อระบบด้านบน · หัวข้อ "Navigation" · เมนูไอคอน+ชื่อ (เลื่อนไปโซน) · เมนูของส่วนที่กำลังดูเป็นแถบเน้น · ปุ่มพับ/กาง
 const SB_MENU = [["zToday", "ฝุ่นภาพรวม"], ["zDrill", "เจาะลึกรายจังหวัด"], ["zWeek", "ย้อนหลัง 7 วัน · คาดการณ์ 3 วัน"],
   ["zMap", "ความร้อน · ค่าฝุ่นรายชั่วโมง"], ["zDisease", "ผู้ป่วย"], ["zAdvice", "คำแนะนำการปฏิบัติตัว"], ["zData", "ดาวน์โหลดข้อมูล"]];
-const SB_GRP = { zToday: "ภาค A · ฝุ่นและความร้อน", zDisease: "ภาค B · ผลต่อสุขภาพ" };
+const SB_GRP = { zToday: "ด้านมลพิษสิ่งแวดล้อม", zDisease: "ด้านผลกระทบสุขภาพ" };
 // ไอคอนเวกเตอร์ (SVG วาดเอง · viewBox 24) บนไทล์ไล่สีแบบไอคอน iOS — [สีบน, สีล่าง, path]
 const SB_ICON = {
   zToday: ["#ffb340", "#ff8a00", '<path d="M12 4.5a9.5 9.5 0 0 0-9.5 9.5c0 1.5.35 2.9.97 4.15.2.4.6.65 1.05.65h14.96c.45 0 .86-.25 1.05-.65A9.5 9.5 0 0 0 12 4.5Zm0 2.2a1 1 0 0 1 1 1v.6a1 1 0 1 1-2 0v-.6a1 1 0 0 1 1-1ZM6.4 9.1a1 1 0 0 1 1.4 0l.43.43a1 1 0 1 1-1.41 1.41l-.43-.43a1 1 0 0 1 0-1.41Zm11.2 0a1 1 0 0 1 0 1.41l-3.86 3.87a2.3 2.3 0 1 1-1.41-1.41l3.86-3.87a1 1 0 0 1 1.41 0ZM4.9 14.2h.6a1 1 0 1 1 0 2h-.6a1 1 0 1 1 0-2Zm13.6 0h.6a1 1 0 1 1 0 2h-.6a1 1 0 1 1 0-2Z"/>'],
@@ -2020,7 +2056,7 @@ function renderToday() {
   document.getElementById("facts").innerHTML = `
     <div class="facts">
       <div class="fact${pheoc ? " ph-hit" : ""}" title="${esc(pheocTitle())}"><span class="fi" style="background:#e7f0fc;color:#1c6ed6"><svg class="ico"><use href="#i-shield"/></svg></span><div><span>เกณฑ์เปิด PHEOC</span><b>${pheocLabel("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")}</b><small class="fact-s">07.00 น. >75 ติด 2 วัน</small></div></div>
-      <div class="fact"><span class="fi" style="background:#fdeee5;color:#e8590c"><svg class="ico"><use href="#i-fire"/></svg></span><div><span>จุดความร้อน 24 ชม.</span><b>${S.hsOk ? S.hsToday.length + " จุด" : "ดึงข้อมูลไม่ได้"}</b></div></div>
+      ${S.hsBehind ? "" : `<div class="fact"><span class="fi" style="background:#fdeee5;color:#e8590c"><svg class="ico"><use href="#i-fire"/></svg></span><div><span>จุดความร้อน 24 ชม.</span><b>${S.hsOk ? S.hsToday.length + " จุด" : "ดึงข้อมูลไม่ได้"}</b></div></div>`}
       ${maxP ? `<div class="fact"><span class="fi" style="background:${LV[lvOf(maxP.v)].soft};color:${LV[lvOf(maxP.v)].ink}"><svg class="ico"><use href="#i-pin"/></svg></span><div><span>สูงสุดวันนี้</span><b>${maxP.p.name} ${f1(maxP.v)}</b></div></div>` : ""}
     </div>`;
   document.getElementById("tiles").innerHTML = PROV.map(p => {
@@ -2082,7 +2118,7 @@ function renderForecast() {
     det.innerHTML = `<div class="dh"><b>จ.${o.p.name} · ${d.getDate()} ${TH_M[d.getMonth()]}</b><span>ค่าฝุ่นคาดการณ์ <b style="color:${l.ink}">${f1(x)}</b> µg/m³ · ${l.name}</span></div>
       ${tr ? `<div class="tr-sum ${tr[2]}"><span class="tr-i">${tr[0]}</span><span>สภาพอากาศ<b>${tr[1]}</b><small>ประเมินจากค่าฝุ่นวันก่อน การระบายอากาศ และความชื้น</small></span></div>` : ""}
       ${f.vr != null ? row("a-dust", "การระบายอากาศ <small>ปกติฤดูฝุ่น ~1,830 m²/s</small>", `${fmt(f.vr)} m²/s`, st(vr[0], vr[2] || vr[1])) : ""}
-      ${f.hs200 != null ? row("i-fire", `จุดความร้อนรัศมี 200 กม. <small>24 ชม. ล่าสุด · เฉพาะในไทย</small>`, `${fmt(f.hs200)} จุด`, st(hs[0], hs[1])) : ""}
+      ${f.hs200 != null && !S.hsBehind ? row("i-fire", `จุดความร้อนรัศมี 200 กม. <small>24 ชม. ล่าสุด · เฉพาะในไทย</small>`, `${fmt(f.hs200)} จุด`, st(hs[0], hs[1])) : ""}
       ${f.wd ? row("i-wind", "ทิศทางลม", `จาก${f.wd}`, "") : ""}
       ${f.rain != null ? row("i-rain", "ฝน", `${f.rain} มม.`, f.rain >= 1 ? st("ช่วยชะล้างฝุ่น", "ok") : st("ไม่มีฝน", "mid")) : ""}
       ${f.rh != null ? row("i-drop", "ความชื้นสัมพัทธ์", `${f.rh}%`, f.rh < 55 ? st("อากาศแห้ง", "bad") : st("ปกติ", "ok")) : ""}
@@ -2161,7 +2197,7 @@ function renderDrill(pvName, level = "province", amp = null) {
     <div class="st-grid">
       ${stat("i-up", "#fdeee5", "#c2410c", "สูงสุด 7 วัน", num(m7?.x), m7 ? thDate(m7.d) : "")}
       ${stat("i-chart", "#ede7fe", "#6d28d9", "เฉลี่ย 7 วัน", num(a7), `${w7.length} วันที่มีข้อมูล`)}
-      ${stat("i-fire", "#fde8e8", "#b91c1c", "จุดความร้อน 24 ชม.", `<b class="num">${hsN}<em>จุด</em></b>`, "ดาวเทียม VIIRS · GISTDA")}
+      ${S.hsBehind ? "" : stat("i-fire", "#fde8e8", "#b91c1c", "จุดความร้อน 24 ชม.", `<b class="num">${hsN}<em>จุด</em></b>`, "ดาวเทียม VIIRS · GISTDA")}
       ${stat("i-gauge", "#fff4d6", "#a16207", `สูงสุดฤดูฝุ่น ${seaLab}`, num(mS?.x), mS ? `${thDate(mS.d)} ${String(+mS.d.slice(0, 4) + 543).slice(2)}` : "")}
       ${stat("i-cal", "#ffe4e4", "#b00000", `วันเกิน ${stdv} ในฤดูฝุ่น`, `<b class="num" ${over ? 'style="color:#b00000"' : ""}>${over}<em>วัน</em></b>`, `จาก ${sea.length} วันที่มีข้อมูล`)}
       ${stat("i-pin", "#e3f2fd", "#1565c0", "เทียบเขตสุขภาพที่ 7", num(S.avg), v != null && S.avg != null ? (v > S.avg ? `สูงกว่าค่าเฉลี่ยเขต ${f1(v - S.avg)}` : v < S.avg ? `ต่ำกว่าค่าเฉลี่ยเขต ${f1(S.avg - v)}` : "เท่าค่าเฉลี่ยเขต") : "ค่าเฉลี่ย 4 จังหวัดวันนี้")}
@@ -2273,14 +2309,14 @@ async function renderArea(pvName, level, amp) {
   panel.innerHTML = drillCrumb(pvName, level, amp) + `
     <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="font-size:calc(22px*var(--fs,1))">${title}</h3><span class="muted">${items.length} ${unit}</span></div>
     <div class="area-sum">${counts.map(o => `<span class="chip" style="background:${o.l.soft};color:${o.l.ink}">${o.l.face} ${o.l.name} ${o.n} ${unit}</span>`).join("")}
-      ${isD ? `<span class="chip" style="background:#fdeee5;color:#a23d00">🔥 จุดความร้อนวันนี้ ${hsTotal} จุด${hsTotal ? ` ใน ${hsAreas} อำเภอ` : ""}</span>` : ""}</div>
+      ${isD && !S.hsBehind ? `<span class="chip" style="background:#fdeee5;color:#a23d00">🔥 จุดความร้อนวันนี้ ${hsTotal} จุด${hsTotal ? ` ใน ${hsAreas} อำเภอ` : ""}</span>` : ""}</div>
     ${mapHtml}
     <div class="area-wrap"><table class="t7 area-t num">
-      <thead><tr><th rowspan="2">${unit}</th><th rowspan="2">เฉลี่ย 24 ชม.<br><small>วันนี้</small></th><th colspan="3">ย้อนหลัง 3 วัน</th><th rowspan="2">สูงสุดฤดูฝุ่น<br><small>${esc(r.season?.label || "")}</small></th>${isD ? `<th rowspan="2">จุด<br>ความร้อน</th>` : ""}</tr>
+      <thead><tr><th rowspan="2">${unit}</th><th rowspan="2">เฉลี่ย 24 ชม.<br><small>วันนี้</small></th><th colspan="3">ย้อนหลัง 3 วัน</th><th rowspan="2">สูงสุดฤดูฝุ่น<br><small>${esc(r.season?.label || "")}</small></th>${isD && !S.hsBehind ? `<th rowspan="2">จุด<br>ความร้อน</th>` : ""}</tr>
       <tr>${(r.days || []).map(d => `<th>${dm(d)}</th>`).join("")}</tr></thead>
       <tbody>${items.map(it => `<tr ${isD ? `class="clk" tabindex="0" role="button" data-code="${esc(it.code)}" data-name="${esc(it.name)}"` : ""}>
         <td>${esc(it.name)}${isD ? ' <span class="go">›</span>' : ""}</td>${cell(it.avg24, true)}${(it.past.length ? it.past : [null, null, null]).map(x => cell(x, false)).join("")}${maxCell(it.max)}
-        ${isD ? `<td class="hs-n">${it.hs ? `🔥 ${it.hs}` : `<span class="muted">–</span>`}</td>` : ""}</tr>`).join("")}</tbody>
+        ${isD && !S.hsBehind ? `<td class="hs-n">${it.hs ? `🔥 ${it.hs}` : `<span class="muted">–</span>`}</td>` : ""}</tr>`).join("")}</tbody>
     </table></div>
     <div class="fc-src"><svg class="ico"><use href="#i-sat"/></svg><span>ค่าฝุ่นราย${unit}: ค่าประมาณจากดาวเทียม GISTDA · ข้อมูล ณ ${esc(r.asOfThai || r.asOf || "")} · ค่าย้อนหลังและสูงสุดฤดูเป็นค่าเฉลี่ยรายวัน${isD ? " · คลิกอำเภอบนแผนที่หรือตารางเพื่อดูรายตำบล" : ""}<br>ค่ารายจังหวัดในส่วนอื่นของหน้ามาจากสถานีตรวจวัด Air4Thai จึงอาจต่างกัน${isD ? " · จุดความร้อน: GISTDA VIIRS 24 ชม." : ""}</span></div>`;
   bindCrumb(panel, pvName, level, amp);
@@ -2702,7 +2738,7 @@ function renderHotspot(feats, isSample) {
     <div>${PROV.map(p => `<div class="hot-row"><span>${p.name}</span><b>${by[p.name] || 0}</b></div>`).join("")}</div>
     <div class="conf"><div class="label">สีจุด = ความมั่นใจของดาวเทียมว่าเป็นไฟจริง</div>${Object.entries(CONF).map(([k, [n, c]]) => `<span class="cf-k"><i style="background:${c}"></i><span>${n}<small>${CONF_TXT[k]}</small></span></span>`).join("")}
       <div class="cf-frp"><span class="dots"><b style="width:7px;height:7px"></b><b style="width:11px;height:11px"></b><b style="width:16px;height:16px"></b></span><span>ขนาดจุด = ความแรงของไฟ<small>วัดจากพลังงานความร้อนที่ดาวเทียมจับได้ (FRP · เมกะวัตต์) จุดใหญ่ = ไฟแรงหรือลุกลามกว้าง</small></span></div></div>
-    ${!S.hsOk ? `<div class="note-box">ดึงข้อมูล GISTDA ไม่สำเร็จ</div>` : ""}
+    ${!S.hsOk && !S.hsBehind ? `<div class="note-box">ดึงข้อมูล GISTDA ไม่สำเร็จ</div>` : ""}
     ${!isSample && feats.length === 0 ? `<div class="note-box">วันนี้ไม่พบจุดความร้อนในพื้นที่ 4 จังหวัด<br><button class="btn" id="hsSample" style="margin-top:8px;padding:6px 12px">ดูตัวอย่างจากข้อมูลจริง 7 พ.ค. 2569</button></div>` : ""}
     ${isSample ? `<div class="note-box">กำลังแสดงข้อมูลย้อนหลัง (ไม่ใช่วันนี้)<br><button class="btn" id="hsToday" style="margin-top:8px;padding:6px 12px">กลับไปข้อมูลวันนี้</button></div>` : ""}`;
   document.getElementById("hsSample")?.addEventListener("click", async () => {
@@ -2761,11 +2797,19 @@ function mmLive() {
   else if (mmPrev()) pmRow = `<div class="mm-ln err"><span class="mm-dot off" aria-hidden="true"></span><b>ค่าเฉลี่ยรายชั่วโมง</b><span>แสดงค่าก่อนหน้า ณ ${pt} · ${MM.pmBusy ? "กำลังขอข้อมูลใหม่…" : !MM.pmOk ? "ดึงค่าใหม่ไม่สำเร็จ" : "ค่าจากครั้งก่อน"}</span>${nx}</div>`;
   else pmRow = `<div class="mm-ln"><span class="mm-dot" aria-hidden="true"></span><b>ค่าเฉลี่ยรายชั่วโมง</b><span>ณ ${pt} · GISTDA (ค่าประมาณจากดาวเทียม)${MM.pmStale ? " · <em>ข้อมูลค้าง</em>" : ""}</span>${nx}</div>`;
   const lt = MM.hsLatest ? mmAt(MM.hsLatest) : null;
-  const hsRow = `<div class="mm-ln${MM.hsErr ? " err" : ""}"><span class="mm-dot${MM.hsErr ? " off" : ""}" aria-hidden="true"></span><b>จุดความร้อน</b><span>GISTDA (VIIRS) · ย้อนหลัง 24 ชม. · ${MM.hsAt ? (lt ? `ตรวจพบล่าสุด ${lt}` : "ไม่พบจุดใน 24 ชม.") : "กำลังขอข้อมูล…"}${MM.hsAt ? ` · อัปเดตข้อมูล ${mmHM(new Date(MM.hsAt))} น.` : ""}${MM.hsErr ? " · ดึงรอบล่าสุดไม่สำเร็จ แสดงข้อมูลครั้งก่อน" : ""}</span>${MM.hsAt ? `<span class="mm-nx">ขอข้อมูลใหม่ทุก 15 นาที (ครั้งถัดไป ${mmHM(new Date(MM.hsNext))} น. · อีก <b id="mmCdH">${mmLeft(MM.hsNext)}</b>)</span>` : ""}</div>`;
+  const hsRow = `<div class="mm-ln mm-hs${MM.hsErr ? " err" : ""}"><span class="mm-dot${MM.hsErr ? " off" : ""}" aria-hidden="true"></span><b>จุดความร้อน</b><span>GISTDA (VIIRS) · ย้อนหลัง 24 ชม. · ${MM.hsAt ? (lt ? `ตรวจพบล่าสุด ${lt}` : "ไม่พบจุดใน 24 ชม.") : "กำลังขอข้อมูล…"}${MM.hsAt ? ` · อัปเดตข้อมูล ${mmHM(new Date(MM.hsAt))} น.` : ""}${MM.hsErr ? " · ดึงรอบล่าสุดไม่สำเร็จ แสดงข้อมูลครั้งก่อน" : ""}</span>${MM.hsAt ? `<span class="mm-nx">ขอข้อมูลใหม่ทุก 15 นาที (ครั้งถัดไป ${mmHM(new Date(MM.hsNext))} น. · อีก <b id="mmCdH">${mmLeft(MM.hsNext)}</b>)</span>` : ""}</div>`;
   el.innerHTML = pmRow + hsRow + `<button type="button" class="mm-rf" id="mmRf" ${MM.pmBusy ? "disabled" : ""}>${MM.pmBusy ? "กำลังดึง…" : "รีเฟรชค่าฝุ่น"}</button>`;
   document.getElementById("mmRf")?.addEventListener("click", () => mmPmFetch());
 }
 function mmRepaint() { renderHotspot(S.hsToday, MM.sample); }
+// ---- วันที่ไม่มีข้อมูลจุดความร้อน → ซ่อนส่วนจุดความร้อน (GISTDA โหลดเป็นชุดรายวัน เช้าวันถัดไป) ----
+function hsApply(feats, ok) {
+  const lt = mmHsLatest(feats), now = new Date(Date.now() + 7 * 3600e3), today = now.toISOString().slice(0, 10);
+  const age = lt ? Math.round((Date.parse(today) - Date.parse(lt.slice(0, 10))) / 864e5) : 0;   // อายุเป็นวัน ตามเวลาไทย
+  S.hsBehind = !!(ok && lt && (age >= 3 || (age === 2 && now.getUTCHours() >= 9)));
+  S.hsToday = S.hsBehind ? [] : feats; S.hsOk = !!ok && !S.hsBehind;
+  document.body.classList.toggle("hs-none", S.hsBehind);
+}
 // ---- จุดความร้อน: ขอข้อมูลใหม่ทุก 15 นาที ----
 function mmHsLatest(feats) {   // เวลาที่ตรวจพบล่าสุดจากตัวข้อมูลเอง (เวลาไทย) — ใช้เมื่อเซิร์ฟเวอร์ไม่ส่ง latest
   let m = ""; for (const f of feats || []) { const p = f.properties || {}, d = String(p.acq_date || "").slice(0, 10), t = String(p.th_time ?? "").padStart(4, "0"), k = d && `${d}T${t.slice(0, 2)}:${t.slice(2)}`; if (d && k > m) m = k; }
@@ -2776,7 +2820,7 @@ async function mmHsFetch() {
   try {
     const j = await getJSON("/api/hotspot"), names = new Set(PROV.map(p => p.name));
     if (j?.ok && Array.isArray(j.geojson?.features)) {
-      S.hsToday = j.geojson.features.filter(f => names.has(f.properties.changwat)); S.hsOk = true;
+      hsApply(j.geojson.features.filter(f => names.has(f.properties.changwat)), true);
       MM.hsAt = Date.now(); MM.hsLatest = mmHsLatest(S.hsToday); MM.hsErr = false;
     } else MM.hsErr = true;
   } catch (_) { MM.hsErr = true; }
@@ -2961,7 +3005,7 @@ function renderHotspot(feats, isSample) {
     <div class="mm-src">${PM25T}: ค่าเฉลี่ยรายชั่วโมง · GISTDA (ค่าประมาณจากดาวเทียม)${MM.live ? ` · ${mmPrev() ? "ค่าก่อนหน้า" : ""} ${esc(mmPmTime() || "")}` : " · ยังไม่มีข้อมูล"}<br>${mmPoint() === "แตะ" ? "แตะ" : "ชี้เคอร์เซอร์"}ที่อำเภอบนแผนที่เพื่อดูค่ารายอำเภอ<br>ค่าบนแผนที่ต่างจากค่าในการ์ดจังหวัดด้านบน (ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จากสถานี Air4Thai)<br>จุดความร้อน: GISTDA (VIIRS)</div>
     <div class="conf"><div class="label">สีจุด = ความมั่นใจของดาวเทียมว่าเป็นไฟจริง</div>${Object.entries(CONF).map(([k, [n, c]]) => `<span class="cf-k"><i style="background:${c}"></i><span>${n}<small>${CONF_TXT[k] || ""}</small></span></span>`).join("")}
       <div class="cf-frp"><span class="dots"><b style="width:7px;height:7px"></b><b style="width:11px;height:11px"></b><b style="width:16px;height:16px"></b></span><span>ขนาดจุด = ความแรงของไฟ<small>วงใหญ่ = ไฟแรง/พื้นที่เผากว้าง</small></span></div></div>
-    ${!S.hsOk ? `<div class="note-box">ดึงข้อมูล GISTDA ไม่สำเร็จ</div>` : ""}
+    ${!S.hsOk && !S.hsBehind ? `<div class="note-box">ดึงข้อมูล GISTDA ไม่สำเร็จ</div>` : ""}
     ${!isSample && feats.length === 0 && S.hsOk ? `<div class="note-box">วันนี้ไม่พบจุดความร้อนในพื้นที่ 4 จังหวัด<br><button class="btn" id="hsSample" style="margin-top:8px;padding:6px 12px">ดูตัวอย่างวันที่มีจุดความร้อน (7 พ.ค. 2569)</button></div>` : ""}
     ${isSample ? `<div class="note-box">กำลังแสดงข้อมูลย้อนหลัง (ไม่ใช่วันนี้)<br><button class="btn" id="hsToday" style="margin-top:8px;padding:6px 12px">กลับไปดูวันนี้</button></div>` : ""}`;
   document.querySelectorAll("#hotSide .mm-row").forEach(b => b.addEventListener("click", () => { const ly = MM.shapes[b.dataset.pv]; if (ly) MAP.fitBounds(ly.getBounds(), { padding: [20, 20], maxZoom: 10 }); }));
@@ -4279,6 +4323,7 @@ function igDelta(pv) {
 const igHs = () => S.igPv ? (S.hsToday || []).filter(f => f.properties?.changwat === S.igPv) : (S.hsToday || []);
 // แถบสูงสุดในเขต: จุดความร้อนทั้งเขต + แยกจังหวัด · ไม่มีเลย = "ไม่พบจุดความร้อน"
 function igHsPill() {
+  if (S.hsBehind) return "";
   const hs = S.hsToday || [], n = hs.length;
   if (!n) return `<span class="ml mlhs ok">${inl("i-fire", 20)}<span class="hst"><span class="hl">จุดความร้อน 24 ชม. · GISTDA</span><span class="hn"><b>ไม่พบจุดความร้อน</b></span></span></span>`;
   const by = PROV.map(p => [p.name, hs.filter(f => f.properties?.changwat === p.name).length]).filter(x => x[1] > 0);   // จังหวัดที่ไม่มีจุดไม่แสดง
@@ -4450,7 +4495,7 @@ function buildInfographic(size = "a4", dense = 0) {
   const over = PROV.filter(p => (S.todayRow?.[p.name] ?? 0) > 37.5);
   const kpi = (ic, bg, fg, k, b, sm) => `<div><span class="fi" style="background:${bg};color:${fg}">${inl(ic, 26)}</span><span><span class="k">${k}</span><b>${b}</b>${sm ? `<small>${sm}</small>` : ""}</span></div>`;
   const kpis = `<div class="kpis${F.region ? " kpis-h" : ""}">${phHit ? kpi("i-shield", "#e7f0fc", "#1c6ed6", "เกณฑ์เปิด PHEOC (เกิน 75 µg/m³)", igPh("ถึงเกณฑ์", "ยังไม่เข้าเกณฑ์")) : ""}
-    ${kpi("i-fire", "#fdeee5", "#e8590c", `จุดความร้อน 24 ชม. (${igHsLbl()})`, `${igHs().length} จุด`, "ที่มา: GISTDA")}</div>`;   // PHEOC แสดงเฉพาะวันที่เข้าเกณฑ์ · ตัด "จังหวัดที่เกิน 37.5"
+    ${S.hsBehind ? "" : kpi("i-fire", "#fdeee5", "#e8590c", `จุดความร้อน 24 ชม. (${igHsLbl()})`, `${igHs().length} จุด`, "ที่มา: GISTDA")}</div>`;   // PHEOC แสดงเฉพาะวันที่เข้าเกณฑ์ · ตัด "จังหวัดที่เกิน 37.5"
   const riskNote = `<div class="ig-note">* กลุ่มเสี่ยง: ${RISK_DEF} · <b>ปรึกษาสุขภาพ สายด่วนกรมควบคุมโรค ${HOT_DDC}</b></div>`;
   const act = F.lv >= 3 ? `<div class="ig-act">${inl("i-fire", 24)}<b>ร่วมงดเผาในที่โล่ง</b> ลดฝุ่นเพื่อคนในชุมชน · พบการเผา แจ้งท้องถิ่นหรือสายด่วน ${HOT_PCD}</div>` : "";
   if (size === "social" && !F.region) { igSocialPv(ig, F, L, head, foot, adviceBox, riskNote, act, dense); igPad(ig); igFitPvChart(ig); return; }   // โพสต์รายจังหวัด: เรียงแบบระดับเขต
