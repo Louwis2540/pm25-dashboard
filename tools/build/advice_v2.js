@@ -32,14 +32,18 @@ const AD_WHO = {
 };
 const adWho = (kind, c) => `<svg viewBox="0 0 28 28" width="30" height="30" aria-hidden="true">${AD_WHO[kind](c)}</svg>`;
 function renderAdvice() {
+  const scale = i => `<div class="ad2-scale" aria-hidden="true">${LV.map((x, j) => `<i style="--k:${x.c}"${j === i ? ' class="on"' : ""}></i>`).join("")}</div>`;
   document.getElementById("advRow").innerHTML = LV.map((l, i) => {
-    const list = (kind, arr) => `<div class="ad2-g"><h4>${adWho(kind, l.ink)}<span>${kind === "pub" ? "ประชาชนทั่วไป" : "กลุ่มเสี่ยง*"}</span></h4><ul>${arr.map(t => `<li>${adIcon(t, l.ink)}<span>${t}</span></li>`).join("")}</ul></div>`;
+    const box = (kind, arr) => `<section class="ad2-g ad2-g-${kind}"><h4>${adWho(kind, l.ink)}<span>${kind === "pub" ? "ประชาชนทั่วไป" : "กลุ่มเสี่ยง*"}</span></h4><ul>${arr.map(t => `<li><span class="ad2-ic">${adIcon(t, l.ink)}</span><span>${t}</span></li>`).join("")}</ul></section>`;
     return `<article class="ad2" style="--c:${l.c};--soft:${l.soft};--tint:${l.tint};--ink:${l.ink}" aria-label="ระดับ${l.name}">
-      <div class="ad2-art"><img src="${AD_IMG[i]}" alt="${AD_ALT[i]}" loading="lazy" decoding="async" width="800" height="597"></div>
+      <div class="ad2-art">
+        <img src="${AD_IMG[i]}" alt="${AD_ALT[i]}" loading="lazy" decoding="async" width="800" height="597">
+        <div class="ad2-meter"><div class="ad2-rng"><span>PM<sub>2.5</sub></span><b>${l.range}</b><small>µg/m³</small></div>${scale(i)}</div>
+      </div>
       <div class="ad2-b">
-        <header><span class="ad2-n">${l.name}</span><span class="ad2-r">PM<sub>2.5</sub> ${l.range} µg/m³</span></header>
+        <header class="ad2-h"><span class="ad2-n">${l.name}</span></header>
         <p class="ad2-s">${l.summary || l.pub[0]}</p>
-        <div class="ad2-gs">${list("pub", l.pub)}${list("risk", l.risk)}</div>
+        <div class="ad2-gs">${box("pub", l.pub)}${box("risk", l.risk)}</div>
       </div></article>`;
   }).join("");
 }
