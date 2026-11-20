@@ -219,6 +219,33 @@ app.get('/api/hotspot', async (req, res) => {
   }
 });
 
+/* ── ตรวจฟีด VIIRS 1day ทั้งประเทศ (ct_tn=ราชอาณาจักรไทย) — ดูว่า GISTDA มีข้อมูลวันล่าสุดหรือค้างทั้งระบบ ──
+   คืนเฉพาะสรุป: จำนวนจุด วัน/เวลาตรวจพบล่าสุด เวลาที่ GISTDA สร้างเรคคอร์ดล่าสุด ชื่อไฟล์ต้นทาง ดาวเทียม (ไม่คืนจุด) */
+app.get('/api/hotspot-national', async (req, res) => {
+  const cached = getCached('hs-national'); if (cached) return res.json(cached);
+  const { api } = readConfig(); if (!api.gistda_key) return res.status(503).json({ ok: false, message: 'ไม่มี GISTDA_KEY' });
+  const BASE = 'https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day';
+  try {
+    let n = 0, latest = '', created = '', pages = 0; const files = {}, sats = {}, days = {};
+    for (let off = 0; pages < 5; pages++, off += 1000) {
+      const r = await fetch(`${BASE}?api_key=${api.gistda_key}&limit=1000&offset=${off}&ct_tn=${encodeURIComponent('ราชอาณาจักรไทย')}`, { signal: AbortSignal.timeout(20000) });
+      if (!r.ok) throw new Error('GISTDA HTTP ' + r.status);
+      const f = (await r.json()).features || [];
+      for (const x of f) {
+        const p = x.properties || {}, row = hsRow(x); n++;
+        const k = `${row.acq_date}T${row.th_time.slice(0, 2)}:${row.th_time.slice(2)}`; if (row.acq_date && k > latest) latest = k;
+        if (p._createdAt && p._createdAt > created) created = p._createdAt;
+        files[p.file_name || '?'] = (files[p.file_name || '?'] || 0) + 1; sats[p.satellite || '?'] = (sats[p.satellite || '?'] || 0) + 1;
+        days[row.acq_date || '?'] = (days[row.acq_date || '?'] || 0) + 1;
+      }
+      if (f.length < 1000) { pages++; break; }
+    }
+    const data = { ok: true, scope: 'ราชอาณาจักรไทย', count: n, partial: pages >= 5, latest: latest || null, lastCreatedAt: created || null, byDate: days, files, satellites: sats, fetchedAt: new Date().toISOString() };
+    setCached('hs-national', data, 10 * 60 * 1000);
+    res.json(data);
+  } catch (e) { res.status(502).json({ ok: false, message: String(e.message || e).replace(api.gistda_key, '***') }); }
+});
+
 /* ── GISTDA Sphere: บริการจุดความร้อนรายวันแบบ from/to (disaster-hotspot) — ทดสอบ/สำรองข้อมูลย้อนหลัง ──
    เอกสาร: https://sphere.gistda.or.th/docs/web-service/disaster-information
    ผลตอบแยกตามดาวเทียม (suomi-npp = VIIRS, terra/aqua = MODIS) → วัน → การใช้ที่ดิน → จุด (lat/lon/จังหวัด/อำเภอ/ตำบล/หมู่บ้าน) ไม่มีเวลาตรวจพบ ความมั่นใจ FRP
