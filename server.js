@@ -219,6 +219,81 @@ app.get('/api/hotspot', async (req, res) => {
   }
 });
 
+/* ── ตรวจฟีด VIIRS 1day ทั้งประเทศ (ct_tn=ราชอาณาจักรไทย) — ดูว่า GISTDA มีข้อมูลวันล่าสุดหรือค้างทั้งระบบ ──
+   คืนเฉพาะสรุป: จำนวนจุด วัน/เวลาตรวจพบล่าสุด เวลาที่ GISTDA สร้างเรคคอร์ดล่าสุด ชื่อไฟล์ต้นทาง ดาวเทียม (ไม่คืนจุด) */
+app.get('/api/hotspot-national', async (req, res) => {
+  const cached = getCached('hs-national'); if (cached) return res.json(cached);
+  const { api } = readConfig(); if (!api.gistda_key) return res.status(503).json({ ok: false, message: 'ไม่มี GISTDA_KEY' });
+  const BASE = 'https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day';
+  try {
+    let n = 0, latest = '', created = '', pages = 0; const files = {}, sats = {}, days = {};
+    for (let off = 0; pages < 5; pages++, off += 1000) {
+      const r = await fetch(`${BASE}?api_key=${api.gistda_key}&limit=1000&offset=${off}&ct_tn=${encodeURIComponent('ราชอาณาจักรไทย')}`, { signal: AbortSignal.timeout(20000) });
+      if (!r.ok) throw new Error('GISTDA HTTP ' + r.status);
+      const f = (await r.json()).features || [];
+      for (const x of f) {
+        const p = x.properties || {}, row = hsRow(x); n++;
+        const k = `${row.acq_date}T${row.th_time.slice(0, 2)}:${row.th_time.slice(2)}`; if (row.acq_date && k > latest) latest = k;
+        if (p._createdAt && p._createdAt > created) created = p._createdAt;
+        files[p.file_name || '?'] = (files[p.file_name || '?'] || 0) + 1; sats[p.satellite || '?'] = (sats[p.satellite || '?'] || 0) + 1;
+        days[row.acq_date || '?'] = (days[row.acq_date || '?'] || 0) + 1;
+      }
+      if (f.length < 1000) { pages++; break; }
+    }
+    const data = { ok: true, scope: 'ราชอาณาจักรไทย', count: n, partial: pages >= 5, latest: latest || null, lastCreatedAt: created || null, byDate: days, files, satellites: sats, fetchedAt: new Date().toISOString() };
+    setCached('hs-national', data, 10 * 60 * 1000);
+    res.json(data);
+  } catch (e) { res.status(502).json({ ok: false, message: String(e.message || e).replace(api.gistda_key, '***') }); }
+});
+
+/* ── GISTDA Sphere: บริการจุดความร้อนรายวันแบบ from/to (disaster-hotspot) — ทดสอบ/สำรองข้อมูลย้อนหลัง ──
+   เอกสาร: https://sphere.gistda.or.th/docs/web-service/disaster-information
+   ผลตอบแยกตามดาวเทียม (suomi-npp = VIIRS, terra/aqua = MODIS) → วัน → การใช้ที่ดิน → จุด (lat/lon/จังหวัด/อำเภอ/ตำบล/หมู่บ้าน) ไม่มีเวลาตรวจพบ ความมั่นใจ FRP
+   คีย์: SPHERE_KEY (ถ้าไม่ตั้ง ลองใช้ GISTDA_KEY) · ยังไม่ผูกกับหน้าเว็บ — ใช้ตรวจว่ามีข้อมูลวันล่าสุดหรือยัง */
+const SPHERE_HS = 'https://api.sphere.gistda.or.th/services/info/disaster-hotspot';
+const SPHERE_SATS = ['suomi-npp', 'terra', 'aqua'];
+function sphereFeatures(j, pv) {
+  const out = [];
+  for (const sat of SPHERE_SATS) {
+    for (const day of Array.isArray(j?.[sat]) ? j[sat] : []) {
+      for (const lu of day?.data || []) for (const p of lu?.data || []) {
+        const lat = +p.lat, lon = +p.lon; if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        out.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
+          properties: { acq_date: `${String(day.date).slice(0, 10)}T00:00:00`, th_time: '', changwat: p.pv_tn || pv, ap_en: p.ap_tn || '', tb_en: p.tb_tn || '',
+            village: p.village || '', lu_name: lu.landuse || '', confidence: '', frp: null, satellite: sat, source: 'sphere' } });
+      }
+    }
+  }
+  return out;
+}
+app.get('/api/hotspot-sphere', async (req, res) => {
+  const re = /^\d{4}-\d{2}-\d{2}$/, today = bkkDate();
+  const from = re.test(req.query.from || '') ? req.query.from : addDaysIso(today, -2);
+  const to = re.test(req.query.to || '') ? req.query.to : today;
+  const ck = `sphere-hs-${from}-${to}`, cached = getCached(ck);
+  if (cached) return res.json(req.query.geo ? cached : { ...cached, geojson: undefined });
+  const { api, provinces } = readConfig();
+  const key = process.env.SPHERE_KEY || api.sphere_key || api.gistda_key;
+  if (!key) return res.status(503).json({ ok: false, message: 'ไม่มี SPHERE_KEY/GISTDA_KEY' });
+  const parts = await Promise.all(provinces.map(async p => {
+    try {
+      const r = await fetch(`${SPHERE_HS}?pv_tn=${encodeURIComponent(p.name)}&from=${from}&to=${to}&key=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(20000) });
+      const body = await r.text();
+      if (!r.ok) return { pv: p.name, status: r.status, error: body.slice(0, 160).replace(key, '***') };
+      return { pv: p.name, status: r.status, feats: sphereFeatures(JSON.parse(body), p.name) };
+    } catch (e) { return { pv: p.name, status: 0, error: String(e.message || e).replace(key, '***').slice(0, 160) }; }
+  }));
+  const feats = parts.flatMap(x => x.feats || []);
+  const byDay = {};
+  for (const f of feats) { const k = `${f.properties.satellite} ${f.properties.acq_date.slice(0, 10)}`; byDay[k] = (byDay[k] || 0) + 1; }
+  const data = { ok: parts.some(x => x.status === 200), source: 'GISTDA Sphere disaster-hotspot', from, to, keySource: process.env.SPHERE_KEY ? 'SPHERE_KEY' : api.sphere_key ? 'config' : 'GISTDA_KEY',
+    count: feats.length, latestDate: feats.map(f => f.properties.acq_date.slice(0, 10)).sort().at(-1) || null, byDay,
+    provinces: parts.map(({ pv, status, error, feats: f }) => ({ pv, status, ...(error ? { error } : { count: f.length }) })),
+    fetchedAt: new Date().toISOString(), geojson: { type: 'FeatureCollection', features: feats } };
+  if (data.ok) setCached(ck, data, 10 * 60 * 1000);
+  res.json(req.query.geo ? data : { ...data, geojson: undefined });
+});
+
 /* ข้อมูลสำรองจุดความร้อนทุกจุดที่บันทึกไว้ (สำหรับเมนูดาวน์โหลด) — อ่านจากชีตแท็บ _hotspots (ถาวร) รวมกับตารางในเครื่อง ตัดซ้ำด้วย key */
 function parseCsv(t) {
   const rows = []; let r = [], c = '', q = false;
