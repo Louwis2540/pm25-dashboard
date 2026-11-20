@@ -219,6 +219,54 @@ app.get('/api/hotspot', async (req, res) => {
   }
 });
 
+/* ── GISTDA Sphere: บริการจุดความร้อนรายวันแบบ from/to (disaster-hotspot) — ทดสอบ/สำรองข้อมูลย้อนหลัง ──
+   เอกสาร: https://sphere.gistda.or.th/docs/web-service/disaster-information
+   ผลตอบแยกตามดาวเทียม (suomi-npp = VIIRS, terra/aqua = MODIS) → วัน → การใช้ที่ดิน → จุด (lat/lon/จังหวัด/อำเภอ/ตำบล/หมู่บ้าน) ไม่มีเวลาตรวจพบ ความมั่นใจ FRP
+   คีย์: SPHERE_KEY (ถ้าไม่ตั้ง ลองใช้ GISTDA_KEY) · ยังไม่ผูกกับหน้าเว็บ — ใช้ตรวจว่ามีข้อมูลวันล่าสุดหรือยัง */
+const SPHERE_HS = 'https://api.sphere.gistda.or.th/services/info/disaster-hotspot';
+const SPHERE_SATS = ['suomi-npp', 'terra', 'aqua'];
+function sphereFeatures(j, pv) {
+  const out = [];
+  for (const sat of SPHERE_SATS) {
+    for (const day of Array.isArray(j?.[sat]) ? j[sat] : []) {
+      for (const lu of day?.data || []) for (const p of lu?.data || []) {
+        const lat = +p.lat, lon = +p.lon; if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        out.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
+          properties: { acq_date: `${String(day.date).slice(0, 10)}T00:00:00`, th_time: '', changwat: p.pv_tn || pv, ap_en: p.ap_tn || '', tb_en: p.tb_tn || '',
+            village: p.village || '', lu_name: lu.landuse || '', confidence: '', frp: null, satellite: sat, source: 'sphere' } });
+      }
+    }
+  }
+  return out;
+}
+app.get('/api/hotspot-sphere', async (req, res) => {
+  const re = /^\d{4}-\d{2}-\d{2}$/, today = bkkDate();
+  const from = re.test(req.query.from || '') ? req.query.from : addDaysIso(today, -2);
+  const to = re.test(req.query.to || '') ? req.query.to : today;
+  const ck = `sphere-hs-${from}-${to}`, cached = getCached(ck);
+  if (cached) return res.json(req.query.geo ? cached : { ...cached, geojson: undefined });
+  const { api, provinces } = readConfig();
+  const key = process.env.SPHERE_KEY || api.sphere_key || api.gistda_key;
+  if (!key) return res.status(503).json({ ok: false, message: 'ไม่มี SPHERE_KEY/GISTDA_KEY' });
+  const parts = await Promise.all(provinces.map(async p => {
+    try {
+      const r = await fetch(`${SPHERE_HS}?pv_tn=${encodeURIComponent(p.name)}&from=${from}&to=${to}&key=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(20000) });
+      const body = await r.text();
+      if (!r.ok) return { pv: p.name, status: r.status, error: body.slice(0, 160).replace(key, '***') };
+      return { pv: p.name, status: r.status, feats: sphereFeatures(JSON.parse(body), p.name) };
+    } catch (e) { return { pv: p.name, status: 0, error: String(e.message || e).replace(key, '***').slice(0, 160) }; }
+  }));
+  const feats = parts.flatMap(x => x.feats || []);
+  const byDay = {};
+  for (const f of feats) { const k = `${f.properties.satellite} ${f.properties.acq_date.slice(0, 10)}`; byDay[k] = (byDay[k] || 0) + 1; }
+  const data = { ok: parts.some(x => x.status === 200), source: 'GISTDA Sphere disaster-hotspot', from, to, keySource: process.env.SPHERE_KEY ? 'SPHERE_KEY' : api.sphere_key ? 'config' : 'GISTDA_KEY',
+    count: feats.length, latestDate: feats.map(f => f.properties.acq_date.slice(0, 10)).sort().at(-1) || null, byDay,
+    provinces: parts.map(({ pv, status, error, feats: f }) => ({ pv, status, ...(error ? { error } : { count: f.length }) })),
+    fetchedAt: new Date().toISOString(), geojson: { type: 'FeatureCollection', features: feats } };
+  if (data.ok) setCached(ck, data, 10 * 60 * 1000);
+  res.json(req.query.geo ? data : { ...data, geojson: undefined });
+});
+
 /* ข้อมูลสำรองจุดความร้อนทุกจุดที่บันทึกไว้ (สำหรับเมนูดาวน์โหลด) — อ่านจากชีตแท็บ _hotspots (ถาวร) รวมกับตารางในเครื่อง ตัดซ้ำด้วย key */
 function parseCsv(t) {
   const rows = []; let r = [], c = '', q = false;
