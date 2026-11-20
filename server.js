@@ -219,6 +219,24 @@ app.get('/api/hotspot', async (req, res) => {
   }
 });
 
+/* ── แหล่งสำรองจุดความร้อน: NASA FIRMS (VIIRS NOAA-20/21) — ยังไม่ผูกกับ /api/hotspot รอตรวจเดโม่ก่อน ──
+   ต้องตั้ง FIRMS_KEY ใน Render · ?days=1..10 (ค่าเริ่มต้น 2) */
+const firms = require('./firms');
+app.get('/api/hotspot-firms', async (req, res) => {
+  const key = process.env.FIRMS_KEY;
+  if (!key) return res.status(503).json({ ok: false, message: 'ยังไม่ได้ตั้ง FIRMS_KEY' });
+  const days = Math.min(10, Math.max(1, parseInt(req.query.days, 10) || 2));
+  const ck = `firms-${days}`, cached = getCached(ck); if (cached) return res.json(cached);
+  try {
+    const feats = firms.firmsFeatures(await firms.fetchFirms(key, days));
+    const latest = feats.map(f => `${f.properties.acq_date.slice(0, 10)}T${f.properties.th_time.slice(0, 2)}:${f.properties.th_time.slice(2)}`).sort().at(-1) || null;
+    const data = { ok: true, source: 'NASA FIRMS VIIRS (NOAA-20/21)', days, count: feats.length, latest, fetchedAt: new Date().toISOString(),
+      geojson: { type: 'FeatureCollection', features: feats } };
+    setCached(ck, data, 15 * 60 * 1000);
+    res.json(data);
+  } catch (e) { res.status(502).json({ ok: false, message: String(e.message || e).replace(key, '***') }); }
+});
+
 /* ── ตรวจฟีด VIIRS 1day ทั้งประเทศ (ct_tn=ราชอาณาจักรไทย) — ดูว่า GISTDA มีข้อมูลวันล่าสุดหรือค้างทั้งระบบ ──
    คืนเฉพาะสรุป: จำนวนจุด วัน/เวลาตรวจพบล่าสุด เวลาที่ GISTDA สร้างเรคคอร์ดล่าสุด ชื่อไฟล์ต้นทาง ดาวเทียม (ไม่คืนจุด) */
 app.get('/api/hotspot-national', async (req, res) => {
