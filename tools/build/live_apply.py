@@ -77,6 +77,10 @@ sub("</style>", "\n/* ===== รอบ 16 ต.ค. 2569 ===== */\n" + (css_z or z
 import layout_apply, map_merge
 html = layout_apply.apply(html)
 html = map_merge.apply(html)
+# ---- 6) เรียงโซนตามที่กำหนด (ภาค A/ภาค B · สรุปช่วงที่แสดงติดกราฟเส้น · เมนูซ้ายแบ่งกลุ่ม) + โซนคำแนะนำแบบใหม่ (ภาพ 5 ระดับ จากไฟล์ img/advice/lvN.webp) ----
+import reorder_apply, advice_apply
+html = reorder_apply.apply(html)
+html = advice_apply.apply(html, embed=False)
 if miss:
     for n, o in miss: print("MISS", n, repr(o))
     raise SystemExit(1)
