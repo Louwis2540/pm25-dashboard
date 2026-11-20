@@ -45,9 +45,6 @@ def apply(html, embed=True):
             f = ROOT / "img" / "advice" / f"lv{n}.webp"
             uri = "data:image/webp;base64," + base64.b64encode(f.read_bytes()).decode()
             html = html.replace(f'"img/advice/lv{n}.webp"', f'"{uri}"', 1)
-    foot = "* กลุ่มเสี่ยง: เด็กเล็ก ผู้สูงอายุ หญิงตั้งครรภ์ ผู้ป่วยโรคระบบทางเดินหายใจ โรคหัวใจและหลอดเลือด"
-    if html.count(foot) == 1:
-        html = html.replace(foot, foot + " · ภาพประกอบสร้างด้วย AI")
     old = '<div class="adv-row" id="advRow"></div>'
     if html.count(old) != 1:
         raise SystemExit("advice_apply: ไม่พบ #advRow")
