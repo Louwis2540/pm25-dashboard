@@ -761,8 +761,6 @@ import reorder_apply
 html = reorder_apply.apply(html)   # เรียงโซนใหม่ตามที่ Louis กำหนด (เดโม่ 20 พ.ย. 2569) — เปลี่ยนเฉพาะลำดับ
 import advice_apply
 html = advice_apply.apply(html)   # โซน 6 คำแนะนำแบบใหม่ (ใหญ่ · ภาพเวกเตอร์คนตามบริบท)
-import hsbehind_apply
-html = hsbehind_apply.apply(html)   # จุดความร้อนค้าง: ข้อมูล GISTDA เก่ากว่าเมื่อวาน → ไม่นับเป็น 24 ชม.
 # ขนาดตัวอักษรทุกจุด (CSS และ style ในเทมเพลต) คูณด้วย --fs ตามขนาดจอ — ต่ำกว่า 1366 px = เท่าเดิม
 html = re.sub(r"font-size:\s*([0-9.]+)px", lambda m: f"font-size:calc({m.group(1)}px*var(--fs,1))", html)
 # โซนชุดข้อมูล: แถบซ้ายข้างแดชบอร์ด สร้างโดย ds_module.js (buildSide)
