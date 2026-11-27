@@ -792,6 +792,59 @@ app.get('/api/sheet-disease', async (req, res) => {
   }
 });
 
+/* ── ผู้ป่วยรายรหัสโรค (ICD-10) × Z58.1 / Y97 ทั้งเขต — ใช้เจาะลึกการ์ดผู้ป่วยรายเดือน ──
+   ข้อมูลชุดเดียวกับ /api/sheet-disease (MOPH s_pm25_1_in_week) แต่ไม่ย่อเป็น 4 กลุ่ม
+   ใช้การดึง MOPH รอบเดียวกัน (singleFlight 'sheet-disease') → ไม่เพิ่มจำนวนครั้งที่ยิง MOPH
+   รูปแบบ: codes[รหัส] = { m, z, y, zy } แต่ละตัวเป็นอาร์เรย์รายสัปดาห์ (ดัชนี 0 = สัปดาห์ที่ 1)
+     m = ทุกการวินิจฉัย · z = ร่วมกับ Z58.1 · y = ร่วมกับ Y97 · zy = ร่วมกับทั้งสอง
+   meta.dataWk = สัปดาห์ล่าสุดที่นิ่งแล้ว (จุดตัดเดียวกับการ์ดเดิม) · meta.maxWk = สัปดาห์ล่าสุดในข้อมูลดิบ  */
+async function buildDiseaseIcd() {
+  let sd = getCached('sheet-disease');
+  if (!sd) sd = await singleFlight('sheet-disease', buildDiseaseData);
+  const Y   = sd.meta?.dataYear || bkkYear();
+  const raw = _icdRaw.get(String(Y + 543));
+  if (!raw) throw new Error('ยังไม่มีข้อมูลรายรหัสโรคจาก MOPH (ดึง MOPH ไม่ครบทุกจังหวัดหรือยังไม่เคยดึง)');
+
+  const age       = diseaseDataAge([{ 'อัพเดท': dateComToDmy(raw.dateCom) }]);
+  const staleDays = Number(readConfig().api.disease_stale_days) || 10;
+  const data = {
+    ok: true,
+    yearBe: Y + 543,
+    codes: raw.codes,
+    meta: {
+      source:   'moph',
+      dataYear: Y,                          // ค.ศ.
+      dataWk:   sd.meta?.dataWk ?? raw.maxWk,
+      maxWk:    raw.maxWk,
+      dateCom:  raw.dateCom,
+      dataDate: age.dataDate,               // D/M/YYYY (ค.ศ.)
+      ageDays:  age.ageDays,
+      staleDays,
+      stale:    age.ageDays !== null && age.ageDays > staleDays,
+    },
+  };
+  setCached('disease-icd', data, 60 * 60 * 1000);
+  return data;
+}
+app.get('/api/disease-icd', async (req, res) => {
+  const cached = getCached('disease-icd');
+  if (cached) return res.json(cached);
+
+  // cache หมดอายุแต่ยังมีข้อมูลเก่า → ตอบของเก่าทันที แล้วรีเฟรชเบื้องหลัง (เหมือน /api/sheet-disease)
+  const stale = _lastGood.get('disease-icd');
+  if (stale) {
+    singleFlight('disease-icd', buildDiseaseIcd)
+      .catch(e => console.warn('รีเฟรชข้อมูลรายรหัสโรคเบื้องหลังไม่สำเร็จ:', e.message));
+    return res.json(stale);
+  }
+
+  try {
+    res.json(await singleFlight('disease-icd', buildDiseaseIcd));
+  } catch (e) {
+    res.status(502).json({ ok: false, message: 'ดึงข้อมูลรายรหัสโรคไม่สำเร็จ: ' + e.message });
+  }
+});
+
 // ปีปัจจุบัน (ค.ศ. · เวลาไทย) — ใช้เลือกปีที่ต้องดึงข้อมูลโรค เพื่อให้กราฟ 12 เดือน "เลื่อนต่อ" เมื่อขึ้นปีใหม่เอง
 const bkkYear = () => new Date(Date.now() + 7 * 3600e3).getUTCFullYear();
 const DISEASE_HYBRID_FROM = 2026;   // ปี ค.ศ. แรกที่ใช้ MOPH + ชีตแบบ hybrid (ปี 2568 = 2025 อ่านจากชีตอย่างเดียว)
@@ -1440,20 +1493,57 @@ function mophAggRows(agg, rows) {
     const cat = MOPH_DIAG_GROUP[row.diag_main];
     if (!cat) continue;
     if (row.date_com && String(row.date_com) > agg.dateCom) agg.dateCom = String(row.date_com);
+    // agg.icd เป็น null เมื่อไม่ต้องการยอดรายรหัส (ตาราง s_pm25_2 ไม่ใช้ → ไม่เสียเวลาคำนวณ)
+    const icd = agg.icd ? (agg.icd[MOPH_DIAG_ICD[row.diag_main]] ||= newIcdSeries()) : null;
     for (let w = 1; w <= 53; w++) {
-      const v = row['w_' + String(w).padStart(2, '0') + '_m'];
+      const nn = String(w).padStart(2, '0');
+      const v = row['w_' + nn + '_m'];
       if (typeof v === 'number' && v > 0) {
         const o = agg.wk[w] || (agg.wk[w] = {});
         o[cat] = (o[cat] || 0) + v;
+      }
+      // รายรหัสโรค × เมตริก (เพิ่มเติม — ไม่กระทบยอดรายกลุ่มด้านบน)
+      if (icd) for (const k of MOPH_ICD_METRICS) {
+        const x = row['w_' + nn + '_' + k];
+        if (typeof x === 'number' && x > 0) icd[k][w - 1] += x;
       }
     }
   }
 }
 
+/* ── ยอดรายรหัสโรค (ICD-10) × Z58.1/Y97 ────────────────────────────────────
+   diag_main (bitmask) → รหัส ICD-10 เรียงตามรายงาน HDC (I21, I24, I22)
+   เมตริกต่อสัปดาห์ในแถวดิบ: m = ทุกการวินิจฉัย · z = ร่วมกับ Z58.1 · y = ร่วมกับ Y97 · zy = ร่วมกับทั้งสอง */
+const MOPH_DIAG_ICD = {
+  2: 'J44', 4: 'J45', 2048: 'J44.2',
+  8: 'I21', 4096: 'I24', 16: 'I22',
+  32: 'H10', 64: 'L30.9', 128: 'L50',
+};
+const MOPH_ICD_METRICS = ['m', 'z', 'y', 'zy'];
+const newIcdSeries = () => Object.fromEntries(MOPH_ICD_METRICS.map(k => [k, Array(53).fill(0)]));
+
+// ยอดรวมทั้งเขตจากผลที่ดึงรายจังหวัด (Map pv_idn → agg) · ตัดอาร์เรย์ที่สัปดาห์ล่าสุดที่มีข้อมูล
+function mophIcdRegion(got) {
+  const codes = {};
+  for (const c of Object.values(MOPH_DIAG_ICD)) codes[c] = newIcdSeries();
+  let dateCom = '';
+  for (const agg of got.values()) {
+    if (agg.dateCom > dateCom) dateCom = agg.dateCom;
+    for (const [c, s] of Object.entries(agg.icd || {})) {
+      for (const k of MOPH_ICD_METRICS) s[k].forEach((v, i) => { codes[c][k][i] += v; });
+    }
+  }
+  let maxWk = 0;
+  for (const s of Object.values(codes)) s.m.forEach((v, i) => { if (v > 0 && i + 1 > maxWk) maxWk = i + 1; });
+  for (const s of Object.values(codes)) for (const k of MOPH_ICD_METRICS) s[k] = s[k].slice(0, maxWk);
+  return { codes, dateCom, maxWk };
+}
+const _icdRaw = new Map();   // ปี พ.ศ. → { codes, dateCom, maxWk, at } · เขียนตอนดึง MOPH ครบทุกจังหวัดสำเร็จเท่านั้น
+
 // ดึงจังหวัดเดียวให้ครบทุกหน้า แล้วคืนเป็นยอดรวม { wk, dateCom, rows }
 // รูปแบบตอบกลับ: { data: [...], total, limit, offset } — รองรับ array เปล่าๆ เผื่อ API เปลี่ยนกลับ
 async function fetchMophAgg(beYear, pvIdn, table = 's_pm25_1_in_week') {
-  const agg = { wk: {}, dateCom: '', rows: 0 };
+  const agg = { wk: {}, icd: table === 's_pm25_1_in_week' ? {} : null, dateCom: '', rows: 0 };
 
   for (let page = 0; page < MOPH_MAX_PAGES; page++) {
     if (page > 0) await sleep(MOPH_GAP_MS);
@@ -1533,6 +1623,7 @@ async function fetchMophDisease(beYear) {
       for (const [cat, v] of Object.entries(cats)) acc[w][cat] = (acc[w][cat] || 0) + v;
     }
   }
+  _icdRaw.set(String(beYear), { ...mophIcdRegion(got), at: Date.now() });   // ให้ /api/disease-icd ใช้ต่อ (ไม่ยิง MOPH เพิ่ม)
 
   const upd = dateComToDmy(maxDateCom);
 
