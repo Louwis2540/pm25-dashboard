@@ -836,7 +836,7 @@ details.pg-fold>ul{padding-left:18px}
 .e1lg .dsh{width:22px;height:2px;background:repeating-linear-gradient(90deg,#b84a00 0 5px,transparent 5px 8px)}
 .e1lg .ssn{width:16px;height:13px;border-radius:3px;background:rgba(232,89,12,.18)}
 .delta b{font-weight:800}
-@media(max-width:680px){.dz-all .dz-top{flex-wrap:wrap}.dz-all .dz-top>div:nth-child(2){flex:1 1 180px;min-width:0}.dz-all .ds-jump{margin-left:0!important}}
+@media(max-width:680px){.pv-bh .ds-jump{margin-left:0!important}.dz-all .dz-top{flex-wrap:wrap}.dz-all .dz-top>div:nth-child(2){flex:1 1 180px;min-width:0}.dz-all .ds-jump{margin-left:0!important}}
 
 /* ===== C5 คาดการณ์ + ปัจจัยอากาศ ===== */
 /* DEMO C5: ตารางคาดการณ์รายจังหวัดอย่างเดียว */
@@ -1146,8 +1146,8 @@ body.dp-open{overflow:hidden}
 @container (max-width:170px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(14.5px*var(--fs,1));line-height:1.1}.ws-v2 .pv-top .tile .th .chip{font-size:calc(14px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:42px}}
 @container (max-width:135px){.ws-v2 .pv-top .tile .th .pn{font-size:calc(13px*var(--fs,1));white-space:normal;overflow-wrap:anywhere}.ws-v2 .pv-top .tile .th .chip{font-size:calc(13px*var(--fs,1))}.ws-v2 .pv-top .tile .t-art{width:36px}}   /* ชื่อจังหวัดยาว (มหาสารคาม) ห้ามถูกไอคอนท้องฟ้าทับ · จอแคบมาก ให้ขึ้นบรรทัดใหม่ได้ */
 .ws-v2 .tile .th .chip{white-space:normal;max-width:100%;min-width:0;text-align:center;line-height:1.3;padding-block:2px}
-.e1p-sc{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px}
-.e1p-sc svg.bars{width:640px;max-width:none;height:auto;display:block}
+.e1p-sc{margin-bottom:6px}
+.e1p-sc svg.bars,.e1x-ch svg.bars{width:100%;max-width:100%;height:auto;display:block}
 .e1p-gh{display:flex;flex-direction:column;gap:2px;margin:12px 0 2px;font-size:calc(12px*var(--fs,1));color:#5f6c80;line-height:1.45}
 .e1p-gh b{display:flex;align-items:center;gap:6px;font-size:calc(13.5px*var(--fs,1));color:#1f2a3d}
 .e1p-gh b i{width:10px;height:10px;border-radius:50%;flex:none}
@@ -1156,7 +1156,51 @@ body.dp-open{overflow:hidden}
 .e1lg .e1p-mk{display:inline-block;flex:none;padding:0 6px;font-size:calc(11.5px*var(--fs,1));font-weight:700;line-height:18px;color:#8a5a00;background:#fff6dd;border:1px solid #e3c47a;border-radius:6px}
 .e1lg .e1p-swipe{display:none;color:var(--ink-3)}
 @media (min-width:900px){.e1p-n{display:none}}
-@media (max-width:899px){.e1lg .e1p-swipe{display:inline-flex}}
+@media (max-width:899px){.e1lg .e1p-swipe{display:inline-flex}.e1g{padding:6px 10px 10px}}
+/* ── การ์ดรายเดือน + รายรหัสโรค (ICD-10): ตัวกรอง Z58.1/Y97 และปุ่มเจาะรายโรค ── */
+.e1x-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.e1x-tabs button{font:inherit;font-size:calc(13.5px*var(--fs,1));font-weight:700;display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;border:1.5px solid color-mix(in srgb,var(--c) 35%,#fff);background:#fff;color:#33415c;cursor:pointer}
+.e1x-tabs button i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.e1x-tabs button[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.e1x-tabs button[aria-pressed="true"] i{background:#fff}
+.e1x-tabs button:focus-visible{outline:3px solid var(--accent,#1c6ed6);outline-offset:2px}
+@media (max-width:680px){.e1x-tabs button{font-size:calc(12.5px*var(--fs,1));padding:5px 11px}}
+.e1x-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:12px 0 2px}
+.e1x-l{font-size:calc(12.5px*var(--fs,1));font-weight:700;color:var(--ink-3)}
+.e1x-hint{margin:6px 0 0;font-size:calc(12.5px*var(--fs,1));line-height:1.55;color:var(--ink-2);max-width:80ch}
+.e1x-sum{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.7);border:1px solid var(--line);font-size:calc(13px*var(--fs,1));color:var(--ink-2)}
+.e1g{margin-top:10px;padding:8px 12px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.6);min-width:0}
+.e1x-st{margin:8px 0;padding:14px;border-radius:12px;background:rgba(255,255,255,.65);border:1px dashed var(--line-strong);font-size:calc(13px*var(--fs,1));color:var(--ink-2);display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.e1x-st .sp{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--line-strong);border-top-color:var(--accent);animation:e1xSpin .9s linear infinite;flex:none}
+@keyframes e1xSpin{to{transform:rotate(360deg)}}
+.e1x-retry{font:inherit;font-weight:700;font-size:calc(12.5px*var(--fs,1));padding:5px 14px;border-radius:999px;border:1.5px solid var(--accent);background:#fff;color:var(--accent);cursor:pointer}
+.e1x-none{margin:6px 0 2px;font-size:calc(13px*var(--fs,1));color:var(--ink-3)}
+/* ปุ่ม "คลิกเพื่อดูรายโรค": แถบสีตามกลุ่มโรค + แสงเลื่อนผ่านเป็นจังหวะ (หยุดเมื่อผู้ใช้ตั้งค่าลดการเคลื่อนไหว) */
+.e1x-dr{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:8px;padding:9px 12px 9px 16px;font:inherit;font-size:calc(14.5px*var(--fs,1));font-weight:700;color:var(--ink-1);text-align:left;min-height:46px;cursor:pointer;
+  background:color-mix(in srgb,var(--gc) 14%,#fff);border:1.5px solid var(--gc);border-radius:12px;box-shadow:0 2px 0 color-mix(in srgb,var(--gc) 35%,transparent)}
+.e1x-dr small{font-weight:500;color:var(--ink-3);font-size:.82em;margin-left:4px}
+.e1x-dr::after{content:"";position:absolute;inset:0;pointer-events:none;transform:translateX(-130%);background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,.85) 50%,transparent 68%);animation:e1xShine 3.6s ease-in-out var(--d,1s) infinite}
+@keyframes e1xShine{0%{transform:translateX(-130%)}36%,100%{transform:translateX(130%)}}
+.e1x-i{width:28px;height:28px;border-radius:50%;background:color-mix(in srgb,var(--gc) 82%,#000);display:grid;place-items:center;color:#fff;flex:none;animation:e1xNudge 1.8s ease-in-out infinite}
+@keyframes e1xNudge{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+.e1x-dr:hover{background:color-mix(in srgb,var(--gc) 24%,#fff)}
+.e1x-dr:active{transform:translateY(1px)}
+.e1x-dr[aria-expanded="true"]{background:#fff}
+.e1x-dr[aria-expanded="true"]::after{display:none}
+.e1x-dr[aria-expanded="true"] .e1x-i{animation:none;transform:rotate(180deg)}
+.e1x-dr:focus-visible,.e1x-retry:focus-visible{outline:3px solid var(--accent,#1c6ed6);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.e1x-dr::after{animation:none;display:none}.e1x-i{animation:none}.e1x-st .sp{animation:none}}
+.e1x-dl{margin:10px 0 0 4px;padding-left:12px;border-left:3px solid var(--gc)}
+.e1x-dl[hidden]{display:none}
+.e1x-row{padding:10px 0 4px;border-bottom:1px solid var(--line);min-width:0}
+.e1x-row:last-of-type{border-bottom:0}
+.e1x-rh{display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap}
+.e1x-code{font-weight:700;font-size:calc(12px*var(--fs,1));padding:1px 8px;border-radius:6px;background:var(--subtle);border:1px solid var(--line-strong);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.e1x-nm{flex:1;min-width:11ch;font-weight:700;font-size:calc(13.5px*var(--fs,1));color:var(--ink-1)}
+.e1x-nm small{display:block;font-weight:500;font-size:calc(11.5px*var(--fs,1));color:var(--ink-3)}
+.e1x-tot{font-variant-numeric:tabular-nums;font-weight:800;color:var(--ink-1)}
+.e1x-tot small{font-weight:500;color:var(--ink-3);font-size:calc(11.5px*var(--fs,1));margin-left:4px}
+.e1x-src{margin:8px 0 2px;font-size:calc(11.5px*var(--fs,1));color:var(--ink-3)}
 @media (max-width:1100px){.pv-top.ws-side .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.wk-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:680px){.pv-top .facts-box .facts{grid-template-columns:minmax(0,1fr)}}
 
@@ -1960,7 +2004,7 @@ function pheocTitle() {
 // ---------- แถบนำทางด้านซ้าย (รูปแบบตามตัวอย่าง Figma Make) ----------
 // ชื่อระบบด้านบน · หัวข้อ "Navigation" · เมนูไอคอน+ชื่อ (เลื่อนไปโซน) · เมนูของส่วนที่กำลังดูเป็นแถบเน้น · ปุ่มพับ/กาง
 const SB_MENU = [["zToday", "ฝุ่นภาพรวม"], ["zDrill", "เจาะลึกรายจังหวัด"], ["zWeek", "ย้อนหลัง 7 วัน · คาดการณ์ 3 วัน"],
-  ["zMap", "ความร้อน · ค่าฝุ่นรายชั่วโมง"], ["zDisease", "ผู้ป่วย"], ["zAdvice", "คำแนะนำการปฏิบัติตัว"], ["zData", "ดาวน์โหลดข้อมูล"]];
+  ["zMap", "ความร้อน · ค่าฝุ่นรายชั่วโมง"], ["zDisease", "ผู้ป่วย · รายรหัสโรค"], ["zAdvice", "คำแนะนำการปฏิบัติตัว"], ["zData", "ดาวน์โหลดข้อมูล"]];
 const SB_GRP = { zToday: "ด้านมลพิษสิ่งแวดล้อม", zDisease: "ด้านผลกระทบสุขภาพ" };
 // ไอคอนเวกเตอร์ (SVG วาดเอง · viewBox 24) บนไทล์ไล่สีแบบไอคอน iOS — [สีบน, สีล่าง, path]
 const SB_ICON = {
@@ -3410,7 +3454,7 @@ function e2xAll(wkMax) {
     <div class="pv-bh"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-map"/></svg></div>
       <div><h3 id="pvH">ค่าฝุ่นกับผู้ป่วยรายสัปดาห์ แยกรายจังหวัด</h3>
       <div class="icd">ค่าฝุ่น PM<sub>2.5</sub> เฉลี่ยรายสัปดาห์ (µg/m³) · อัตราผู้ป่วยต่อแสนประชากร · ปี ${PYB()}</div></div>
-</div>
+<button type="button" class="ds-jump" data-preset="analysis" style="margin-left:auto"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลดข้อมูล</button></div>
     <div class="x-bar"><div class="x-tabs" role="group" aria-label="เลือกกลุ่มโรค">${tabs}</div></div>
     ${lg}
     <div class="pv-grid">${data.map(o => e2xCard(o, o.ser[k], n, lastOk, mode, RMAX)).join("")}</div>
@@ -3437,6 +3481,7 @@ const e1pChg = (a, b) => (a != null && b) ? (a - b) / b * 100 : null;
 const e1pChgT = p => p == null ? "" : Math.abs(p) < .05 ? "เท่าเดิม" : `${p > 0 ? "▲ เพิ่มขึ้น" : "▼ ลดลง"} ${Math.abs(p).toFixed(1)}%`;
 // หัวแผงแต่ละกลุ่มโรค: เดือนล่าสุด + เปลี่ยนแปลงจากเดือนก่อน (ใช้ทั้งใน SVG จอกว้าง และ HTML จอแคบ)
 function e1pHead(s, cols) {
+  if (s.head) return s.head;   // มุมมอง Z58.1/Y97: หัวแผงสรุปยอดรวมแทนการเทียบเดือนก่อน
   const n = cols.length, li = (() => { for (let i = n - 1; i >= 0; i--) if (s.v[i]) return i; return -1; })();
   if (li < 0) return null;
   const pi = li > 0 && s.v[li - 1] ? li - 1 : -1, ch = pi >= 0 ? e1pChg(s.v[li].sum, s.v[pi].sum) : null, o = s.v[li];
@@ -3447,7 +3492,7 @@ function e1pHead(s, cols) {
 function e1pSvg(ser, cols, W, lastI, noHead) {
   const wide = W > 800, fs = wide ? 11.5 : 10, n = cols.length;
   const L = wide ? 54 : 40, R = wide ? 16 : 10, pw = W - L - R, slot = pw / n, bw = Math.min(wide ? 34 : 20, slot * .6);
-  const LH = noHead ? 6 : wide ? 46 : 58, PH = wide ? 120 : 104, PT = 20, ML = fs * 3 + 18, GAP = noHead ? 0 : 16, PB = LH + PH + ML + GAP;
+  const LH = noHead ? 6 : wide ? 46 : 58, PH = ser[0]?.compact ? (wide ? 88 : 78) : wide ? 120 : 104, PT = 20, ML = fs * 3 + 18, GAP = noHead ? 0 : 16, PB = LH + PH + ML + GAP;
   const H = ser.length * PB - GAP, X = i => L + i * slot + slot / 2;
   const F = `font-family="'IBM Plex Sans Thai',Anuphan,sans-serif"`;
   // ช่วงฤดูฝุ่นที่ติดกัน → แถบพื้นหลัง
@@ -3455,7 +3500,7 @@ function e1pSvg(ser, cols, W, lastI, noHead) {
   let g = "";
   ser.forEach((s, k) => {
     const top = k * PB, y0 = top + LH + PT, base = top + LH + PH;
-    const mx = Math.max(0, ...s.v.map(o => o?.sum || 0)), bMax = e1Nice(mx * 1.08, true) || 1, Y = v => base - v / bMax * (base - y0);
+    const mx = Math.max(0, ...s.v.map(o => o?.sum || 0)), bMax = (s.small ? (mx <= 4 ? 4 : e1Nice(mx * 1.08, true)) : e1Nice(mx * 1.08, true)) || 1, Y = v => base - v / bMax * (base - y0);
     // หัวแผง + สรุปเดือนล่าสุด (จอแคบวาดเป็น HTML นอกกราฟ เพื่อไม่ให้ถูกตัดตอนเลื่อน)
     if (!noHead) {
       g += `<circle cx="${L - 34 + (wide ? 0 : 6)}" cy="${top + 8}" r="5" fill="${s.d.c}"/><text x="${L - 24 + (wide ? 0 : 6)}" y="${top + 12}" font-size="${fs + 1.5}" font-weight="700" fill="#1f2a3d" ${F}>${dzName(s.d)}<tspan font-size="${fs - .5}" font-weight="600" fill="#6b7689"> · ราย/เดือน</tspan></text>`;
@@ -3492,20 +3537,74 @@ function e1pSvg(ser, cols, W, lastI, noHead) {
     });
     g += line + lab;
   });
-  return `<svg class="bars ${wide ? "w-w" : "w-n"}" viewBox="0 0 ${W} ${H}"${wide ? "" : ` width="${W}" height="${H}"`} role="img" aria-label="จำนวนผู้ป่วยรวมรายเดือน 4 กลุ่มโรค ทั้งเขตสุขภาพที่ 7 ตั้งแต่ ม.ค. 2569 ถึง พ.ค. 2570 แยกแผงรายกลุ่มโรค พื้นสีส้มอ่อนคือช่วงฤดูฝุ่น">${g}</svg>`;
+  return `<svg class="bars ${wide ? "w-w" : "w-n"}" viewBox="0 0 ${W} ${H}"${wide ? "" : ` width="${W}" height="${H}"`} role="img" aria-label="${ser.length === 1 && ser[0].aria ? ser[0].aria : 'จำนวนผู้ป่วยรวมรายเดือน 4 กลุ่มโรค ทั้งเขตสุขภาพที่ 7 ตั้งแต่ ม.ค. 2569 ถึง พ.ค. 2570 แยกแผงรายกลุ่มโรค พื้นสีส้มอ่อนคือช่วงฤดูฝุ่น'}">${g}</svg>`;
 }
-// จอแคบ: กราฟกว้างกว่าจอ เลื่อนซ้าย-ขวาได้ · เปิดมาให้เห็นเดือนล่าสุดที่มีข้อมูล
-new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(nd => {
-  if (nd.nodeType !== 1) return; const els = nd.matches?.(".e1p-sc") ? [nd] : [...(nd.querySelectorAll?.(".e1p-sc") || [])];
-  if (els.length) requestAnimationFrame(() => els.forEach(el => { el.scrollLeft = Math.max(0, +el.dataset.last - el.clientWidth + 70); }));
-}))).observe(document.documentElement, { childList: true, subtree: true });
-// เลื่อนแผงหนึ่ง แผงอื่นเลื่อนตาม ให้เดือนตรงกันทุกกลุ่มโรค
-let e1pSync = false;
-document.addEventListener("scroll", e => {
-  const el = e.target; if (e1pSync || !el.classList?.contains("e1p-sc")) return;
-  e1pSync = true; el.closest(".e1p-n")?.querySelectorAll(".e1p-sc").forEach(o => { if (o !== el) o.scrollLeft = el.scrollLeft; });
-  requestAnimationFrame(() => { e1pSync = false; });
-}, true);
+// ── ผู้ป่วยรายรหัสโรค (ICD-10) × Z58.1 / Y97 · เจาะลึกจากการ์ดรายเดือน ─────────────────────────────
+// ข้อมูล: /api/disease-icd (MOPH s_pm25_1 ชุดเดียวกับกราฟรายเดือน) · แปลงสัปดาห์เป็นเดือนด้วย monthlyWk ตัวเดิม
+// → ยอดกลุ่ม = ผลรวมของรหัสโรคในกลุ่ม ตรงกับกราฟเดิมทุกเดือน · จอแคบแสดง 12 เดือนล่าสุดที่มีข้อมูล จึงไม่ต้องเลื่อนกราฟ
+const ICD_GROUPS = { "ทางเดินหายใจ": ["J44", "J45", "J44.2"], "หัวใจ": ["I21", "I24", "I22"], "ตาอักเสบ": ["H10"], "ผิวหนัง": ["L30.9", "L50"] };   // เรียงตามรายงาน HDC
+const ICD_NAME = {   // [ชื่อไทย, ชื่ออังกฤษตาม HDC] — ไทย: J44, J45, J44.2, I21 ตาม kkpho · I22, I24 ตาม ICD-10 ฉบับไทย (วิกิพีเดียไทย ฉบับแปล WHO ICD-10 ยังไม่ได้ยืนยันกับ ICD-10-TM ของกระทรวง) · H10, L30.9, L50 ตามที่ผู้ดูแลแดชบอร์ดกำหนด
+  "J44": ["โรคปอดอุดกั้นเรื้อรัง", "Chronic obstructive pulmonary disease"],
+  "J45": ["โรคหอบหืดกำเริบเฉียบพลัน", "Acute asthma"],
+  "J44.2": ["โรคหอบหืดกำเริบ (รหัส J44.2)", "Acute asthma (J44.2)"],
+  "I21": ["กล้ามเนื้อหัวใจขาดเลือดเฉียบพลัน", "Acute ischemic heart diseases"],
+  "I24": ["โรคหัวใจขาดเลือดเฉียบพลันแบบอื่น", "Other acute ischemic heart diseases"],
+  "I22": ["กล้ามเนื้อหัวใจที่ตายตามมา", "Subsequent ST elevation (STEMI) and non-ST elevation (NSTEMI) myocardial infarction"],
+  "H10": ["เยื่อบุตาอักเสบ", "Conjunctivitis"],
+  "L30.9": ["ผิวหนังอักเสบ", "Eczema"],
+  "L50": ["ลมพิษ", "Urticaria"],
+};
+const ICD_BASIS = [["m", "ทั้งหมด (โรคหลัก)"], ["z", "ร่วมกับ Z58.1"], ["y", "ร่วมกับ Y97"], ["zy", "ร่วมกับ Z58.1 + Y97"]];
+const ICD_Z = "Z58.1 (Exposure to air pollution · โรคที่เกิดจากการสัมผัสมลพิษทางอากาศ)", ICD_Y = "Y97 (Environmental-pollution-related condition · ภาวะที่เกี่ยวกับมลพิษในสิ่งแวดล้อม)";
+const ICD_FULL = { z: ICD_Z, y: ICD_Y, zy: `${ICD_Z} และ ${ICD_Y} ทั้งคู่` };
+S.icd = { st: "idle", data: null, p: null, pre: false };   // st: idle | loading | ok | fail
+S.icdUi = { basis: "m", open: {} };
+function icdLoad(force) {
+  const c = S.icd;
+  if (c.p) return c.p;
+  if (c.st === "ok" && !force) return Promise.resolve();
+  c.st = "loading";
+  c.p = getJSONRetry("/api/disease-icd").then(d => {
+    if (d?.ok && d.years) { c.data = d; c.st = "ok"; } else c.st = c.data ? "ok" : "fail";
+  }).finally(() => {
+    c.p = null;
+    const u = S.icdUi;
+    if (u.basis !== "m" || Object.values(u.open).some(Boolean) || c.st === "fail") dzIcdRefresh();   // วาดใหม่เฉพาะเมื่อหน้าจอรอข้อมูลนี้อยู่
+    window.dsRefresh && dsRefresh();
+  });
+  return c.p;
+}
+function icdPrefetch() { if (S.icd.pre) return; S.icd.pre = true; setTimeout(() => icdLoad(), 1500); }   // โหลดล่วงหน้าหลังหน้าหลักเสร็จ ให้กดเจาะรายโรคแล้วเห็นทันที
+// ยอดรายเดือนของรหัสโรค (หรือผลรวมหลายรหัสของกลุ่ม) × เมตริก (m/z/y/zy) ต่อคอลัมน์เดือนของการ์ด — ใช้ monthlyWk ตัวเดิม
+function icdCells(codes, basis, cols, end) {
+  const yrs = S.icd.data?.years || {}, lastM = epiMonth(end.y, end.w), memo = {};
+  const mw = y => memo[y] ||= (() => {
+    const arr = [];
+    for (const c of codes) { const a = yrs[String(y + 543)]?.codes?.[c]?.[basis]; if (!a) return null; a.forEach((v, i) => { arr[i] = (arr[i] || 0) + v; }); }
+    return monthlyWk(arr.map((v, i) => ({ wk: i + 1, v })), "v", y === end.y ? end.w : 99, y);
+  })();
+  return cols.map(({ y, m }) => (y > end.y || (y === end.y && m > lastM)) ? null : (mw(y)?.[m] || null));
+}
+// วาดการ์ดรายเดือนใหม่ในที่เดิม (คงสถานะส่วน "รายละเอียดเพิ่มเติม" และโฟกัสปุ่มที่เพิ่งกด)
+function dzIcdRefresh(from) {
+  const card = document.querySelector(".dz-all"); if (!card || !S.dz) return;
+  const html = dzMonthAll(S.dz, S.wkMax); if (!html) return;
+  const sel = from ? (from.dataset?.ib ? `[data-ib="${from.dataset.ib}"]` : from.dataset?.ig != null ? `[data-ig="${from.dataset.ig}"]` : ".e1x-retry") : null;
+  const fold = card.querySelector("details.dz-fold")?.open;
+  card.outerHTML = html;
+  const nc = document.querySelector(".dz-all"); if (!nc) return;
+  if (fold) { const d = nc.querySelector("details.dz-fold"); if (d) d.open = true; }
+  dzBindTips(nc);
+  if (sel) nc.querySelector(sel)?.focus({ preventScroll: true });
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-ib], [data-ig], .e1x-retry"); if (!b || !b.closest(".dz-all")) return;
+  const u = S.icdUi;
+  if (b.dataset.ib) { u.basis = b.dataset.ib; if (u.basis !== "m") icdLoad(); }
+  else if (b.dataset.ig != null) { u.open[b.dataset.ig] = !u.open[b.dataset.ig]; if (u.open[b.dataset.ig]) icdLoad(); }
+  else icdLoad(true);
+  dzIcdRefresh(b);
+});
 function dzMonthAll(dz, wkMax) {
   const end = dzCbEnd(dz, wkMax); if (!end.w) return "";
   const lastM = epiMonth(end.y, end.w), memo = {};
@@ -3516,19 +3615,58 @@ function dzMonthAll(dz, wkMax) {
   const hasProv = ser.some(s => s.v.some(o => o?.prov));
   const asOf = (() => { const p = String(dz.meta?.dataDate || "").split("/"); return p.length === 3 ? `${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ""; })();
   const lastTxt = lastI < 0 ? "" : `${TH_M[cols[lastI].m]} ${cols[lastI].y + 543}`;
-  const W2 = 640, slot2 = (W2 - 50) / cols.length, last2 = 40 + (lastI + 1) * slot2;   // จอแคบ: ตำแหน่งขวาสุดของเดือนล่าสุด (ใช้เลื่อนกราฟมาให้เห็นตอนเปิด)
+  // ── รายรหัสโรค (ICD-10) · ตัวกรอง Z58.1/Y97 ──
+  const ui = S.icdUi, ib = ui.basis, icdOk = S.icd.st === "ok", bName = ICD_BASIS.find(b => b[0] === ib)[1];
+  const yy = c => `${TH_M[c.m]} ${e1pYY(c.y)}`;
+  const fi = (() => { for (let i = 0; i < cols.length; i++) if (ser.some(s => s.v[i])) return i; return 0; })();
+  const range = lastI < 0 ? "" : `${yy(cols[fi])}–${yy(cols[lastI])}`;
+  const n0 = Math.max(0, lastI - 11), nEnd = Math.max(lastI, 0) + 1, nc = cols.slice(n0, nEnd), nLast = nc.length - 1;   // จอแคบ: 12 เดือนล่าสุดที่มีข้อมูล (ไม่ต้องเลื่อนกราฟ)
+  const cut = v => v.slice(n0, nEnd), sumOf = v => v.reduce((a, o) => a + (o?.sum || 0), 0);
+  const icAsOf = (() => { const p = String(S.icd.data?.meta?.dataDate || "").split("/"); return p.length === 3 ? `${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ""; })();
+  const stBox = () => S.icd.st === "fail"
+    ? `<div class="e1x-st" role="alert"><span>โหลดข้อมูลรายรหัสโรคไม่สำเร็จ</span><button type="button" class="e1x-retry">ลองใหม่</button></div>`
+    : `<div class="e1x-st" role="status"><span class="sp" aria-hidden="true"></span><span>กำลังโหลดข้อมูลรายรหัสโรค…</span></div>`;
+  const headHtml = s => { const h = e1pHead(s, cols); return `<div class="e1p-gh"><b><i style="background:${s.d.c}"></i>${dzName(s.d)}<small> · ราย/เดือน</small></b>${h ? `<span>${h.a}<strong>${h.bT}</strong>${h.c ? ` · <strong style="color:${h.col}">${h.c}</strong>` : ""}${h.why}</span>` : ""}</div>`; };
+  const pair = (sr, withHead) => ({ wide: e1pSvg([sr], cols, 1100, lastI, !withHead), narrow: e1pSvg([{ ...sr, v: cut(sr.v) }], nc, 360, nLast, true) });
+  // โรคหลัก: ใช้ข้อมูลเดิมของการ์ดทุกตัวเลข · Z58.1/Y97: คำนวณจากข้อมูลรายรหัส (ผลรวมของรหัสในกลุ่ม)
+  const gSer = ser.map(s => {
+    if (ib === "m" || !icdOk) return s;
+    const codes = ICD_GROUPS[s.d.key], v = icdCells(codes, ib, cols, end), tot = sumOf(v), base = sumOf(icdCells(codes, "m", cols, end));
+    return { d: s.d, v, small: true, tot, base, aria: `${dzName(s.d)} ผู้ป่วย${bName} รายเดือน`,
+      head: { a: `${range} รวม `, bT: `${fmt(tot)} ราย`, c: "", why: ` · จากผู้ป่วยโรคหลักในกลุ่ม ${fmt(base)} ราย`, col: "#5f6c80" } };
+  });
+  const ctl = `<div class="e1x-ctl"><span class="e1x-l">นับจาก</span><div class="e1x-tabs" role="group" aria-label="เลือกวิธีนับผู้ป่วย">${ICD_BASIS.map(([k, t]) => `<button type="button" data-ib="${k}" aria-pressed="${k === ib}" style="--c:#33415c">${t}</button>`).join("")}</div></div>`;
+  const hint = `<p class="e1x-hint">${ib === "m" ? "นับผู้ป่วยโรคหลักทุกราย · กดปุ่ม “คลิกเพื่อดูรายโรค” ใต้แต่ละกลุ่มเพื่อดูแยกรายรหัสโรค (ICD-10)" : `เฉพาะผู้ป่วยที่แพทย์ลงรหัส ${ICD_FULL[ib]} ร่วมกับโรคหลักในกลุ่ม · ตัวเลขน้อยมาก แสดงตามจริงทุกราย ศูนย์ก็แสดงเพราะเป็นข้อมูลเฝ้าระวัง`}</p>`;
+  const sumHtml = ib === "m" || !icdOk ? "" : (() => { const t = gSer.reduce((a, s) => a + (s.tot || 0), 0), b = gSer.reduce((a, s) => a + (s.base || 0), 0);
+    return `<div class="e1x-sum">${bName}: รวม <b>${fmt(t)}</b> ราย จากผู้ป่วยโรคหลักทั้งหมด <b>${fmt(b)}</b> ราย${b ? ` (${(t / b * 100).toFixed(3)}%)` : ""} · ทั้งเขตสุขภาพที่ 7 ${range}</div>`; })();
+  const grpHtml = gSer.map((s, i) => {
+    const codes = ICD_GROUPS[s.d.key], open = !!ui.open[i];
+    if (ib !== "m" && !icdOk) return `<div class="e1g">${headHtml({ d: s.d, v: [] })}${stBox()}</div>`;
+    if (ib !== "m" && !s.tot) return `<div class="e1g">${headHtml(s)}<p class="e1x-none">ไม่มีผู้ป่วยกลุ่มนี้ที่ลงรหัสนี้ร่วมด้วย ${range} (${bName})</p></div>`;
+    const g = pair(s, true);
+    const rowsHtml = !open ? "" : !icdOk ? stBox() : codes.map(c => {
+      const nm = ICD_NAME[c], cells = icdCells([c], ib, cols, end), ytd = sumOf(cells);
+      const sr = { d: { key: c, label: `${c} ${nm[0]}`, c: s.d.c }, v: cells, small: ib !== "m", compact: true, aria: `${c} ${nm[0]} ผู้ป่วย${bName} รายเดือน` }, p = pair(sr, false);
+      return `<div class="e1x-row"><div class="e1x-rh"><span class="e1x-code">${c}</span><span class="e1x-nm">${nm[0]}<small>${nm[1]}</small></span><span class="e1x-tot">${fmt(ytd)}<small>ราย ${range}</small></span></div>${
+        (ib === "m" ? cells.some(Boolean) : ytd > 0) ? `<div class="e1x-ch">${p.wide}${p.narrow}</div>` : `<p class="e1x-none">ไม่มีผู้ป่วยรายการนี้ ${range} (${bName})</p>`}</div>`;
+    }).join("") + (icAsOf ? `<p class="e1x-src">ข้อมูลรายรหัสโรคจาก HDC ณ ${icAsOf}</p>` : "");
+    return `<div class="e1g" style="--gc:${s.d.c}">${g.wide}<div class="e1p-n">${headHtml(s)}<div class="e1p-sc">${g.narrow}</div></div>
+      <button type="button" class="e1x-dr" data-ig="${i}" aria-expanded="${open}" aria-controls="e1x-l${i}" style="--d:${(1 + i * .7).toFixed(1)}s"><span>${open ? "ซ่อนรายโรค" : "คลิกเพื่อดูรายโรค"}<small>· ${codes.length} รหัสโรค</small></span><span class="e1x-i" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+      <div class="e1x-dl" id="e1x-l${i}"${open ? "" : " hidden"}>${rowsHtml}</div></div>`;
+  }).join("");
   return `<article class="card dz dz-all" style="--dsoft:#eef2f7;--dc:#5f6c80">
     <div class="dz-top"><div class="dz-icon" style="background:#e6ebf2;color:#33415c"><svg><use href="#i-chart"/></svg></div>
-      <div><h3>จำนวนผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น ในแต่ละเดือน</h3><div class="icd">ทั้งเขตสุขภาพที่ 7 · ม.ค. 2569 – พ.ค. 2570${lastTxt ? ` (มีข้อมูลถึง ${lastTxt} เพิ่มทีละเดือน)` : ""} · <b>1 แท่ง = จำนวนผู้ป่วยรวมของเดือนนั้น</b> (หน่วย: ราย)</div></div><button type="button" class="ds-jump" data-preset="weekly" style="margin-left:auto"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลดข้อมูล</button></div>
-    <div class="e1lg"><span><i class="ssn"></i><em>พื้นส้มอ่อน = ช่วงฤดูฝุ่น (พ.ย.–พ.ค.)</em></span>${hasProv ? `<span><i class="bar" style="opacity:.4;outline:1.5px dashed currentColor"></i><em>แท่งจางขอบประ (*) = ข้อมูลเดือนนั้นยังเข้าไม่ครบ</em></span>` : ""}<span><b class="e1p-mk">ปีใหม่</b><em>คำใต้ชื่อเดือน = เดือนที่มีวันหยุดยาว (ปีใหม่ · สงกรานต์) สัปดาห์ที่หยุดหลายวันผู้มารับบริการมักลดลงชั่วคราว ยอดเดือนนั้นอาจต่ำกว่าปกติเล็กน้อย ไม่ได้แปลว่าผู้ป่วยลดลงจริง</em></span><span class="e1p-swipe"><em>เลื่อนกราฟซ้าย-ขวาเพื่อดูเดือนอื่น</em></span></div>
-    ${e1pSvg(ser, cols, 1100, lastI)}<div class="e1p-n">${ser.map(s => { const h = e1pHead(s, cols);
-      return `<div class="e1p-gh"><b><i style="background:${s.d.c}"></i>${dzName(s.d)}<small> · ราย/เดือน</small></b>${h ? `<span>${h.a}<strong>${h.bT}</strong>${h.c ? ` · <strong style="color:${h.col}">${h.c}</strong>` : ""}${h.why}</span>` : ""}</div><div class="e1p-sc" data-last="${last2.toFixed(0)}">${e1pSvg([s], cols, W2, lastI, true)}</div>`; }).join("")}</div>
+      <div><h3>จำนวนผู้ป่วย 4 กลุ่มโรคที่เกี่ยวข้องกับฝุ่น ในแต่ละเดือน</h3><div class="icd">ทั้งเขตสุขภาพที่ 7 · ม.ค. 2569 – พ.ค. 2570${lastTxt ? ` (มีข้อมูลถึง ${lastTxt} เพิ่มทีละเดือน)` : ""} · <b>1 แท่ง = จำนวนผู้ป่วยรวมของเดือนนั้น</b> (หน่วย: ราย)</div></div><button type="button" class="ds-jump" data-preset="icd" style="margin-left:auto"><svg class="ico"><use href="#i-down"/></svg>ดาวน์โหลดข้อมูล</button></div>
+    <div class="e1lg"><span><i class="ssn"></i><em>พื้นส้มอ่อน = ช่วงฤดูฝุ่น (พ.ย.–พ.ค.)</em></span>${hasProv ? `<span><i class="bar" style="opacity:.4;outline:1.5px dashed currentColor"></i><em>แท่งจางขอบประ (*) = ข้อมูลเดือนนั้นยังเข้าไม่ครบ</em></span>` : ""}<span><b class="e1p-mk">ปีใหม่</b><em>คำใต้ชื่อเดือน = เดือนที่มีวันหยุดยาว (ปีใหม่ · สงกรานต์) สัปดาห์ที่หยุดหลายวันผู้มารับบริการมักลดลงชั่วคราว ยอดเดือนนั้นอาจต่ำกว่าปกติเล็กน้อย ไม่ได้แปลว่าผู้ป่วยลดลงจริง</em></span><span class="e1p-swipe"><em>จอแคบแสดง 12 เดือนล่าสุดที่มีข้อมูล ดูครบทุกเดือนบนจอกว้าง</em></span></div>
+    ${ctl}${hint}${sumHtml}<div class="e1x-groups">${grpHtml}</div>
     <details class="pv-guide pg-fold dz-fold"><summary class="pg-h"><svg class="ico"><use href="#i-chart"/></svg><b>รายละเอียดเพิ่มเติม (สำหรับเจ้าหน้าที่)</b><span class="pg-more">กดเพื่อเปิด/ปิด</span></summary>
     <ul><li><b>ช่วงที่แสดง</b>: ม.ค. 2569 – พ.ค. 2570 ต่อเนื่องเป็นเส้นเวลาเดียว ไม่เทียบปี · พื้นส้มอ่อน = ช่วงฤดูฝุ่น 1 พ.ย.–31 พ.ค.</li>
       <li><b>ตัวเลขบนแท่ง</b> = ผลรวมรายสัปดาห์ของเดือนนั้น (แต่ละสัปดาห์นับคนไม่ซ้ำ คนเดียวกันที่มาต่างสัปดาห์จะถูกนับอีกครั้ง) · ชี้ที่แท่งเพื่อดูค่าเฉลี่ยราย/สัปดาห์ · เดือนที่มี 5 สัปดาห์ยอดรวมสูงกว่าเดือนที่มี 4 สัปดาห์ ถ้าจะเทียบข้ามเดือนอย่างละเอียดให้ดูค่าเฉลี่ยราย/สัปดาห์</li>
       <li><b>คำกำกับเทศกาล</b>: เทียบไฟล์ HDC ปี 2568 และ 2569 สัปดาห์ที่มีวันหยุดราชการ กับสัปดาห์ข้างเคียงที่ไม่มีวันหยุด (ความผันผวนปกติ ±5–6%) · หยุด 1 วันลดราว 6% (แยกจากความผันผวนปกติไม่ออก) · 2 วันราว 14% · 3 วันราว 24% (เช่น สงกรานต์ เหลือ 79% และ 73% ของสัปดาห์ข้างเคียงในปี 2568 และ 2569) แล้วกลับมาเท่าเดิมในสัปดาห์ถัดไป · ยอดทั้งเดือนจึงลดน้อยกว่านี้</li>
       <li><b>การแปลผล</b>: เป็นข้อมูลเฝ้าระวังเชิงพรรณนาระดับประชากร ใช้ดูแนวโน้มและสัญญาณผิดปกติ ไม่ใช้สรุปความสัมพันธ์เชิงสาเหตุ การประเมินผลของฝุ่นต่อการป่วยต้องใช้การวิเคราะห์อนุกรมเวลาที่ควบคุมปัจจัยกวน เช่น อุณหภูมิ ความชื้น ฤดูกาล วันหยุด และผลที่เกิดช้ากว่าวันที่ได้รับฝุ่น (lag)</li>
-      <li>นับตาม<b>สัปดาห์ระบาดวิทยา</b> (อาทิตย์–เสาร์) สัปดาห์ที่คร่อมสองเดือนนับเข้าเดือนที่มีวันมากกว่า · แต่ละกลุ่มโรคมีแกนซ้ายของตัวเอง · ผู้ป่วยสัญชาติไทยทุกคนที่รับบริการในเขต รวมผู้อยู่นอกพื้นที่ · ที่มา: HDC กระทรวงสาธารณสุข</li></ul></details>
+      <li>นับตาม<b>สัปดาห์ระบาดวิทยา</b> (อาทิตย์–เสาร์) สัปดาห์ที่คร่อมสองเดือนนับเข้าเดือนที่มีวันมากกว่า · แต่ละกลุ่มโรคมีแกนซ้ายของตัวเอง · ผู้ป่วยสัญชาติไทยทุกคนที่รับบริการในเขต รวมผู้อยู่นอกพื้นที่ · ที่มา: HDC กระทรวงสาธารณสุข</li>
+      <li><b>แยกรายรหัสโรค (ICD-10)</b>: กดปุ่ม “คลิกเพื่อดูรายโรค” ใต้แต่ละกลุ่ม · ยอดของกลุ่มเท่ากับผลรวมของรหัสโรคในกลุ่ม ตรงกับกราฟด้านบนทุกเดือน</li>
+      <li><b>ร่วมกับ Z58.1 / Y97</b>: นับเฉพาะผู้ป่วยที่แพทย์ลงรหัสนี้ร่วมกับโรคหลักในกลุ่ม · ขึ้นกับการลงรหัสของแพทย์และเวชระเบียน ไม่ได้พิสูจน์ว่าฝุ่นเป็นสาเหตุ และมีผู้ลงรหัสน้อยมาก จึงแสดงตัวเลขจริงทุกราย</li></ul></details>
     <div class="dz-note"><b>หมายเหตุ</b> ข้อมูลจาก HDC${asOf ? ` ณ ${asOf}` : ""} อาจยังไม่สมบูรณ์ หน่วยบริการบางแห่งรายงานยังไม่ครบ${hasProv ? ` <span class="nw">* เดือนที่มีข้อมูล ${DZ_PROV_WK} สัปดาห์ล่าสุดรวมอยู่ ตัวเลขมักเพิ่มขึ้นเมื่อรายงานครบ จึงยังไม่ควรใช้สรุปแนวโน้ม</span>` : ""}</div>
     <div class="tip"></div></article>`;
 }
@@ -3609,13 +3747,21 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     confidence: ["ความมั่นใจของดาวเทียมว่าเป็นไฟจริง (VIIRS): high = สูง · nominal = ปานกลาง · low = ต่ำ", ""], frp_mw: ["ความแรงของไฟ (Fire Radiative Power)", "เมกะวัตต์"],
     lat: ["ละติจูด (WGS84)", "องศา"], lng: ["ลองจิจูด (WGS84)", "องศา"],
   });
+  Object.assign(COL, {
+    group: ["กลุ่มโรค", ""], icd_code: ["รหัสโรค ICD-10 (โรคหลัก)", ""], icd_name_en: ["ชื่อโรคภาษาอังกฤษ (ตามรายงาน HDC)", ""],
+    cases_all: ["ผู้ป่วยโรคหลักนี้ ทั้งหมด (ตัดซ้ำรายคนในสัปดาห์)", "ราย"],
+    cases_z581: ["ผู้ป่วยโรคหลักนี้ ที่แพทย์ลงรหัส Z58.1 (Exposure to air pollution · โรคที่เกิดจากการสัมผัสมลพิษทางอากาศ) ร่วมด้วย", "ราย"],
+    cases_y97: ["ผู้ป่วยโรคหลักนี้ ที่แพทย์ลงรหัส Y97 (Environmental-pollution-related condition · ภาวะที่เกี่ยวกับมลพิษในสิ่งแวดล้อม) ร่วมด้วย", "ราย"],
+    cases_z581_y97: ["ผู้ป่วยโรคหลักนี้ ที่แพทย์ลงรหัสทั้ง Z58.1 และ Y97 ร่วมด้วย", "ราย"],
+  });
+  const icdDate = () => { const dc = String(S.icd?.data?.meta?.dateCom || ""); return dc.length >= 12 ? `${dc.slice(0, 4)}-${dc.slice(4, 6)}-${dc.slice(6, 8)} ${dc.slice(8, 10)}:${dc.slice(10, 12)}` : ""; };
   for (const k of GK) { COL["cases_" + k] = [`ผู้ป่วย${GLABEL[k]} (Type 1+3)`, "ราย"]; COL["rate_" + k] = [`อัตราป่วย${GLABEL[k]} ต่อแสน`, "ต่อแสน"]; }
 
   // วันที่ใช้ค่าดาวเทียม GISTDA แทนค่าสถานี (backfillGistda 16 ต.ค. 2569 · ดูแท็บ _backfill_log)
   const satDay = (d, pv) => (d >= "2026-01-01" && d <= "2026-02-18") || (d === "2026-02-23" && pv === "กาฬสินธุ์");
   const SRC_HDC = "HDC กระทรวงสาธารณสุข (MOPH Open Data) รายงานโรคที่เกี่ยวข้องกับ PM2\u002E5 รายสัปดาห์";
   const DS = [
-    { id: "cases", icon: "i-steth", title: "ผู้ป่วย 4 กลุ่มโรค รายสัปดาห์ รายจังหวัด", level: "จังหวัด · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
+    { id: "cases", raw: "/api/disease-pv", icon: "i-steth", title: "ผู้ป่วย 4 กลุ่มโรค รายสัปดาห์ รายจังหวัด", level: "จังหวัด · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
       src: SRC_HDC, desc: "ผู้ป่วยโรคที่เกี่ยวข้องกับฝุ่น นับรายคน ตัดซ้ำในสัปดาห์ เลือกได้ว่านับทุกคนที่มารับบริการ หรือเฉพาะผู้อยู่จริงในจังหวัด (มีอัตราต่อแสน)",
       filters: ["pv", "weeks", "groups", "table"],
       build(f) {
@@ -3635,7 +3781,25 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
       note: f => f.table === "s2"
         ? "ตัวตั้ง = ผู้ป่วยที่อยู่อาศัยจริงในจังหวัด (Type area 1 และ 3) · ตัวหาร = ประชากร Type 1+3 กลางปี จาก HDC — ตัวตั้งและตัวหารเป็นประชากรกลุ่มเดียวกัน"
         : "นับผู้ป่วยสัญชาติไทยทุกคนที่มารับบริการในหน่วยบริการของจังหวัด รวมผู้อยู่นอกพื้นที่ (ใช้ดูภาระงาน) จึงไม่มีอัตราต่อแสน" },
-    { id: "pm_daily", icon: "i-chart", title: "ค่าฝุ่น PM2\u002E5 รายวัน รายจังหวัด", level: "จังหวัด · รายวัน", freq: "อัปเดตทุกวัน · ค่า ณ 07.00 น.",
+    { id: "icd", raw: "/api/disease-icd", icon: "i-steth", title: "ผู้ป่วยรายรหัสโรค (ICD-10) ร่วม Z58.1 / Y97 รายสัปดาห์ ทั้งเขต", level: "เขตสุขภาพที่ 7 (รวม 4 จังหวัด) · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
+      src: SRC_HDC, desc: "ผู้ป่วยรายรหัสโรค 9 รหัส พร้อมจำนวนที่แพทย์ลงรหัส Z58.1 และ/หรือ Y97 ร่วมด้วย 1 แถว = 1 รหัสโรค × 1 สัปดาห์ ตัวเลขชุดเดียวกับการ์ดรายเดือนในแดชบอร์ด",
+      filters: ["weeks", "groups"],
+      ready: () => S.icd?.st === "ok",
+      wait: () => S.icd?.st === "fail" ? "โหลดข้อมูลรายรหัสโรคไม่สำเร็จ ลองใหม่อีกครั้งภายหลัง" : "กำลังโหลดข้อมูลรายรหัสโรค…",
+      build(f) {
+        const cols = ["year_be", "epi_week", "week_start", "week_end", "month", "group", "icd_code", "icd_name_en", "cases_all", "cases_z581", "cases_y97", "cases_z581_y97", "preliminary", "date_com"];
+        const I = S.icd?.data, yb = I?.yearBe, YD = I?.years?.[String(yb)], rows = [];
+        if (!YD) return { cols, rows };
+        const Y = yb - 543;
+        for (let w = f.w0; w <= f.w1; w++) for (const g of f.groups) for (const c of ICD_GROUPS[GKEY[g]]) {
+          const x = YD.codes[c]; if (!x || w > YD.maxWk) continue;
+          rows.push({ year_be: yb, epi_week: w, week_start: iso(epiStart(Y, w)), week_end: iso(epiEnd(Y, w)), month: epiMonth(Y, w) + 1, group: GKEY[g], icd_code: c, icd_name_en: ICD_NAME[c][1],
+            cases_all: x.m[w - 1], cases_z581: x.z[w - 1], cases_y97: x.y[w - 1], cases_z581_y97: x.zy[w - 1], preliminary: w >= prelimFrom() ? 1 : 0, date_com: icdDate() });
+        }
+        return { cols, rows };
+      },
+      note: () => "นับผู้ป่วยสัญชาติไทยทุกคนที่มารับบริการในหน่วยบริการของเขต (ตาราง s_pm25_1 เหมือนกราฟรายเดือน) รวม 4 จังหวัดเป็นยอดเดียว · Z58.1 / Y97 ขึ้นกับการลงรหัสของแพทย์และเวชระเบียน ไม่ได้พิสูจน์ว่าฝุ่นเป็นสาเหตุ และมีผู้ลงรหัสน้อยมาก" },
+    { id: "pm_daily", raw: "/api/sheet-pm25", icon: "i-chart", title: "ค่าฝุ่น PM2\u002E5 รายวัน รายจังหวัด", level: "จังหวัด · รายวัน", freq: "อัปเดตทุกวัน · ค่า ณ 07.00 น.",
       src: "Air4Thai กรมควบคุมมลพิษ (สถานีตรวจวัด) ร่วมกับดาวเทียม GISTDA · ค่าเฉลี่ย 24 ชม. ณ 07.00 น. (แหล่งของแต่ละวันระบุในคอลัมน์ pm25_source)", desc: "ค่าเฉลี่ย 24 ชม. ณ 07.00 น. รายจังหวัด พร้อมระดับคุณภาพอากาศและเลขสัปดาห์ระบาดวิทยา",
       filters: ["pv", "dates"],
       build(f) {
@@ -3651,7 +3815,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
         return { cols: ["date", "year_be", "epi_week", "pv_code", "pv_name", "pm25_24h", "pm25_source", "aqi_level"], rows };
       },
       note: () => "ค่าเฉลี่ย 24 ชม. ณ 07.00 น. จากสถานีตรวจวัด Air4Thai ร่วมกับดาวเทียม GISTDA ในวันที่สถานีไม่มีข้อมูล (ระบุในคอลัมน์ pm25_source) · วันที่ไม่มีข้อมูลจะไม่มีแถว" },
-    { id: "analysis", icon: "i-layers", star: true, title: "ชุดพร้อมวิเคราะห์ ฝุ่น × ผู้ป่วย", level: "จังหวัด · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
+    { id: "analysis", raw: "/api/sheet-pm25 และ /api/disease-pv", icon: "i-layers", star: true, title: "ชุดพร้อมวิเคราะห์ ฝุ่น × ผู้ป่วย", level: "จังหวัด · สัปดาห์ระบาดวิทยา", freq: "อัปเดตรายสัปดาห์",
       src: "Air4Thai + GISTDA (ค่าฝุ่น ณ 07.00 น.) + " + SRC_HDC + " ชุดที่ 2 + ประชากร Type 1+3 HDC",
       desc: "1 แถว = 1 จังหวัด × 1 สัปดาห์ มีค่าฝุ่นเฉลี่ย/สูงสุด/วันเกินมาตรฐาน ผู้ป่วยและอัตราต่อแสนทั้ง 4 กลุ่ม เปิดใน Excel, R หรือ Stata แล้ววิเคราะห์ได้ทันที",
       filters: ["pv", "weeks"],
@@ -3672,7 +3836,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
           ...GK.map(k => "cases_" + k), ...GK.map(k => "rate_" + k), "population", "preliminary", "date_com"], rows };
       },
       note: () => "ผู้ป่วย = ผู้อยู่จริงในจังหวัด (Type 1+3) จึงคู่กับประชากรได้ถูกต้อง · ค่าฝุ่นเฉลี่ยคิดเฉพาะวันที่มีข้อมูล ดูจำนวนวันจากคอลัมน์ pm25_days · ใช้ดูความสัมพันธ์ระดับกลุ่มประชากร ไม่ใช่หลักฐานว่าฝุ่นเป็นสาเหตุ (ecological fallacy)" },
-    { id: "hotspot", icon: "i-fire", title: "จุดความร้อนรายวัน (สำรองข้อมูลอัตโนมัติ)", level: "จุดละ 1 แถว · รายวัน", freq: "บันทึกจุดใหม่ทุก 15 นาที · สะสมตั้งแต่เริ่มเก็บ",
+    { id: "hotspot", raw: "/api/hotspot-backup", rawNote: "(JSON ทุกจุดที่บันทึกไว้)", icon: "i-fire", title: "จุดความร้อนรายวัน (สำรองข้อมูลอัตโนมัติ)", level: "จุดละ 1 แถว · รายวัน", freq: "บันทึกจุดใหม่ทุก 15 นาที · สะสมตั้งแต่เริ่มเก็บ",
       src: "GISTDA ดาวเทียม VIIRS (Suomi NPP · NOAA-20/21) ผ่าน API GISTDA · ระบบบันทึกเก็บทุกจุดที่ตรวจพบในพื้นที่ 4 จังหวัด ตัดซ้ำ", filters: ["pv", "dates"],
       desc: "ทุกจุดความร้อนที่ดาวเทียมตรวจพบในเขตสุขภาพที่ 7 ตั้งแต่วันที่เริ่มเก็บ (GISTDA ให้ดูย้อนหลังได้แค่ 24 ชม. ระบบจึงเก็บสำรองไว้ทุกวัน) พร้อมวันเวลา อำเภอ ตำบล ประเภทพื้นที่ ความมั่นใจ ความแรงไฟ และพิกัด ใช้ประกอบรายงานได้",
       range: () => [HSB.min, HSB.max], ready: () => HSB.state === "ok",
@@ -3707,6 +3871,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
   const PRESETS = [
     { id: "analysis", label: "ชุดวิเคราะห์ ฝุ่น × ผู้ป่วย ทั้งปี", ds: "analysis", f: () => ({ w0: 1, w1: wkMax() }) },
     { id: "weekly", label: "สรุปผู้ป่วย 4 สัปดาห์ล่าสุด (ทำรายงาน)", ds: "cases", f: () => ({ table: "s1", w0: Math.max(1, wkMax() - 3), w1: wkMax() }) },
+    { id: "icd", label: "ผู้ป่วยรายรหัสโรค ร่วม Z58.1 / Y97 ทั้งปี", ds: "icd", f: () => ({ w0: 1, w1: wkMax() }) },
     { id: "hotspot7", label: "จุดความร้อน 7 วันล่าสุด (ทำรายงาน)", ds: "hotspot", f: () => { const e = new Date(), s = new Date(); s.setDate(e.getDate() - 6); return { d0: iso(s), d1: iso(e), keep: true }; } },
     { id: "season", label: "ค่าฝุ่นรายวัน ฤดูฝุ่นล่าสุด", ds: "pm_daily", f: () => { const t = pmRange()[1] || iso(new Date()), y = +t.slice(0, 4), m = +t.slice(5, 7); const sy = m >= 11 ? y : y - 1; return { d0: `${sy}-11-01`, d1: m >= 6 && m <= 10 ? `${y}-05-31` : t }; } },
   ];
@@ -3717,7 +3882,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     const r07 = Object.keys(S.pm07 || {}).sort(), [a, b] = ds === "hotspot" ? [HSB.min || iso(new Date()), HSB.max || iso(new Date())] : ds === "pm07" && r07.length ? [r07[0], r07.at(-1)] : pmRange();
     return { pv: PROV.map(p => p.name), w0: 1, w1: wkMax(), groups: [...GK], table: "s2", d0: a || `${PY()}-01-01`, d1: b || iso(new Date()) };
   }
-  function pick(id, over) { st.ds = id; st.f = { ...defaults(id), ...(over || {}) }; render(); if (id === "hotspot") hsbLoad(); }
+  function pick(id, over) { st.ds = id; st.f = { ...defaults(id), ...(over || {}) }; render(); if (id === "hotspot") hsbLoad(); if (id === "icd") icdLoad(); }
 
   // ── ไฟล์ ──────────────────────────────────────────────────────────
   const cell = v => { if (v == null) return ""; const s = String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -3726,11 +3891,12 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     const today = iso(new Date());
     const scope = ds.filters.includes("weeks") ? `สัปดาห์ระบาดวิทยาที่ ${f.w0}–${f.w1} ปี ${PYB()} (${epiRange(PY(), f.w0, f.w1)})` : ds.filters.includes("dates") ? `${thD(f.d0)} – ${thD(f.d1)}` : "ปีงบประมาณ 2568–2569";
     return [
-      ["ชุดข้อมูล", ds.title], ["พื้นที่", "เขตสุขภาพที่ 7: " + f.pv.join(", ")], ["ช่วงเวลา", scope], ["จำนวนแถว", n],
-      ["แหล่งข้อมูล", ds.src], ["วันที่ประมวลผลต้นทาง", ds.id === "pm_daily" || ds.id === "pop" || ds.id === "hotspot" ? "-" : D().dateCom], ["วันที่ดาวน์โหลด", today],
+      ["ชุดข้อมูล", ds.title], ["พื้นที่", ds.id === "icd" ? "เขตสุขภาพที่ 7 (รวม 4 จังหวัดเป็นยอดเดียว)" : "เขตสุขภาพที่ 7: " + f.pv.join(", ")], ["ช่วงเวลา", scope], ["จำนวนแถว", n],
+      ["แหล่งข้อมูล", ds.src], ["วันที่ประมวลผลต้นทาง", ds.id === "pm_daily" || ds.id === "pop" || ds.id === "hotspot" ? "-" : ds.id === "icd" ? icdDate() : D().dateCom], ["วันที่ดาวน์โหลด", today],
       ["หมายเหตุ", ds.note(f)],
       ["นิยามสัปดาห์", "สัปดาห์ระบาดวิทยา กรมควบคุมโรค: วันอาทิตย์–เสาร์ สัปดาห์ที่ 1 เริ่ม 1 ม.ค."],
       ["รหัสโรค (ICD-10)", "ทางเดินหายใจ J44 (ยกเว้น J44.2), J45, J44.2 · หัวใจ I21, I22, I24 · ตา H10 · ผิวหนัง L30.9, L50 (ประกาศกระทรวงสาธารณสุข พ.ศ. 2565)"],
+      ...(ds.id === "icd" ? [["Z58.1 / Y97", "Z58.1 = Exposure to air pollution (โรคที่เกิดจากการสัมผัสมลพิษทางอากาศ) · Y97 = Environmental-pollution-related condition (ภาวะที่เกี่ยวกับมลพิษในสิ่งแวดล้อม) · นับเฉพาะผู้ป่วยที่แพทย์ลงรหัสนี้ร่วมกับโรคหลัก 9 รหัส"]] : []),
       ["การอ้างอิง", `สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (${PYB()}). ${ds.title} [ชุดข้อมูล]. แดชบอร์ด PM2\u002E5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(today)}.`],
       ["ข้อควรระวัง", "ข้อมูลระดับจังหวัดเป็นข้อมูลรวม ไม่มีข้อมูลรายบุคคล · ใช้เพื่อการเฝ้าระวังและสื่อสารความเสี่ยง"],
     ].filter(r => !(ds.id === "hotspot" && r[0] === "รหัสโรค (ICD-10)"));
@@ -3818,7 +3984,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
         ${st.fmt === "csv" ? `<button type="button" class="ds-sub" id="dsDict">คำอธิบายตัวแปร (CSV)</button>` : ""}<p id="dsMsg" class="ds-msg" aria-live="polite"></p>
         <details class="ds-cite"><summary>วิธีอ้างอิงและลิงก์ถาวร</summary>
           <p><b>อ้างอิง:</b> สำนักงานป้องกันควบคุมโรคที่ 7 ขอนแก่น. (${PYB()}). ${esc(ds.title)} [ชุดข้อมูล]. แดชบอร์ด PM2.5 เขตสุขภาพที่ 7. สืบค้นเมื่อ ${thD(iso(new Date()))}.</p>
-          ${ds.id === "hotspot" ? `<p><b>ลิงก์ข้อมูลดิบ (Power Query/R):</b> <code>/api/hotspot-backup</code> (JSON ทุกจุดที่บันทึกไว้)</p>` : `<p><b>ลิงก์ถาวร (Power Query/R):</b> <code>/api/dataset/${ds.id}.csv?pv=${f.pv.map(n => PROV.find(p => p.name === n).code).join(",")}${ds.filters.includes("weeks") ? `&wk=${f.w0}-${f.w1}` : ""}${ds.filters.includes("dates") ? `&from=${f.d0}&to=${f.d1}` : ""}</code> <em>(เปิดใช้เมื่อขึ้นเว็บจริง)</em></p>`}</details>`
+          ${ds.raw ? `<p><b>ลิงก์ข้อมูลดิบ (Power Query/R):</b> <code>${ds.raw}</code> ${ds.rawNote || "(JSON)"}</p>` : ""}</details>`
         : `<p class="ds-empty">${ds.soon ? "ยังไม่เปิดให้ดาวน์โหลด" : ds.ready && !ds.ready() ? ds.wait() : "เลือกอย่างน้อย 1 จังหวัด 1 กลุ่มโรค และช่วงเวลาที่ถูกต้อง"}</p>`}</section>`;
   }
   function onChange(e) {
@@ -3844,6 +4010,7 @@ Object.defineProperty(window, "DSDATA", { configurable: true, get() {
     const p = PRESETS.find(x => x.id === j.dataset.preset); if (p) pick(p.ds, p.f());
     window.dsOpen && dsOpen();
   });
+  window.dsRefresh = () => { if (document.getElementById("dsBody")?.dataset.on) render(); };   // เรียกเมื่อข้อมูลรายรหัสโรคมาถึง
   window.dsInit = function () {
     if (!document.getElementById("dsBody")) return;
     const el = document.getElementById("dsBody"); if (el.dataset.on) return render();
@@ -3858,7 +4025,7 @@ function renderDisease() {
   const dz = S.dz; if (!dz) { document.getElementById("dz").innerHTML = `<p class="muted">ดึงข้อมูลโรคไม่ได้</p>`; return; }
   const wkMax = Number(dz.meta?.dataWk) || dz.meta?.reportWeek || Math.max(...(dz[DY()] || []).map(r => +r.wk)) - 1;
   S.wkMax = wkMax;
-  document.getElementById("dzSub").textContent = `ผู้ป่วย 4 กลุ่มโรค · ปี ${DYB()} สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(DY(), 1, wkMax)}) · ทั้งเขตสุขภาพที่ 7 · ข้อมูล HDC${(() => { const p = String(dz.meta?.dataDate || '').split('/'); return p.length === 3 ? ` ณ ${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ''; })()}`;
+  document.getElementById("dzSub").textContent = `ผู้ป่วย 4 กลุ่มโรค · 9 รหัส ICD-10 · ร่วม Z58.1 / Y97 · ปี ${DYB()} สัปดาห์ระบาดวิทยาที่ 1–${wkMax} (${epiRange(DY(), 1, wkMax)}) · ทั้งเขตสุขภาพที่ 7 · ข้อมูล HDC${(() => { const p = String(dz.meta?.dataDate || '').split('/'); return p.length === 3 ? ` ณ ${+p[0]} ${TH_M[+p[1] - 1]} ${+p[2] + 543}` : ''; })()}`;
   S.dzTot = []; S.dzData = [];
   document.getElementById("dz").innerHTML = DZ.map((d, di) => {
     const a = monthly(dz[DY() - 1], d.key, 53, DY() - 1), b = monthly(dz[DY()], d.key, wkMax, DY());
@@ -3874,9 +4041,14 @@ function renderDisease() {
       <svg class="bars" viewBox="0 0 ${W} ${H}" role="img" aria-label="ผู้ป่วยรายเดือน ${d.label} ปี 2568 และ 2569">${g}</svg>
       <div class="lg"><span><i style="background:#b4bfcd"></i>ปี 2568</span><span><i style="background:${d.c}"></i>ปี 2569 (สัปดาห์ระบาดวิทยาที่ 1–${wkMax})</span><span class="lg-n">แต่ละสัปดาห์นับเข้าเดือนที่มีวันอยู่มากกว่า · ชี้ที่แท่งเพื่อดูสัปดาห์ที่รวม</span></div>
       <div class="tip"></div></article>`; }).join("");
-  // tooltip ต่อแท่ง
-  document.querySelectorAll(".dz").forEach(card => {
-    const tip = card.querySelector(".tip");
+  dzBindTips();
+  icdPrefetch();
+}
+// tooltip ต่อแท่ง — ผูกใหม่ได้เฉพาะการ์ดที่วาดใหม่ (scope = การ์ดหรือส่วนที่ครอบ)
+function dzBindTips(scope) {
+  const cards = !scope ? document.querySelectorAll(".dz") : scope.matches?.(".dz") ? [scope] : scope.querySelectorAll(".dz");
+  cards.forEach(card => {
+    const tip = card.querySelector(".tip"); if (!tip) return;
     card.querySelectorAll(".hb").forEach(rc => {
       rc.addEventListener("pointerenter", () => { tip.textContent = rc.dataset.t; tip.classList.add("on"); });
       rc.addEventListener("pointermove", e => {   // ชิดขอบขวา → สลับไปซ้ายเมาส์ · ไม่ล้นขอบการ์ด
