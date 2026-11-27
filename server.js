@@ -810,12 +810,12 @@ async function buildDiseaseIcd() {
   // ทุกปีที่ดึงไว้ (ตั้งแต่ปีแรกของ hybrid) — การ์ดรายเดือนข้ามปีใหม่ต้องใช้ทั้งสองปี ไม่งั้นเดือนของปีก่อนจะว่าง
   const years = {};
   for (const [be, r] of _icdRaw) {
-    if (Number(be) >= DISEASE_HYBRID_FROM + 543) years[be] = { codes: r.codes, maxWk: r.maxWk, dateCom: r.dateCom };
+    if (Number(be) >= DISEASE_HYBRID_FROM + 543) years[be] = { codes: r.codes, prov: r.prov || {}, maxWk: r.maxWk, dateCom: r.dateCom };
   }
   const data = {
     ok: true,
     yearBe: Y + 543,
-    years,                                  // { "2569": { codes: { รหัส: { m, z, y, zy } }, maxWk, dateCom }, ... }
+    years,                                  // { "2569": { codes: { รหัส: { m, z, y, zy } }, prov: { จังหวัด: { รหัส: { z, y, zy } } }, maxWk, dateCom }, ... }
     meta: {
       source:   'moph',
       dataYear: Y,                          // ค.ศ.
@@ -1541,7 +1541,20 @@ function mophIcdRegion(got) {
   let maxWk = 0;
   for (const s of Object.values(codes)) s.m.forEach((v, i) => { if (v > 0 && i + 1 > maxWk) maxWk = i + 1; });
   for (const s of Object.values(codes)) for (const k of MOPH_ICD_METRICS) s[k] = s[k].slice(0, maxWk);
-  return { codes, dateCom, maxWk };
+  // แยกรายจังหวัด (ชื่อจังหวัด → รหัสโรค → z/y/zy รายสัปดาห์) ใช้บอกว่าเคส Z58.1/Y97 รายงานจากจังหวัดใด
+  // ไม่ส่ง m (ทุกการวินิจฉัย) แยกจังหวัด เพราะไม่ได้ใช้ และใหญ่กว่ามาก
+  const prov = {};
+  for (const pv of readConfig().provinces) {
+    const agg = got.get(pv.pv_idn); if (!agg) continue;
+    const o = {};
+    for (const [c, s] of Object.entries(agg.icd || {})) {
+      const t = {};
+      for (const k of ['z', 'y', 'zy']) t[k] = s[k].slice(0, maxWk);
+      if (['z', 'y', 'zy'].some(k => t[k].some(v => v > 0))) o[c] = t;   // ตัดรหัสที่ไม่มีเคสเลย ลดขนาด
+    }
+    prov[pv.name] = o;
+  }
+  return { codes, prov, dateCom, maxWk };
 }
 const _icdRaw = new Map();   // ปี พ.ศ. → { codes, dateCom, maxWk, at } · เขียนตอนดึง MOPH ครบทุกจังหวัดสำเร็จเท่านั้น
 

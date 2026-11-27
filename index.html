@@ -3529,7 +3529,7 @@ function e1pSvg(ser, cols, W, lastI, noHead) {
       if (c.m === 0 || i === 0) g += `<text x="${x.toFixed(1)}" y="${base + fs * 3 + 12}" text-anchor="middle" font-size="${fs - .5}" font-weight="700" fill="#33415c" ${F}>${c.y + 543}</text>`;
       if (hol) g += `<text x="${x.toFixed(1)}" y="${base + fs * 2 + 8}" text-anchor="middle" font-size="${fs - 1.5}" font-weight="700" fill="#8a5a00" ${F}>${hol.n}</text>`;
       const p = i > 0 ? s.v[i - 1] : null, pc = o && p ? e1pChg(o.sum, p.sum) : null;
-      const tip = o ? `&#10;ผู้ป่วยรวมทั้งเดือน ${fmt(o.sum)} ราย${pc != null ? `&#10;เทียบเดือนก่อน: ${e1pChgT(pc)} (${o.sum >= p.sum ? "เพิ่ม" : "ลด"} ${fmt(Math.abs(o.sum - p.sum))} ราย)` : ""}&#10;เฉลี่ยประมาณ ${fmt(Math.round(o.avg))} ราย/สัปดาห์ (${o.n} สัปดาห์)`
+      const tip = o ? `&#10;ผู้ป่วยรวมทั้งเดือน ${fmt(o.sum)} ราย${s.pvTxt?.[i] ? `&#10;รายงานจากจังหวัด: ${s.pvTxt[i]}` : ""}${pc != null ? `&#10;เทียบเดือนก่อน: ${e1pChgT(pc)} (${o.sum >= p.sum ? "เพิ่ม" : "ลด"} ${fmt(Math.abs(o.sum - p.sum))} ราย)` : ""}`
           + (hol ? `&#10;เดือนนี้มีวันหยุด${hol.n} สัปดาห์ที่หยุดหลายวันมักมีผู้มารับบริการน้อยลงชั่วคราว (ราว 6% / 14% / 24% เมื่อหยุด 1 / 2 / 3 วัน) ยอดทั้งเดือนอาจต่ำกว่าปกติเล็กน้อย` : "")
           + (o.prov ? "&#10;* ข้อมูลเดือนนี้ยังเข้าไม่ครบ ตัวเลขอาจเพิ่มขึ้นอีก" : "")
         : fut ? "&#10;ยังไม่มีข้อมูล จะแสดงเมื่อมีรายงานเข้ามา" : "&#10;ไม่มีข้อมูล";
@@ -3576,14 +3576,25 @@ function icdLoad(force) {
 }
 function icdPrefetch() { if (S.icd.pre) return; S.icd.pre = true; setTimeout(() => icdLoad(), 1500); }   // โหลดล่วงหน้าหลังหน้าหลักเสร็จ ให้กดเจาะรายโรคแล้วเห็นทันที
 // ยอดรายเดือนของรหัสโรค (หรือผลรวมหลายรหัสของกลุ่ม) × เมตริก (m/z/y/zy) ต่อคอลัมน์เดือนของการ์ด — ใช้ monthlyWk ตัวเดิม
-function icdCells(codes, basis, cols, end) {
+function icdCells(codes, basis, cols, end, pv) {   // pv = ชื่อจังหวัด (ถ้าระบุ = เฉพาะจังหวัดนั้น · ใช้กับ z/y/zy เท่านั้น)
   const yrs = S.icd.data?.years || {}, lastM = epiMonth(end.y, end.w), memo = {};
   const mw = y => memo[y] ||= (() => {
     const arr = [];
-    for (const c of codes) { const a = yrs[String(y + 543)]?.codes?.[c]?.[basis]; if (!a) return null; a.forEach((v, i) => { arr[i] = (arr[i] || 0) + v; }); }
+    for (const c of codes) {
+      const a = pv ? (yrs[String(y + 543)]?.prov?.[pv]?.[c]?.[basis] || []) : yrs[String(y + 543)]?.codes?.[c]?.[basis];
+      if (!a) return null; a.forEach((v, i) => { arr[i] = (arr[i] || 0) + v; });
+    }
+    if (!arr.length) return null;
     return monthlyWk(arr.map((v, i) => ({ wk: i + 1, v })), "v", y === end.y ? end.w : 99, y);
   })();
   return cols.map(({ y, m }) => (y > end.y || (y === end.y && m > lastM)) ? null : (mw(y)?.[m] || null));
+}
+// ข้อความ "จังหวัด" ต่อเดือนสำหรับ tooltip: เฉพาะตัวกรอง Z58.1/Y97 · เช่น "ขอนแก่น 2 · กาฬสินธุ์ 1"
+const ICD_PV = ["ขอนแก่น", "มหาสารคาม", "ร้อยเอ็ด", "กาฬสินธุ์"];
+function icdPvTxt(codes, basis, cols, end) {
+  if (basis === "m") return null;
+  const per = ICD_PV.map(n => [n, icdCells(codes, basis, cols, end, n)]);
+  return cols.map((_, i) => per.filter(([, c]) => c[i]?.sum > 0).map(([n, c]) => `${n} ${fmt(c[i].sum)}`).join(" · "));
 }
 // วาดการ์ดรายเดือนใหม่ในที่เดิม (คงสถานะส่วน "รายละเอียดเพิ่มเติม" และโฟกัสปุ่มที่เพิ่งกด)
 function dzIcdRefresh(from) {
@@ -3627,12 +3638,12 @@ function dzMonthAll(dz, wkMax) {
     ? `<div class="e1x-st" role="alert"><span>โหลดข้อมูลรายรหัสโรคไม่สำเร็จ</span><button type="button" class="e1x-retry">ลองใหม่</button></div>`
     : `<div class="e1x-st" role="status"><span class="sp" aria-hidden="true"></span><span>กำลังโหลดข้อมูลรายรหัสโรค…</span></div>`;
   const headHtml = s => { const h = e1pHead(s, cols); return `<div class="e1p-gh"><b><i style="background:${s.d.c}"></i>${dzName(s.d)}<small> · ราย/เดือน</small></b>${h ? `<span>${h.a}<strong>${h.bT}</strong>${h.c ? ` · <strong style="color:${h.col}">${h.c}</strong>` : ""}${h.why}</span>` : ""}</div>`; };
-  const pair = (sr, withHead) => ({ wide: e1pSvg([sr], cols, 1100, lastI, !withHead), narrow: e1pSvg([{ ...sr, v: cut(sr.v) }], nc, 360, nLast, true) });
+  const pair = (sr, withHead) => ({ wide: e1pSvg([sr], cols, 1100, lastI, !withHead), narrow: e1pSvg([{ ...sr, v: cut(sr.v), pvTxt: sr.pvTxt && cut(sr.pvTxt) }], nc, 360, nLast, true) });
   // โรคหลัก: ใช้ข้อมูลเดิมของการ์ดทุกตัวเลข · Z58.1/Y97: คำนวณจากข้อมูลรายรหัส (ผลรวมของรหัสในกลุ่ม)
   const gSer = ser.map(s => {
     if (ib === "m" || !icdOk) return s;
     const codes = ICD_GROUPS[s.d.key], v = icdCells(codes, ib, cols, end), tot = sumOf(v), base = sumOf(icdCells(codes, "m", cols, end));
-    return { d: s.d, v, small: true, tot, base, aria: `${dzName(s.d)} ผู้ป่วย${bName} รายเดือน`,
+    return { d: s.d, v, small: true, tot, base, pvTxt: icdPvTxt(codes, ib, cols, end), aria: `${dzName(s.d)} ผู้ป่วย${bName} รายเดือน`,
       head: { a: `${range} รวม `, bT: `${fmt(tot)} ราย`, c: "", why: ` · จากผู้ป่วยโรคหลักในกลุ่ม ${fmt(base)} ราย`, col: "#5f6c80" } };
   });
   const ctl = `<div class="e1x-ctl"><span class="e1x-l">นับจาก</span><div class="e1x-tabs" role="group" aria-label="เลือกวิธีนับผู้ป่วย">${ICD_BASIS.map(([k, t]) => `<button type="button" data-ib="${k}" aria-pressed="${k === ib}" style="--c:#33415c">${t}</button>`).join("")}</div></div>`;
@@ -3646,7 +3657,7 @@ function dzMonthAll(dz, wkMax) {
     const g = pair(s, true);
     const rowsHtml = !open ? "" : !icdOk ? stBox() : codes.map(c => {
       const nm = ICD_NAME[c], cells = icdCells([c], ib, cols, end), ytd = sumOf(cells);
-      const sr = { d: { key: c, label: `${c} ${nm[0]}`, c: s.d.c }, v: cells, small: ib !== "m", compact: true, aria: `${c} ${nm[0]} ผู้ป่วย${bName} รายเดือน` }, p = pair(sr, false);
+      const sr = { d: { key: c, label: `${c} ${nm[0]}`, c: s.d.c }, v: cells, small: ib !== "m", compact: true, pvTxt: icdPvTxt([c], ib, cols, end), aria: `${c} ${nm[0]} ผู้ป่วย${bName} รายเดือน` }, p = pair(sr, false);
       return `<div class="e1x-row"><div class="e1x-rh"><span class="e1x-code">${c}</span><span class="e1x-nm">${nm[0]}<small>${nm[1]}</small></span><span class="e1x-tot">${fmt(ytd)}<small>ราย ${range}</small></span></div>${
         (ib === "m" ? cells.some(Boolean) : ytd > 0) ? `<div class="e1x-ch">${p.wide}${p.narrow}</div>` : `<p class="e1x-none">ไม่มีผู้ป่วยรายการนี้ ${range} (${bName})</p>`}</div>`;
     }).join("") + (icAsOf ? `<p class="e1x-src">ข้อมูลรายรหัสโรคจาก HDC ณ ${icAsOf}</p>` : "");
@@ -3661,7 +3672,7 @@ function dzMonthAll(dz, wkMax) {
     ${ctl}${hint}${sumHtml}<div class="e1x-groups">${grpHtml}</div>
     <details class="pv-guide pg-fold dz-fold"><summary class="pg-h"><svg class="ico"><use href="#i-chart"/></svg><b>รายละเอียดเพิ่มเติม (สำหรับเจ้าหน้าที่)</b><span class="pg-more">กดเพื่อเปิด/ปิด</span></summary>
     <ul><li><b>ช่วงที่แสดง</b>: ม.ค. 2569 – พ.ค. 2570 ต่อเนื่องเป็นเส้นเวลาเดียว ไม่เทียบปี · พื้นส้มอ่อน = ช่วงฤดูฝุ่น 1 พ.ย.–31 พ.ค.</li>
-      <li><b>ตัวเลขบนแท่ง</b> = ผลรวมรายสัปดาห์ของเดือนนั้น (แต่ละสัปดาห์นับคนไม่ซ้ำ คนเดียวกันที่มาต่างสัปดาห์จะถูกนับอีกครั้ง) · ชี้ที่แท่งเพื่อดูค่าเฉลี่ยราย/สัปดาห์ · เดือนที่มี 5 สัปดาห์ยอดรวมสูงกว่าเดือนที่มี 4 สัปดาห์ ถ้าจะเทียบข้ามเดือนอย่างละเอียดให้ดูค่าเฉลี่ยราย/สัปดาห์</li>
+      <li><b>ตัวเลขบนแท่ง</b> = ผลรวมรายสัปดาห์ของเดือนนั้น (แต่ละสัปดาห์นับคนไม่ซ้ำ คนเดียวกันที่มาต่างสัปดาห์จะถูกนับอีกครั้ง) · เดือนที่มี 5 สัปดาห์ยอดรวมจะสูงกว่าเดือนที่มี 4 สัปดาห์</li>
       <li><b>คำกำกับเทศกาล</b>: เทียบไฟล์ HDC ปี 2568 และ 2569 สัปดาห์ที่มีวันหยุดราชการ กับสัปดาห์ข้างเคียงที่ไม่มีวันหยุด (ความผันผวนปกติ ±5–6%) · หยุด 1 วันลดราว 6% (แยกจากความผันผวนปกติไม่ออก) · 2 วันราว 14% · 3 วันราว 24% (เช่น สงกรานต์ เหลือ 79% และ 73% ของสัปดาห์ข้างเคียงในปี 2568 และ 2569) แล้วกลับมาเท่าเดิมในสัปดาห์ถัดไป · ยอดทั้งเดือนจึงลดน้อยกว่านี้</li>
       <li><b>การแปลผล</b>: เป็นข้อมูลเฝ้าระวังเชิงพรรณนาระดับประชากร ใช้ดูแนวโน้มและสัญญาณผิดปกติ ไม่ใช้สรุปความสัมพันธ์เชิงสาเหตุ การประเมินผลของฝุ่นต่อการป่วยต้องใช้การวิเคราะห์อนุกรมเวลาที่ควบคุมปัจจัยกวน เช่น อุณหภูมิ ความชื้น ฤดูกาล วันหยุด และผลที่เกิดช้ากว่าวันที่ได้รับฝุ่น (lag)</li>
       <li>นับตาม<b>สัปดาห์ระบาดวิทยา</b> (อาทิตย์–เสาร์) สัปดาห์ที่คร่อมสองเดือนนับเข้าเดือนที่มีวันมากกว่า · แต่ละกลุ่มโรคมีแกนซ้ายของตัวเอง · ผู้ป่วยสัญชาติไทยทุกคนที่รับบริการในเขต รวมผู้อยู่นอกพื้นที่ · ที่มา: HDC กระทรวงสาธารณสุข</li>
