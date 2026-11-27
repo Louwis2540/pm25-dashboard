@@ -3543,15 +3543,15 @@ function e1pSvg(ser, cols, W, lastI, noHead) {
 // ข้อมูล: /api/disease-icd (MOPH s_pm25_1 ชุดเดียวกับกราฟรายเดือน) · แปลงสัปดาห์เป็นเดือนด้วย monthlyWk ตัวเดิม
 // → ยอดกลุ่ม = ผลรวมของรหัสโรคในกลุ่ม ตรงกับกราฟเดิมทุกเดือน · จอแคบแสดง 12 เดือนล่าสุดที่มีข้อมูล จึงไม่ต้องเลื่อนกราฟ
 const ICD_GROUPS = { "ทางเดินหายใจ": ["J44", "J45", "J44.2"], "หัวใจ": ["I21", "I24", "I22"], "ตาอักเสบ": ["H10"], "ผิวหนัง": ["L30.9", "L50"] };   // เรียงตามรายงาน HDC
-const ICD_NAME = {   // [ชื่อไทย, ชื่ออังกฤษตาม HDC] — ชื่อไทยของ I22, I24, H10, L30.9, L50 ยังเป็นร่าง รอตรวจ
+const ICD_NAME = {   // [ชื่อไทย, ชื่ออังกฤษตาม HDC] — ไทย: J44, J45, J44.2, I21 ตาม kkpho · I22, I24 ตาม ICD-10 ฉบับไทย (วิกิพีเดียไทย ฉบับแปล WHO ICD-10 ยังไม่ได้ยืนยันกับ ICD-10-TM ของกระทรวง) · H10, L30.9, L50 ตามที่ผู้ดูแลแดชบอร์ดกำหนด
   "J44": ["โรคปอดอุดกั้นเรื้อรัง", "Chronic obstructive pulmonary disease"],
   "J45": ["โรคหอบหืดกำเริบเฉียบพลัน", "Acute asthma"],
   "J44.2": ["โรคหอบหืดกำเริบ (รหัส J44.2)", "Acute asthma (J44.2)"],
   "I21": ["กล้ามเนื้อหัวใจขาดเลือดเฉียบพลัน", "Acute ischemic heart diseases"],
-  "I24": ["โรคหัวใจขาดเลือดเฉียบพลันชนิดอื่น", "Other acute ischemic heart diseases"],
-  "I22": ["กล้ามเนื้อหัวใจตายซ้ำ (STEMI / NSTEMI)", "Subsequent ST elevation (STEMI) and non-ST elevation (NSTEMI) myocardial infarction"],
+  "I24": ["โรคหัวใจขาดเลือดเฉียบพลันแบบอื่น", "Other acute ischemic heart diseases"],
+  "I22": ["กล้ามเนื้อหัวใจที่ตายตามมา", "Subsequent ST elevation (STEMI) and non-ST elevation (NSTEMI) myocardial infarction"],
   "H10": ["เยื่อบุตาอักเสบ", "Conjunctivitis"],
-  "L30.9": ["ผิวหนังอักเสบ (เอ็กซีมา)", "Eczema"],
+  "L30.9": ["ผิวหนังอักเสบ", "Eczema"],
   "L50": ["ลมพิษ", "Urticaria"],
 };
 const ICD_BASIS = [["m", "ทั้งหมด (โรคหลัก)"], ["z", "ร่วมกับ Z58.1"], ["y", "ร่วมกับ Y97"], ["zy", "ร่วมกับ Z58.1 + Y97"]];
