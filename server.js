@@ -795,7 +795,7 @@ app.get('/api/sheet-disease', async (req, res) => {
 /* ── ผู้ป่วยรายรหัสโรค (ICD-10) × Z58.1 / Y97 ทั้งเขต — ใช้เจาะลึกการ์ดผู้ป่วยรายเดือน ──
    ข้อมูลชุดเดียวกับ /api/sheet-disease (MOPH s_pm25_1_in_week) แต่ไม่ย่อเป็น 4 กลุ่ม
    ใช้การดึง MOPH รอบเดียวกัน (singleFlight 'sheet-disease') → ไม่เพิ่มจำนวนครั้งที่ยิง MOPH
-   รูปแบบ: codes[รหัส] = { m, z, y, zy } แต่ละตัวเป็นอาร์เรย์รายสัปดาห์ (ดัชนี 0 = สัปดาห์ที่ 1)
+   รูปแบบ: years[ปี พ.ศ.].codes[รหัส] = { m, z, y, zy } แต่ละตัวเป็นอาร์เรย์รายสัปดาห์ (ดัชนี 0 = สัปดาห์ที่ 1)
      m = ทุกการวินิจฉัย · z = ร่วมกับ Z58.1 · y = ร่วมกับ Y97 · zy = ร่วมกับทั้งสอง
    meta.dataWk = สัปดาห์ล่าสุดที่นิ่งแล้ว (จุดตัดเดียวกับการ์ดเดิม) · meta.maxWk = สัปดาห์ล่าสุดในข้อมูลดิบ  */
 async function buildDiseaseIcd() {
@@ -807,10 +807,15 @@ async function buildDiseaseIcd() {
 
   const age       = diseaseDataAge([{ 'อัพเดท': dateComToDmy(raw.dateCom) }]);
   const staleDays = Number(readConfig().api.disease_stale_days) || 10;
+  // ทุกปีที่ดึงไว้ (ตั้งแต่ปีแรกของ hybrid) — การ์ดรายเดือนข้ามปีใหม่ต้องใช้ทั้งสองปี ไม่งั้นเดือนของปีก่อนจะว่าง
+  const years = {};
+  for (const [be, r] of _icdRaw) {
+    if (Number(be) >= DISEASE_HYBRID_FROM + 543) years[be] = { codes: r.codes, maxWk: r.maxWk, dateCom: r.dateCom };
+  }
   const data = {
     ok: true,
     yearBe: Y + 543,
-    codes: raw.codes,
+    years,                                  // { "2569": { codes: { รหัส: { m, z, y, zy } }, maxWk, dateCom }, ... }
     meta: {
       source:   'moph',
       dataYear: Y,                          // ค.ศ.
