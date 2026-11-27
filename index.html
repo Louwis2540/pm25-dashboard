@@ -2991,7 +2991,7 @@ function renderHotspot(feats, isSample) {
     const r = Math.min(5 + (p.frp || 0) * .35, 13);
     const t = p.th_time ? `${String(p.th_time).padStart(4, "0").slice(0, 2)}:${String(p.th_time).padStart(4, "0").slice(2)} น.` : "–";
     L.circleMarker([lat, lng], { radius: r, fillColor: cc, color: "#fff", weight: 1, fillOpacity: .9 })
-      .bindTooltip(`<b class="t">🔥 จุดความร้อน</b><br><b>จังหวัด:</b> ${esc(p.changwat)}<br><b>อำเภอ:</b> ${esc(p.ap_en || "–")}<br><b>ตำบล:</b> ${esc(p.tb_en || "–")}<br><b>เวลา:</b> ${t}<br><b>ความเชื่อมั่น:</b> ${cn}`,
+      .bindTooltip(`<b class="t">🔥 จุดความร้อน</b><br><b>จังหวัด:</b> ${esc(p.changwat)}<br><b>อำเภอ:</b> ${esc(p.ap_en || "–")}<br><b>ตำบล:</b> ${esc(p.tb_en || "–")}<br><b>การใช้ที่ดิน:</b> ${esc(p.lu_hp_name || p.lu_name || "–")}<br><b>เวลา:</b> ${t}<br><b>ความเชื่อมั่น:</b> ${cn}`,
         { className: "hs-tip", direction: "top", offset: [0, -r], sticky: false })
       .addTo(MM.hsG);
   }
