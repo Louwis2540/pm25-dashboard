@@ -3647,7 +3647,7 @@ function dzMonthAll(dz, wkMax) {
       head: { a: `${range} รวม `, bT: `${fmt(tot)} ราย`, c: "", why: ` · จากผู้ป่วยโรคหลักในกลุ่ม ${fmt(base)} ราย`, col: "#5f6c80" } };
   });
   const ctl = `<div class="e1x-ctl"><span class="e1x-l">นับจาก</span><div class="e1x-tabs" role="group" aria-label="เลือกวิธีนับผู้ป่วย">${ICD_BASIS.map(([k, t]) => `<button type="button" data-ib="${k}" aria-pressed="${k === ib}" style="--c:#33415c">${t}</button>`).join("")}</div></div>`;
-  const hint = `<p class="e1x-hint">${ib === "m" ? "นับผู้ป่วยโรคหลักทุกราย · กดปุ่ม “คลิกเพื่อดูรายโรค” ใต้แต่ละกลุ่มเพื่อดูแยกรายรหัสโรค (ICD-10)" : `เฉพาะผู้ป่วยที่แพทย์ลงรหัส ${ICD_FULL[ib]} ร่วมกับโรคหลักในกลุ่ม · ตัวเลขน้อยมาก แสดงตามจริงทุกราย ศูนย์ก็แสดงเพราะเป็นข้อมูลเฝ้าระวัง`}</p>`;
+  const hint = `<p class="e1x-hint">${ib === "m" ? "นับผู้ป่วยโรคหลักทุกราย · กดปุ่ม “คลิกเพื่อดูรายโรค” ใต้แต่ละกลุ่มเพื่อดูแยกรายรหัสโรค (ICD-10)" : `เฉพาะผู้ป่วยที่แพทย์ลงรหัส ${ICD_FULL[ib]} ร่วมกับโรคหลักในกลุ่ม`}</p>`;
   const sumHtml = ib === "m" || !icdOk ? "" : (() => { const t = gSer.reduce((a, s) => a + (s.tot || 0), 0), b = gSer.reduce((a, s) => a + (s.base || 0), 0);
     return `<div class="e1x-sum">${bName}: รวม <b>${fmt(t)}</b> ราย จากผู้ป่วยโรคหลักทั้งหมด <b>${fmt(b)}</b> ราย${b ? ` (${(t / b * 100).toFixed(3)}%)` : ""} · ทั้งเขตสุขภาพที่ 7 ${range}</div>`; })();
   const grpHtml = gSer.map((s, i) => {
