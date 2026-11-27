@@ -1156,7 +1156,7 @@ body.dp-open{overflow:hidden}
 .e1lg .e1p-mk{display:inline-block;flex:none;padding:0 6px;font-size:calc(11.5px*var(--fs,1));font-weight:700;line-height:18px;color:#8a5a00;background:#fff6dd;border:1px solid #e3c47a;border-radius:6px}
 .e1lg .e1p-swipe{display:none;color:var(--ink-3)}
 @media (min-width:900px){.e1p-n{display:none}}
-@media (max-width:899px){.e1lg .e1p-swipe{display:inline-flex}.e1g{padding:6px 10px 10px}}
+@media (max-width:899px){.e1lg .e1p-swipe{display:inline-flex}.e1g{padding:10px 10px 12px;border-radius:20px}}
 /* ── การ์ดรายเดือน + รายรหัสโรค (ICD-10): ตัวกรอง Z58.1/Y97 และปุ่มเจาะรายโรค ── */
 .e1x-tabs{display:flex;flex-wrap:wrap;gap:6px}
 .e1x-tabs button{font:inherit;font-size:calc(13.5px*var(--fs,1));font-weight:700;display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;border:1.5px solid color-mix(in srgb,var(--c) 35%,#fff);background:#fff;color:#33415c;cursor:pointer}
@@ -1169,7 +1169,36 @@ body.dp-open{overflow:hidden}
 .e1x-l{font-size:calc(12.5px*var(--fs,1));font-weight:700;color:var(--ink-3)}
 .e1x-hint{margin:6px 0 0;font-size:calc(12.5px*var(--fs,1));line-height:1.55;color:var(--ink-2);max-width:80ch}
 .e1x-sum{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.7);border:1px solid var(--line);font-size:calc(13px*var(--fs,1));color:var(--ink-2)}
-.e1g{margin-top:10px;padding:8px 12px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.6);min-width:0}
+.e1g{--gc:#5f6c80;margin-top:12px;padding:12px 14px 14px;border:1px solid color-mix(in srgb,var(--gc) 30%,#fff);border-radius:22px;min-width:0;
+  background:linear-gradient(160deg,rgba(255,255,255,.6),rgba(255,255,255,.12) 45%,rgba(255,255,255,0) 65%),color-mix(in srgb,var(--gc) 9%,rgba(255,255,255,.62));
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),0 0 0 1px rgba(15,27,45,.06),0 2px 4px rgba(15,27,45,.07),0 18px 36px -14px color-mix(in srgb,var(--gc) 55%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.5);backdrop-filter:blur(14px) saturate(1.5)}
+
+/* ── ป๊อปอัปประกาศอัปเดต: แสดงทุกครั้งที่เปิดหน้าเว็บจนกว่าจะกด "รับทราบ" หรือครบกำหนด ── */
+.nt-bd{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,27,45,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:ntFade .25s ease-out}
+.nt-bd[hidden]{display:none}
+.nt{position:relative;width:min(520px,100%);max-height:calc(100dvh - 32px);overflow:auto;border-radius:26px;background:#fff;box-shadow:0 30px 80px -20px rgba(15,27,45,.55),0 0 0 1px rgba(15,27,45,.08);animation:ntPop .35s cubic-bezier(.2,.9,.3,1.2)}
+.nt-hd{position:relative;padding:22px 22px 18px;color:#fff;background:linear-gradient(135deg,#0e6b3a,#1f8f5f 55%,#2a7fb8);overflow:hidden}
+.nt-hd::after{content:"";position:absolute;right:-30px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.28),rgba(255,255,255,0) 70%)}
+.nt-ic{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.2);display:grid;place-items:center;margin-bottom:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.nt-ic svg{width:26px;height:26px;stroke:#fff}
+.nt-hd h2{margin:0;font-size:calc(21px*var(--fs,1));line-height:1.25;font-weight:800;position:relative;z-index:1}
+.nt-x{position:absolute;right:12px;top:12px;z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:20px;line-height:1;cursor:pointer}
+.nt-x:hover{background:rgba(255,255,255,.35)}
+.nt-bd2{padding:16px 18px 6px;display:flex;flex-direction:column;gap:10px}
+.nt-it{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;padding:12px;border-radius:16px;background:linear-gradient(160deg,color-mix(in srgb,var(--c) 10%,#fff),color-mix(in srgb,var(--c) 4%,#fff));border:1px solid color-mix(in srgb,var(--c) 28%,#fff);animation:ntIn .4s ease-out both;animation-delay:var(--d,0s)}
+.nt-it i{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 16%,#fff);color:var(--c);font-style:normal}
+.nt-it i svg{width:22px;height:22px;stroke:currentColor}
+.nt-it b{display:block;font-size:calc(15px*var(--fs,1));color:var(--ink-1);line-height:1.35}
+.nt-it span{display:block;margin-top:2px;font-size:calc(13px*var(--fs,1));color:var(--ink-2);line-height:1.5}
+.nt-ft{padding:12px 18px 18px;display:flex;justify-content:flex-end;gap:10px}
+.nt-ok{font:inherit;font-weight:800;font-size:calc(15px*var(--fs,1));padding:11px 26px;border:0;border-radius:999px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#0e6b3a,#1f8f5f);box-shadow:0 8px 18px -8px rgba(14,107,58,.8)}
+.nt-ok:hover{filter:brightness(1.06)}
+.nt-ok:focus-visible,.nt-x:focus-visible{outline:3px solid #2a7fb8;outline-offset:2px}
+@keyframes ntFade{from{opacity:0}to{opacity:1}}
+@keyframes ntPop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes ntIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.nt-bd,.nt,.nt-it{animation:none}}
 .e1x-st{margin:8px 0;padding:14px;border-radius:12px;background:rgba(255,255,255,.65);border:1px dashed var(--line-strong);font-size:calc(13px*var(--fs,1));color:var(--ink-2);display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 .e1x-st .sp{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--line-strong);border-top-color:var(--accent);animation:e1xSpin .9s linear infinite;flex:none}
 @keyframes e1xSpin{to{transform:rotate(360deg)}}
@@ -3652,8 +3681,8 @@ function dzMonthAll(dz, wkMax) {
     return `<div class="e1x-sum">${bName}: รวม <b>${fmt(t)}</b> ราย จากผู้ป่วยโรคหลักทั้งหมด <b>${fmt(b)}</b> ราย${b ? ` (${(t / b * 100).toFixed(3)}%)` : ""} · ทั้งเขตสุขภาพที่ 7 ${range}</div>`; })();
   const grpHtml = gSer.map((s, i) => {
     const codes = ICD_GROUPS[s.d.key], open = !!ui.open[i];
-    if (ib !== "m" && !icdOk) return `<div class="e1g">${headHtml({ d: s.d, v: [] })}${stBox()}</div>`;
-    if (ib !== "m" && !s.tot) return `<div class="e1g">${headHtml(s)}<p class="e1x-none">ไม่มีผู้ป่วยกลุ่มนี้ที่ลงรหัสนี้ร่วมด้วย ${range} (${bName})</p></div>`;
+    if (ib !== "m" && !icdOk) return `<div class="e1g" style="--gc:${s.d.c}">${headHtml({ d: s.d, v: [] })}${stBox()}</div>`;
+    if (ib !== "m" && !s.tot) return `<div class="e1g" style="--gc:${s.d.c}">${headHtml(s)}<p class="e1x-none">ไม่มีผู้ป่วยกลุ่มนี้ที่ลงรหัสนี้ร่วมด้วย ${range} (${bName})</p></div>`;
     const g = pair(s, true);
     const rowsHtml = !open ? "" : !icdOk ? stBox() : codes.map(c => {
       const nm = ICD_NAME[c], cells = icdCells([c], ib, cols, end), ytd = sumOf(cells);
@@ -4986,6 +5015,46 @@ document.getElementById("mCopy").addEventListener("click", async e => { const bt
 document.getElementById("mClose").addEventListener("click", () => document.getElementById("modal").classList.remove("on"));
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") e.target.classList.remove("on"); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.getElementById("modal").classList.remove("on"); });
+
+/* ── ป๊อปอัปประกาศอัปเดต ──
+   แสดงทุกครั้งที่เปิดหน้าเว็บ จนกว่าผู้ใช้กด "รับทราบ" (จำไว้ในเบราว์เซอร์) หรือเลยวันที่สิ้นสุด (3 วันนับจากวันที่ขึ้นเว็บ)
+   ปุ่ม × = ปิดเฉพาะครั้งนี้ (เปิดหน้าใหม่ยังเห็นอีก) · localStorage ใช้ไม่ได้ก็แสดงตามปกติ ไม่พัง */
+(function () {
+  const NOTICE = {
+    id: "2569-11-27",
+    end: "2026-11-30T00:00:00+07:00",   // แสดงถึงสิ้นวันที่ 29 พ.ย. 2569 (3 วัน)
+    title: "อัปเดตใหม่ในแดชบอร์ด",
+    items: [
+      { c: "#2980b9", d: "0s", icon: '<path d="M4 19V9M10 19V5M16 19v-8M22 19H2"/>', t: "ผู้ป่วยรายเดือน เจาะดูรายรหัสโรคได้", s: "กดปุ่ม “คลิกเพื่อดูรายโรค” ใต้แต่ละกลุ่ม เพื่อดูรายรหัส ICD-10 ทั้ง 9 รหัส" },
+      { c: "#e74c3c", d: ".12s", icon: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>', t: "ตัวกรองผู้ป่วยร่วมกับ Z58.1 / Y97", s: "ดูผู้ป่วยที่แพทย์ลงรหัสร่วม และดูว่ารายงานจากจังหวัดใด" },
+      { c: "#27ae60", d: ".24s", icon: '<path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/>', t: "ดาวน์โหลดข้อมูลชุดใหม่", s: "ผู้ป่วยรายรหัสโรค (ICD-10) ร่วม Z58.1 / Y97 รายสัปดาห์ ทั้งเขต" },
+    ],
+  };
+  const KEY = "pm25_notice_ack";
+  const lsGet = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
+  const lsSet = v => { try { localStorage.setItem(KEY, v); } catch (e) { /* ไม่เป็นไร */ } };
+  if (Date.now() >= Date.parse(NOTICE.end) || lsGet() === NOTICE.id) return;
+  const mount = () => {
+    if (document.getElementById("ntBd")) return;
+    const el = document.createElement("div");
+    el.className = "nt-bd"; el.id = "ntBd";
+    el.innerHTML = `<div class="nt" role="dialog" aria-modal="true" aria-labelledby="ntT">
+      <div class="nt-hd"><button type="button" class="nt-x" aria-label="ปิด">×</button>
+        <div class="nt-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 001 1h2l5 4V6L6 10H4a1 1 0 00-1 1z"/><path d="M15.5 8.5a5 5 0 010 7M18 6a8.5 8.5 0 010 12"/></svg></div>
+        <h2 id="ntT">${NOTICE.title}</h2></div>
+      <div class="nt-bd2">${NOTICE.items.map(i => `<div class="nt-it" style="--c:${i.c};--d:${i.d}"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${i.icon}</svg></i><div><b>${i.t}</b><span>${i.s}</span></div></div>`).join("")}</div>
+      <div class="nt-ft"><button type="button" class="nt-ok">รับทราบ</button></div></div>`;
+    const close = ack => { if (ack) lsSet(NOTICE.id); el.remove(); document.removeEventListener("keydown", onKey); };
+    const onKey = e => { if (e.key === "Escape") close(false); };
+    el.querySelector(".nt-ok").addEventListener("click", () => close(true));
+    el.querySelector(".nt-x").addEventListener("click", () => close(false));
+    el.addEventListener("click", e => { if (e.target === el) close(false); });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(el);
+    el.querySelector(".nt-ok").focus({ preventScroll: true });
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount); else mount();
+})();
 </script>
 </body>
 </html>
